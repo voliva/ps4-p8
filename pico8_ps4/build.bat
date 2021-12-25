@@ -8,7 +8,7 @@ set PKG_TITLE_ID="BREW34965"
 set PKG_CONTENT_ID="IV0000-BREW34965_00-OLIPS4PICO800000"
 
 Rem Libraries to link in
-set libraries=-lc -lkernel -lc++
+set libraries=-lc -lkernel -lc++ -lSceUserService -lSceVideoOut -lSceAudioOut -lScePad -lSceSysmodule -lSceFreeType -lSDL2 -lSDL2_image
 
 set extra_flags=-I"..\\lua"
 
@@ -21,8 +21,6 @@ set outputElf=%intdir%\%targetname%.elf
 set outputOelf=%intdir%\%targetname%.oelf
 
 @mkdir %intdir%
-
-echo asdfasdfasdf
 
 Rem Compile object files for all the source files
 for %%f in (*.c) do (
@@ -45,7 +43,7 @@ for %%f in (%1\\*.o) do set obj_files=!obj_files! .\%%f
 
 
 Rem Link the input ELF
-ld.lld -error-limit=0 -m elf_x86_64 -pie --script "%OO_PS4_TOOLCHAIN%\link.x" --eh-frame-hdr -o "%outputElf%" "-L%OO_PS4_TOOLCHAIN%\\lib" %libraries% --verbose "%OO_PS4_TOOLCHAIN%\lib\crt1.o" %obj_files%
+ld.lld -m elf_x86_64 -pie --script "%OO_PS4_TOOLCHAIN%\link.x" --eh-frame-hdr -o "%outputElf%" "-L%OO_PS4_TOOLCHAIN%\\lib" %libraries% --verbose "%OO_PS4_TOOLCHAIN%\lib\crt1.o" %obj_files%
 
 Rem Create the eboot
 %OO_PS4_TOOLCHAIN%\bin\windows\create-fself.exe -in "%outputElf%" --out "%outputOelf%" --eboot "eboot.bin" --paid 0x3800000000000011
@@ -68,7 +66,6 @@ cd ..
 %OO_PS4_TOOLCHAIN%\bin\windows\PkgTool.Core.exe sfo_setentry sce_sys/param.sfo TITLE_ID --type Utf8 --maxsize 12 --value %PKG_TITLE_ID%
 %OO_PS4_TOOLCHAIN%\bin\windows\PkgTool.Core.exe sfo_setentry sce_sys/param.sfo VERSION --type Utf8 --maxsize 8 --value %PKG_VERSION%
 
-Rem Get a list of assets for packaging
 Rem Get a list of assets for packaging
 set module_files=
 for %%f in (sce_module\\*) do set module_files=!module_files! sce_module/%%~nxf
