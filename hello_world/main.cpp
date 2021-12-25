@@ -2,9 +2,12 @@
 #include <iostream>
 #include <orbis/libkernel.h>
 #include "../../_common/log.h"
-#include "lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
+
+extern "C" {
+    #include "lua.h"
+    #include "lauxlib.h"
+    #include "lualib.h"
+}
 
 // Logging
 std::stringstream debugLogStream;
