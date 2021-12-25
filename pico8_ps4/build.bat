@@ -1,11 +1,11 @@
 SETLOCAL EnableDelayedExpansion
 
 Rem Package information
-set PKG_TITLE="OpenOrbis Hello World Sample"
+set PKG_TITLE="PS4 Pico-8"
 set PKG_VERSION="1.00"
 set PKG_ASSETS="assets"
-set PKG_TITLE_ID="BREW00083"
-set PKG_CONTENT_ID="IV0000-BREW00083_00-HELLOWORLDLUA000"
+set PKG_TITLE_ID="BREW34965"
+set PKG_CONTENT_ID="IV0000-BREW34965_00-OLIPS4PICO800000"
 
 Rem Libraries to link in
 set libraries=-lc -lkernel -lc++
@@ -40,31 +40,6 @@ set obj_files=
 
 Rem Lua obj files
 for %%f in (..\lua\%1*.o) do set obj_files=!obj_files! .\%%f
-@REM set obj_files=!obj_files! ..\lua\%1\lauxlib.o
-@REM set obj_files=!obj_files! ..\lua\%1\lua.o
-@REM set obj_files=!obj_files! ..\lua\%1\ldebug.o
-@REM set obj_files=!obj_files! ..\lua\%1\lapi.o
-@REM set obj_files=!obj_files! ..\lua\%1\lstate.o
-@REM set obj_files=!obj_files! ..\lua\%1\linit.o
-@REM set obj_files=!obj_files! ..\lua\%1\lfunc.o
-@REM set obj_files=!obj_files! ..\lua\%1\ltable.o
-@REM set obj_files=!obj_files! ..\lua\%1\ltm.o
-@REM set obj_files=!obj_files! ..\lua\%1\lgc.o
-@REM set obj_files=!obj_files! ..\lua\%1\lobject.o
-@REM set obj_files=!obj_files! ..\lua\%1\lvm.o
-@REM set obj_files=!obj_files! ..\lua\%1\ldo.o
-@REM set obj_files=!obj_files! ..\lua\%1\lopcodes.o
-@REM set obj_files=!obj_files! ..\lua\%1\lstring.o
-@REM set obj_files=!obj_files! ..\lua\%1\lzio.o
-@REM set obj_files=!obj_files! ..\lua\%1\ldump.o
-@REM set obj_files=!obj_files! ..\lua\%1\lmem.o
-@REM set obj_files=!obj_files! ..\lua\%1\llex.o
-@REM set obj_files=!obj_files! ..\lua\%1\lbaselib.o
-@REM set obj_files=!obj_files! ..\lua\%1\loadlib.o
-@REM set obj_files=!obj_files! ..\lua\%1\lcorolib.o
-@REM set obj_files=!obj_files! ..\lua\%1\ltablib.o
-@REM set obj_files=!obj_files! ..\lua\%1\liolib.o
-@REM set obj_files=!obj_files! ..\lua\%1\loslib.o
 
 for %%f in (%1\\*.o) do set obj_files=!obj_files! .\%%f
 

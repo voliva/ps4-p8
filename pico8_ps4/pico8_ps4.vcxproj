@@ -52,7 +52,7 @@ del /s /q /f $(IntDir)\*.oelf</NMakeCleanCommandLine>
     <NMakeIncludeSearchPath>$(OO_PS4_TOOLCHAIN)\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <OutDir>$(SolutionDir)</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
-    <IncludePath>C:\OpenOrbis\PS4Toolchain\samples\hello_world_lua\lua;$(IncludePath)</IncludePath>
+    <IncludePath>..\lua;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <NMakeOutput>eboot.bin</NMakeOutput>
@@ -63,9 +63,6 @@ del /s /q /f $(IntDir)\*.oelf</NMakeCleanCommandLine>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="build.bat" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\_common\log.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,7 +1,7 @@
 #include <sstream>
 #include <iostream>
 #include <orbis/libkernel.h>
-#include "../../_common/log.h"
+#include "./log.h"
 
 extern "C" {
     #include "lua.h"
