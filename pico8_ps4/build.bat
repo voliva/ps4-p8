@@ -90,3 +90,6 @@ Rem Create gp4
 
 Rem Create pkg
 %OO_PS4_TOOLCHAIN%\bin\windows\PkgTool.Core.exe pkg_build pkg.gp4 .
+
+if exist pico8.pkg del /f pico8.pkg
+ren IV0000-BREW34965_00-OLIPS4PICO800000.pkg pico8.pkg

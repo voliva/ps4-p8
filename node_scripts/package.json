@@ -1,0 +1,10 @@
+{
+  "name": "node_scripts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Víctor Oliva",
+  "license": "MIT",
+  "dependencies": {
+    "ftp": "^0.3.10"
+  }
+}
