@@ -26,7 +26,7 @@ bool Scene2D::Init(size_t memSize, int numFrameBuffers)
 
 	if (this->video < 0)
 	{
-		DEBUGLOG << "Failed to open a video out handle: " << std::string(strerror(errno));
+		// DEBUGLOG << "Failed to open a video out handle: " << std::string(strerror(errno));
 		return false;
 	}
 	
@@ -36,7 +36,7 @@ bool Scene2D::Init(size_t memSize, int numFrameBuffers)
 
 	if (rc < 0)
 	{
-		DEBUGLOG << "Failed to load freetype: " << std::string(strerror(errno));
+		// DEBUGLOG << "Failed to load freetype: " << std::string(strerror(errno));
 		return false;
 	}
 
@@ -45,26 +45,26 @@ bool Scene2D::Init(size_t memSize, int numFrameBuffers)
 
 	if (rc != 0)
 	{
-		DEBUGLOG << "Failed to initialize freetype: " << std::string(strerror(errno));
+		// DEBUGLOG << "Failed to initialize freetype: " << std::string(strerror(errno));
 		return false;
 	}
 #endif
 	
 	if(!initFlipQueue())
 	{
-		DEBUGLOG << "Failed to initialize flip queue: " << std::string(strerror(errno));
+		// DEBUGLOG << "Failed to initialize flip queue: " << std::string(strerror(errno));
 		return false;
 	}
 	
 	if(!allocateVideoMem(memSize, 0x200000))
 	{
-		DEBUGLOG << "Failed to allocate video memory: " << std::string(strerror(errno));
+		// DEBUGLOG << "Failed to allocate video memory: " << std::string(strerror(errno));
 		return false;
 	}
 	
 	if(!allocateFrameBuffers(numFrameBuffers))
 	{
-		DEBUGLOG << "Failed to allocate frame buffers: " << std::string(strerror(errno));
+		// DEBUGLOG << "Failed to allocate frame buffers: " << std::string(strerror(errno));
 		return false;
 	}
 	

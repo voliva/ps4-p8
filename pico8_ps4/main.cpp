@@ -20,7 +20,7 @@
  }
 
 // Logging
-std::stringstream debugLogStream;
+// std::stringstream debugLogStream;
 
 // SDL window and software renderer
 SDL_Window* window;
@@ -31,12 +31,16 @@ FT_Face fontDebug;
 Color bgColor = { 0x10, 0x10, 0x10 };
 Color fgColor = { 255, 255, 255 };
 
+Logger logger;
+
 static int pong(lua_State* L);
 
 extern "C" int hello();
 void debug_text(const char *str);
 int main(void)
 {
+	// Log DEBUGLOG = logger.log("main");
+
 	int rc;
 	SDL_Surface* windowSurface;
 
@@ -44,23 +48,23 @@ int main(void)
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	// Initialize SDL functions
-	DEBUGLOG << "Initializing SDL";
+	// DEBUGLOG << "Initializing SDL";
 	printf("Initializing SDL with printf");
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0)
 	{
-		DEBUGLOG << "Failed to initialize SDL: " << SDL_GetError();
+		// DEBUGLOG << "Failed to initialize SDL: " << SDL_GetError();
 		return -1;
 	}
 
 	// We have to force load the freetype module or we'll get unresolved NID crashes
-	DEBUGLOG << "Initializing TTF";
+	// DEBUGLOG << "Initializing TTF";
 
 	rc = sceSysmoduleLoadModule(0x009A);
 
 	if (rc < 0)
 	{
-		DEBUGLOG << "Failed to load freetype module: " << std::string(strerror(errno));
+		// DEBUGLOG << "Failed to load freetype module: " << std::string(strerror(errno));
 		return -1;
 	}
 
@@ -69,29 +73,29 @@ int main(void)
 
 	if (rc < 0)
 	{
-		DEBUGLOG << "Failed to initialize freetype: " << std::string(strerror(errno));
+		// DEBUGLOG << "Failed to initialize freetype: " << std::string(strerror(errno));
 		return -1;
 	}
 
 	// Create a font face for debug and score text
 	const char* debugFontPath = "/app0/assets/fonts/VeraMono.ttf";
 
-	DEBUGLOG << "Initializing debug font (" << debugFontPath << ")";
+	// DEBUGLOG << "Initializing debug font (" << debugFontPath << ")";
 
 	if (!InitFont(&fontDebug, debugFontPath, 16))
 	{
-		DEBUGLOG << "Failed to initialize debug font '" << debugFontPath << "'";
+		// DEBUGLOG << "Failed to initialize debug font '" << debugFontPath << "'";
 		return -1;
 	}
 
 	// Create a window context
-	DEBUGLOG << "Creating a window";
+	// DEBUGLOG << "Creating a window";
 
 	window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
 
 	if (!window)
 	{
-		DEBUGLOG << "Failed to create window: " << SDL_GetError();
+		// DEBUGLOG << "Failed to create window: " << SDL_GetError();
 		for (;;);
 	}
 
@@ -101,7 +105,7 @@ int main(void)
 
 	if (!renderer)
 	{
-		DEBUGLOG << "Failed to create software renderer: " << SDL_GetError();
+		// DEBUGLOG << "Failed to create software renderer: " << SDL_GetError();
 		SDL_Quit();
 		return -1;
 	}
@@ -109,7 +113,7 @@ int main(void)
 	// Initialize input / joystick
 	// if (SDL_NumJoysticks() < 1)
 	// {
-	//     DEBUGLOG << "No controllers available!";
+	// DEBUGLOG << "No controllers available!";
 	//     for (;;);
 	// }
 
@@ -117,7 +121,7 @@ int main(void)
 
 	// if (controller == NULL)
 	// {
-	//     DEBUGLOG << "Couldn't open controller handle: " << SDL_GetError();
+	// DEBUGLOG << "Couldn't open controller handle: " << SDL_GetError();
 	//     for (;;);
 	// }
 

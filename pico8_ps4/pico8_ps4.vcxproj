@@ -62,9 +62,11 @@ del /s /q /f $(IntDir)\*.oelf</NMakeCleanCommandLine>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="graphics.cpp" />
+    <ClCompile Include="log.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="build.bat" />
     <ClCompile Include="png.cpp" />
+    <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="TTF.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -72,6 +74,7 @@ del /s /q /f $(IntDir)\*.oelf</NMakeCleanCommandLine>
     <ClInclude Include="graphics.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="png.h" />
+    <ClInclude Include="Renderer.h" />
     <ClInclude Include="TTF.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

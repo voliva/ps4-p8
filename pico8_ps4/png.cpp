@@ -12,7 +12,7 @@ PNG::PNG(const char *imagePath)
 
  	if (this->img == NULL)
 	{
-		DEBUGLOG << "Failed to load image '" << imagePath << "': " << stbi_failure_reason();
+		// DEBUGLOG << "Failed to load image '" << imagePath << "': " << stbi_failure_reason();
 		return;
 	}
 }
