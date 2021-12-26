@@ -1,3 +1,6 @@
+// node debuglog.js 192.168.1.38 | tee -a debuglog.log
+// nc 192.168.1.38 9025
+
 const net = require('net');
 
 const PORT = 9025;
@@ -11,7 +14,7 @@ client.connect(PORT, process.argv[2], function () {
 });
 
 client.on('data', function (data) {
-  console.log(data);
+  console.log(data.toString('utf8'));
 });
 
 client.on('close', function () {

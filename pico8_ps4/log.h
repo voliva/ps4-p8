@@ -4,6 +4,7 @@
 #include <mutex>
 #include <vector>
 #include <unistd.h>
+#include <sys/socket.h>
 
 class Log;
 
@@ -13,6 +14,8 @@ public:
 	Logger();
 
 	Log log(std::string name);
+	void listen_clients();
+	int start_server();
 
 	Logger& operator<<(const char* v) {
 		printf("%s", v);
@@ -20,7 +23,7 @@ public:
 		this->mtx.lock();
 
 		if (this->active_client > 0) {
-			write(this->active_client, v, sizeof(v));
+			send(this->active_client, v, sizeof(v), MSG_NOSIGNAL);
 		}
 		else {
 			this->buffer.push_back(v);
@@ -43,7 +46,6 @@ private:
 	std::mutex mtx;
 	std::vector<std::string> buffer;
 	int active_client;
-	int start_server();
 };
 
 class Log

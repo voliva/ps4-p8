@@ -9,6 +9,7 @@
 #include "log.h"
 #include "TTF.h"
 #include "Color.h"
+#include <thread>
 
 #define FRAME_WIDTH     1920
 #define FRAME_HEIGHT    1080
@@ -31,14 +32,15 @@ FT_Face fontDebug;
 Color bgColor = { 0x10, 0x10, 0x10 };
 Color fgColor = { 255, 255, 255 };
 
-Logger logger;
-
 static int pong(lua_State* L);
 
 extern "C" int hello();
 void debug_text(const char *str);
 int main(void)
 {
+	Logger logger;
+	// logger.listen_clients();
+	// std::thread t1(&Logger::start_server, &logger);
 	// Log DEBUGLOG = logger.log("main");
 
 	int rc;
@@ -141,6 +143,12 @@ int main(void)
 	//render(renderer);
 	debug_text("Hello world");
 
+	debug_text("Spawning logger thread");
+
+	std::thread t1(&Logger::start_server, &logger);
+
+	debug_text("Spawned");
+
 	// Propagate the updated window to the screen
 	SDL_UpdateWindowSurface(window);
 
@@ -190,6 +198,7 @@ int main(void)
 	debug_text(std::to_string(value).c_str());
 
 	lua_close(L);
+	// std::thread t1(&Logger::start_server, &logger);
 
 	for (;;) {}
 
@@ -199,6 +208,7 @@ int main(void)
 
 int last_line = 0;
 void debug_text(const char *str) {
+	// logger << str;
 
 	last_line += 20;
 	if (last_line > FRAME_HEIGHT - 20) {
