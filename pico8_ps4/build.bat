@@ -9,6 +9,7 @@ set PKG_CONTENT_ID="IV0000-BREW34965_00-OLIPS4PICO800000"
 
 Rem Libraries to link in
 set libraries=-lc -lkernel -lc++ -lSceUserService -lSceVideoOut -lSceAudioOut -lScePad -lSceSysmodule -lSceFreeType -lSDL2 -lSDL2_image
+set libraries=!libraries! "-L..\rust-interop-lib\target\x86_64-unknown-freebsd\debug" -lrust_interop_lib
 
 set extra_flags=-I"..\\lua"
 

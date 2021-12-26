@@ -33,6 +33,7 @@ Color fgColor = { 255, 255, 255 };
 
 static int pong(lua_State* L);
 
+extern "C" int hello();
 void debug_text(const char *str);
 int main(void)
 {
@@ -180,6 +181,9 @@ int main(void)
 	if (lua_pcall(L, 1, 0, 0) != 0) {
 		debug_text("Failed calling function");
 	}
+
+	int value = hello();
+	debug_text(std::to_string(value).c_str());
 
 	lua_close(L);
 
