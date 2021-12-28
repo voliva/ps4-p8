@@ -4,4 +4,6 @@ pkg.gp4
 /*.pkg
 .vs
 /lib
-pico8_ps4/*.dll
+/pico8_ps4/*.dll
+/pico8_ps4/Debug
+/Debug

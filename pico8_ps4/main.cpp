@@ -3,18 +3,23 @@
 #include <vector>
 #include <string>
 #include <SDL2/SDL.h>
-#include "log.h"
-#include "TTF.h"
 #include "Color.h"
 #include <thread>
+#include <chrono>
 
 #ifdef __PS4__
 #include <orbis/libkernel.h>
 #include <orbis/Sysmodule.h>
-#endif
 
 #define FRAME_WIDTH     1920
 #define FRAME_HEIGHT    1080
+#else
+// SDL messes up with the linker somehow on windows?
+#undef main
+#define FRAME_WIDTH     1440
+#define FRAME_HEIGHT    810
+#endif
+
 
  extern "C" {
      #include "lua.h"
@@ -29,20 +34,17 @@
 SDL_Window* window;
 SDL_Renderer* renderer;
 
-FT_Face fontDebug;
-
 Color bgColor = { 0x10, 0x10, 0x10 };
 Color fgColor = { 255, 255, 255 };
 
 static int pong(lua_State* L);
 
-extern "C" int hello();
 void debug_text(const char *str);
-Logger logger;
+//Logger logger;
 
 int main(void)
 {
-	std::thread t1 = logger.listen_clients();
+	//std::thread t1 = logger.listen_clients();
 
 	// logger = new Logger();
 	// logger.listen_clients();
@@ -65,36 +67,8 @@ int main(void)
 		return -1;
 	}
 
-	// We have to force load the freetype module or we'll get unresolved NID crashes
-	// DEBUGLOG << "Initializing TTF";
-
-	rc = sceSysmoduleLoadModule(0x009A);
-
-	if (rc < 0)
-	{
-		// DEBUGLOG << "Failed to load freetype module: " << std::string(strerror(errno));
-		return -1;
-	}
-
-	// Finally initialize freetype
-	rc = FT_Init_FreeType(&ftLib);
-
-	if (rc < 0)
-	{
-		// DEBUGLOG << "Failed to initialize freetype: " << std::string(strerror(errno));
-		return -1;
-	}
-
 	// Create a font face for debug and score text
 	const char* debugFontPath = "/app0/assets/fonts/VeraMono.ttf";
-
-	// DEBUGLOG << "Initializing debug font (" << debugFontPath << ")";
-
-	if (!InitFont(&fontDebug, debugFontPath, 16))
-	{
-		// DEBUGLOG << "Failed to initialize debug font '" << debugFontPath << "'";
-		return -1;
-	}
 
 	// Create a window context
 	// DEBUGLOG << "Creating a window";
@@ -199,37 +173,34 @@ int main(void)
 		debug_text("Failed calling function");
 	}
 
-	int value = hello();
-	debug_text(std::to_string(value).c_str());
+	//int value = hello();
+	//debug_text(std::to_string(value).c_str());
 
 	lua_close(L);
 	// std::thread t1(&Logger::start_server, &logger);
 
-	for (;;) {}
+	SDL_Event e;
+	bool quit = false;
+	while (!quit) {
+		while (SDL_PollEvent(&e) != 0)
+		{
+			//User requests quit
+			if (e.type == SDL_QUIT)
+			{
+				quit = true;
+			}
+		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
 
 	SDL_Quit();
+
 	return 0;
 }
 
-int last_line = 0;
 void debug_text(const char *str) {
-	logger << str;
-
-	last_line += 20;
-	if (last_line > FRAME_HEIGHT - 20) {
-		SDL_RenderClear(renderer);
-		last_line = 20;
-	}
-
-	SDL_Rect fpsCounterDest;
-	fpsCounterDest.x = 20;
-	fpsCounterDest.y = last_line;
-	SDL_Texture* helloTexture = CreateText(renderer, (char *)str, fontDebug, fgColor, bgColor);
-	SDL_QueryTexture(helloTexture, NULL, NULL, &fpsCounterDest.w, &fpsCounterDest.h);
-	SDL_RenderCopy(renderer, helloTexture, NULL, &fpsCounterDest);
-
-	// Propagate the updated window to the screen
-	SDL_UpdateWindowSurface(window);
+	//logger << str;
 }
 
 static int pong(lua_State* L) {
