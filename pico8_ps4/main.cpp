@@ -2,14 +2,16 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <orbis/libkernel.h>
-#include <orbis/Sysmodule.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 #include "log.h"
 #include "TTF.h"
 #include "Color.h"
 #include <thread>
+
+#ifdef __PS4__
+#include <orbis/libkernel.h>
+#include <orbis/Sysmodule.h>
+#endif
 
 #define FRAME_WIDTH     1920
 #define FRAME_HEIGHT    1080
