@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#include "circular_buffer.h"
+
 class Log;
 
 class Logger
@@ -22,11 +24,9 @@ public:
 
 		this->mtx.lock();
 
+		this->buffer->push(v);
 		if (this->active_client > 0) {
 			send(this->active_client, v, sizeof(v), MSG_NOSIGNAL);
-		}
-		else {
-			this->buffer.push_back(v);
 		}
 
 		this->mtx.unlock();
@@ -44,7 +44,7 @@ public:
 
 private:
 	std::mutex mtx;
-	std::vector<std::string> buffer;
+	CircularBuffer<std::string> *buffer;
 	int active_client;
 };
 

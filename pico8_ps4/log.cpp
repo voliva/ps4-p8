@@ -9,6 +9,7 @@
 
 Logger::Logger()
 {
+	this->buffer = new CircularBuffer<std::string>(100);
 }
 
 Log Logger::log(std::string name)
@@ -97,10 +98,10 @@ int Logger::start_server()
 		const char msg[] = "Hello!";
 		write(this->active_client, msg, sizeof(msg));
 
-		for (int i = 0; i < this->buffer.size(); i++) {
-			write(this->active_client, this->buffer[i].c_str(), this->buffer[i].length());
+		for (int i = 0; i < this->buffer->size(); i++) {
+			std::string logline = this->buffer->get(i);
+			write(this->active_client, logline.c_str(), logline.length());
 		}
-		this->buffer.clear();
 
 		this->mtx.unlock();
 	}

@@ -70,6 +70,7 @@ del /s /q /f $(IntDir)\*.oelf</NMakeCleanCommandLine>
     <ClCompile Include="TTF.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="circular_buffer.hpp" />
     <ClInclude Include="Color.h" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="log.h" />
