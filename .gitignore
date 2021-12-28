@@ -7,4 +7,5 @@ pkg.gp4
 /pico8_ps4/*.dll
 /pico8_ps4/Debug
 /Debug
+*.log
 ps4_int

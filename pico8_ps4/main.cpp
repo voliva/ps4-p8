@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <SDL2/SDL.h>
-#include "Color.h"
 #include <thread>
 #include <chrono>
 
@@ -20,15 +19,17 @@
 #define FRAME_HEIGHT    810
 #endif
 
+extern "C" {
+	#include <lua.h>
+	#include <lauxlib.h>
+	#include <lualib.h>
+}
 
- extern "C" {
-     #include "lua.h"
-     #include "lauxlib.h"
-     #include "lualib.h"
- }
+#include "Color.h"
+#include "log.h"
 
 // Logging
-// std::stringstream debugLogStream;
+Logger logger;
 
 // SDL window and software renderer
 SDL_Window* window;
@@ -39,17 +40,9 @@ Color fgColor = { 255, 255, 255 };
 
 static int pong(lua_State* L);
 
-void debug_text(const char *str);
-//Logger logger;
-
 int main(void)
 {
-	//std::thread t1 = logger.listen_clients();
-
-	// logger = new Logger();
-	// logger.listen_clients();
-	// std::thread t1(&Logger::start_server, &logger);
-	// Log DEBUGLOG = logger.log("main");
+	Log DEBUGLOG = logger.log("main");
 
 	int rc;
 	SDL_Surface* windowSurface;
@@ -58,12 +51,11 @@ int main(void)
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	// Initialize SDL functions
-	// DEBUGLOG << "Initializing SDL";
-	printf("Initializing SDL with printf");
+	DEBUGLOG << "Initializing SDL";
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0)
 	{
-		// DEBUGLOG << "Failed to initialize SDL: " << SDL_GetError();
+		DEBUGLOG << "Failed to initialize SDL: " << SDL_GetError();
 		return -1;
 	}
 
@@ -71,14 +63,14 @@ int main(void)
 	const char* debugFontPath = "/app0/assets/fonts/VeraMono.ttf";
 
 	// Create a window context
-	// DEBUGLOG << "Creating a window";
+	DEBUGLOG << "Creating a window";
 
 	window = SDL_CreateWindow("main", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, FRAME_WIDTH, FRAME_HEIGHT, 0);
 
 	if (!window)
 	{
-		// DEBUGLOG << "Failed to create window: " << SDL_GetError();
-		for (;;);
+		DEBUGLOG << "Failed to create window: " << SDL_GetError();
+		return -1;
 	}
 
 	// Create a software rendering instance for the window
@@ -87,30 +79,28 @@ int main(void)
 
 	if (!renderer)
 	{
-		// DEBUGLOG << "Failed to create software renderer: " << SDL_GetError();
+		DEBUGLOG << "Failed to create software renderer: " << SDL_GetError();
 		SDL_Quit();
 		return -1;
 	}
 
 	// Initialize input / joystick
-	// if (SDL_NumJoysticks() < 1)
-	// {
-	// DEBUGLOG << "No controllers available!";
-	//     for (;;);
-	// }
+	/*if (SDL_NumJoysticks() < 1)
+	{
+		DEBUGLOG << "No controllers available!";
+		return -1;
+	}
 
-	// controller = SDL_JoystickOpen(0);
+	SDL_Joystick *controller = SDL_JoystickOpen(0);
 
-	// if (controller == NULL)
-	// {
-	// DEBUGLOG << "Couldn't open controller handle: " << SDL_GetError();
-	//     for (;;);
-	// }
-
-	// initGame(renderer);
+	if (controller == NULL)
+	{
+		DEBUGLOG << "Couldn't open controller handle: " << SDL_GetError();
+		return -1;
+	}*/
 
 	// Enter the render loop
-	// DEBUGLOG << "Entering draw loop...";
+	DEBUGLOG << "Entering draw loop...";
 
 	//for (int frame = 0; frame < 1000; frame++)
 	//{
@@ -119,14 +109,7 @@ int main(void)
 	SDL_RenderClear(renderer);
 
 	// Run all rendering routines
-
-	//render(renderer);
-	debug_text("Hello world");
-
-	// debug_text("Spawning logger thread");
-	// std::thread t1(&Logger::start_server, &logger);
-
-	debug_text("Spawned");
+	// render(renderer);
 
 	// Propagate the updated window to the screen
 	SDL_UpdateWindowSurface(window);
@@ -152,32 +135,27 @@ int main(void)
 	};
 
 	for (int i = 0; i < lines.size(); i++) {
-		debug_text(lines[i].c_str());
 		error = luaL_loadbuffer(L, lines[i].c_str(), lines[i].length(), "line") ||
 			lua_pcall(L, 0, 0, 0);
 		if (error) {
 			std::string e = lua_tostring(L, -1);
 			lua_pop(L, 1);  // pop error message from the stack *
-			debug_text(e.c_str());
+			DEBUGLOG << e.c_str();
 
-			for (;;) {}
+			return -1;
 		}
 	}
 
-	debug_text("Calling");
+	DEBUGLOG << "Calling";
 
 	lua_getglobal(L, "ping");
 	lua_pushstring(L, "sent stuff");
 
 	if (lua_pcall(L, 1, 0, 0) != 0) {
-		debug_text("Failed calling function");
+		DEBUGLOG << "Failed calling function";
 	}
 
-	//int value = hello();
-	//debug_text(std::to_string(value).c_str());
-
 	lua_close(L);
-	// std::thread t1(&Logger::start_server, &logger);
 
 	SDL_Event e;
 	bool quit = false;
@@ -199,14 +177,10 @@ int main(void)
 	return 0;
 }
 
-void debug_text(const char *str) {
-	//logger << str;
-}
-
 static int pong(lua_State* L) {
 	std::string result = lua_tostring(L, 1);  /* get argument */
 
-	debug_text((char*)result.c_str());
+	logger << result;
 
 	return 0;  /* number of results */
 }

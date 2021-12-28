@@ -1,10 +1,7 @@
 #pragma once
 
 #include <string>
-#include <mutex>
 #include <vector>
-#include <unistd.h>
-#include <sys/socket.h>
 #include <stdio.h>
 
 #include "circular_buffer.h"
@@ -18,8 +15,6 @@ public:
 	~Logger();
 
 	Log log(std::string name);
-	std::thread listen_clients();
-	int start_server();
 	FILE *file_handle;
 
 	Logger& operator<<(const char* v);
@@ -33,9 +28,7 @@ public:
 	}
 
 private:
-	std::mutex mtx;
 	CircularBuffer<std::string> *buffer;
-	int active_client;
 };
 
 class Log
@@ -47,10 +40,14 @@ private:
 public:
 	Log(std::string name, Logger *logger);
 
-	template <class T>
-	Log& operator<<(const T& v) {
-		*(this->logger) << this->name << ": " << v;
+	Log& operator<<(const char* v) {
+		std::string string_value = std::string(v);
+		*(this->logger) << (this->name + ": " + string_value).c_str();
 
 		return *this;
+	}
+	template <class T>
+	Log& operator<<(const T& v) {
+		return *this << std::to_string(v).c_str();
 	}
 };

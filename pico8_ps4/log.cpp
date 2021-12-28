@@ -1,16 +1,16 @@
 #include "log.h"
-
-#include <netinet/in.h>
 #include <thread>
 
-#define PORT 9025
-
-// extern void debug_text(const char* str);
+#ifdef __PS4__
+#define FILENAME "/data/debug.log"
+#else
+#define FILENAME "debug.log"
+#endif
 
 Logger::Logger()
 {
 	this->buffer = new CircularBuffer<std::string>(100);
-	this->file_handle = fopen("/data/debug.log", "w");
+	this->file_handle = fopen(FILENAME, "w");
 }
 
 Logger::~Logger()
@@ -21,20 +21,12 @@ Logger::~Logger()
 
 Logger& Logger::operator<<(const char* v)
 {
-	printf("%s", v);
-
-	this->mtx.lock();
+	printf("%s\n", v);
 
 	this->buffer->push(v);
 	fputs(v, this->file_handle);
 	fputs("\n", this->file_handle);
 	fflush(this->file_handle);
-
-	if (this->active_client > 0) {
-		send(this->active_client, v, sizeof(v), MSG_NOSIGNAL);
-	}
-
-	this->mtx.unlock();
 
 	return *this;
 }
@@ -42,98 +34,6 @@ Logger& Logger::operator<<(const char* v)
 Log Logger::log(std::string name)
 {
 	return Log(name, this);
-}
-
-std::thread Logger::listen_clients()
-{
-	return std::thread(&Logger::start_server, this);
-}
-
-int Logger::start_server()
-{
-	//debug_text("Starting");
-
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd < 0) {
-		return -1;
-	}
-
-	struct sockaddr_in serverAddr;
-	memset(&serverAddr, 0, sizeof(serverAddr));
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serverAddr.sin_port = htons(PORT);
-
-	//debug_text("Binding");
-	if (bind(sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) != 0)
-	{
-		return -2;
-	}
-
-	if (listen(sockfd, 5) != 0)
-	{
-		//debug_text("Failed to listen");
-		//debug_text(strerror(errno));
-		return -3;
-	}
-
-	struct sockaddr_in clientAddr;
-	socklen_t addrLen = sizeof(clientAddr);
-	for (;;) {
-		//debug_text("Listening");
-		int connfd = accept(sockfd, (struct sockaddr*)&clientAddr, &addrLen);
-
-		if (connfd < 0) {
-			//debug_text("Failed to accept client");
-			//debug_text(strerror(errno));
-			return -1;
-		}
-		//debug_text("Accepted");
-
-		int flag = 1;
-
-		this->mtx.lock();
-
-		if (this->active_client > 0) {
-			/*debug_text("Client is active, checking error");
-			int error = 0;
-			socklen_t len = sizeof(error);
-			int retval = getsockopt(this->active_client, SOL_SOCKET, SO_ERROR, &error, &len);
-			if (retval != 0) {
-				// there was a problem getting the error code
-				debug_text("error getting socket error code");
-				debug_text(strerror(retval));
-				for (;;);
-			}
-
-			if (error != 0) {
-				// socket has a non zero error status
-				debug_text("socket error");
-				debug_text(strerror(retval));
-			}
-			else {*/
-				// debug_text("nothing happened, would send message");
-				// TODO Crashes if the connection is broken, error checking above made no difference. MSG_NOSIGNAL made no difference.
-			const char msg[] = "Another client connected, bye!";
-			send(this->active_client, msg, sizeof(msg), MSG_NOSIGNAL);
-			close(this->active_client);
-			//}
-		}
-
-		this->active_client = connfd;
-
-		const char msg[] = "Hello!";
-		write(this->active_client, msg, sizeof(msg));
-
-		for (int i = 0; i < this->buffer->size(); i++) {
-			std::string logline = this->buffer->get(i);
-			write(this->active_client, logline.c_str(), logline.length());
-		}
-
-		this->mtx.unlock();
-	}
-
-	return 0;
 }
 
 Log::Log(std::string name, Logger *logger)
