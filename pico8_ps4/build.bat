@@ -9,14 +9,13 @@ set PKG_CONTENT_ID="IV0000-BREW34965_00-OLIPS4PICO800000"
 
 Rem Libraries to link in
 set libraries=-lc -lkernel -lc++ -lSceUserService -lSceVideoOut -lSceAudioOut -lScePad -lSceSysmodule -lSceFreeType -lSDL2 -lSDL2_image
-set libraries=!libraries! "-L..\rust-interop-lib\target\x86_64-unknown-freebsd\debug" -lrust_interop_lib
 
-set extra_flags=-I"..\\lua"
+set extra_flags=-I"..\\lua" -D__PS4__
 
 Rem Read the script arguments into local vars
-set intdir=%1
-set targetname=%~2
-set outputPath=%3
+set intdir=ps4_int
+set targetname=pico8_ps4
+set outputPath=..\
 
 set outputElf=%intdir%\%targetname%.elf
 set outputOelf=%intdir%\%targetname%.oelf
@@ -38,9 +37,9 @@ Rem Get a list of object files for linking
 set obj_files=
 
 Rem Lua obj files
-for %%f in (..\lua\%1*.o) do set obj_files=!obj_files! .\%%f
+for %%f in (..\lua\%intdir%\*.o) do set obj_files=!obj_files! .\%%f
 
-for %%f in (%1\\*.o) do set obj_files=!obj_files! .\%%f
+for %%f in (%intdir%\*.o) do set obj_files=!obj_files! .\%%f
 
 
 Rem Link the input ELF

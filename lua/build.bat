@@ -1,7 +1,7 @@
 SETLOCAL EnableDelayedExpansion
 
 Rem Read the script arguments into local vars
-set intdir=%1
+set intdir=ps4_int
 
 @mkdir %intdir%
 
