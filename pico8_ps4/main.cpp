@@ -36,9 +36,13 @@ static int pong(lua_State* L);
 
 extern "C" int hello();
 void debug_text(const char *str);
+Logger logger;
+
 int main(void)
 {
-	Logger logger;
+	std::thread t1 = logger.listen_clients();
+
+	// logger = new Logger();
 	// logger.listen_clients();
 	// std::thread t1(&Logger::start_server, &logger);
 	// Log DEBUGLOG = logger.log("main");
@@ -143,9 +147,8 @@ int main(void)
 	//render(renderer);
 	debug_text("Hello world");
 
-	debug_text("Spawning logger thread");
-
-	std::thread t1(&Logger::start_server, &logger);
+	// debug_text("Spawning logger thread");
+	// std::thread t1(&Logger::start_server, &logger);
 
 	debug_text("Spawned");
 
@@ -208,7 +211,7 @@ int main(void)
 
 int last_line = 0;
 void debug_text(const char *str) {
-	// logger << str;
+	logger << str;
 
 	last_line += 20;
 	if (last_line > FRAME_HEIGHT - 20) {

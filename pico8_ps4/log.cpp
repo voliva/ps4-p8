@@ -10,6 +10,33 @@
 Logger::Logger()
 {
 	this->buffer = new CircularBuffer<std::string>(100);
+	this->file_handle = fopen("/data/debug.log", "w");
+}
+
+Logger::~Logger()
+{
+	delete this->buffer;
+	fclose(this->file_handle);
+}
+
+Logger& Logger::operator<<(const char* v)
+{
+	printf("%s", v);
+
+	this->mtx.lock();
+
+	this->buffer->push(v);
+	fputs(v, this->file_handle);
+	fputs("\n", this->file_handle);
+	fflush(this->file_handle);
+
+	if (this->active_client > 0) {
+		send(this->active_client, v, sizeof(v), MSG_NOSIGNAL);
+	}
+
+	this->mtx.unlock();
+
+	return *this;
 }
 
 Log Logger::log(std::string name)
@@ -17,9 +44,9 @@ Log Logger::log(std::string name)
 	return Log(name, this);
 }
 
-void Logger::listen_clients()
+std::thread Logger::listen_clients()
 {
-	std::thread(&Logger::start_server, this);
+	return std::thread(&Logger::start_server, this);
 }
 
 int Logger::start_server()

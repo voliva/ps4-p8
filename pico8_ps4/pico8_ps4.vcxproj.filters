@@ -54,7 +54,7 @@
     <ClInclude Include="log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="circular_buffer.hpp">
+    <ClInclude Include="circular_buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

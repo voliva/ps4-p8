@@ -5,6 +5,7 @@
 #include <vector>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <stdio.h>
 
 #include "circular_buffer.h"
 
@@ -14,25 +15,14 @@ class Logger
 {
 public:
 	Logger();
+	~Logger();
 
 	Log log(std::string name);
-	void listen_clients();
+	std::thread listen_clients();
 	int start_server();
+	FILE *file_handle;
 
-	Logger& operator<<(const char* v) {
-		printf("%s", v);
-
-		this->mtx.lock();
-
-		this->buffer->push(v);
-		if (this->active_client > 0) {
-			send(this->active_client, v, sizeof(v), MSG_NOSIGNAL);
-		}
-
-		this->mtx.unlock();
-
-		return *this;
-	}
+	Logger& operator<<(const char* v);
 	Logger& operator<<(std::string &v) {
 		return (*this << v.c_str());
 	}

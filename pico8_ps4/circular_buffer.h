@@ -17,7 +17,7 @@ public:
 		this->buffer = new std::vector<T>(capacity);
 	};
 	~CircularBuffer() {
-		delete this->vector;
+		delete this->buffer;
 	};
 	void push(T value) {
 		if (this->length < this->buffer->size()) {
