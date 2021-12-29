@@ -4,9 +4,9 @@
 #include <vector>
 #include <stdio.h>
 
-#include "circular_buffer.h"
-
 class Log;
+
+#define ENDL "\n";
 
 class Logger
 {
@@ -18,36 +18,43 @@ public:
 	FILE *file_handle;
 
 	Logger& operator<<(const char* v);
-	Logger& operator<<(std::string &v) {
-		return (*this << v.c_str());
-	}
+	Logger& operator<<(std::string v);
 	template <class T>
 	Logger& operator<<(const T& v) {
-		std::string string_value = std::to_string(v);
-		return (*this << string_value);
+		return *this << std::to_string(v);
 	}
-
-private:
-	CircularBuffer<std::string> *buffer;
 };
+
+extern Logger logger;
 
 class Log
 {
 private:
 	std::string name;
 	Logger* logger;
+	bool appended_label;
 
 public:
 	Log(std::string name, Logger *logger);
 
-	Log& operator<<(const char* v) {
-		std::string string_value = std::string(v);
-		*(this->logger) << (this->name + ": " + string_value).c_str();
+	Log& operator<<(std::string v) {
+		if (!this->appended_label) {
+			*(this->logger) << this->name << ": ";
+			this->appended_label = true;
+		}
+		*(this->logger) << v;
+
+		if (v.find("\n") != std::string::npos) {
+			this->appended_label = false;
+		}
 
 		return *this;
 	}
+	Log& operator<<(const char* v) {
+		return *this << std::string(v);
+	}
 	template <class T>
 	Log& operator<<(const T& v) {
-		return *this << std::to_string(v).c_str();
+		return *this << std::to_string(v);
 	}
 };

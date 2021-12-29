@@ -3,21 +3,19 @@
 #include <vector>
 #include <map>
 #include <string>
-
-typedef struct {
-	int x;
-	int y;
-} Coord;
+#include <SDL2/SDL.h>
 
 typedef struct {
 	int size;
-	std::vector<Coord> coords;
+	std::vector<SDL_Point> coords;
 } CharData;
 
 class Font
 {
 public:
 	Font();
+	void drawChar(std::string c, int x, int y, SDL_Renderer *renderer);
+	void print(std::string c, int x, int y, SDL_Renderer* renderer);
 
 private:
 	std::map<std::string, CharData> charData;

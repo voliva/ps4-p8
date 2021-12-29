@@ -152,11 +152,14 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="cartridge.cpp" />
     <ClCompile Include="font.cpp" />
     <ClCompile Include="log.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\lib\include\stb\stb_image.h" />
+    <ClInclude Include="cartridge.h" />
     <ClInclude Include="Color.h" />
     <ClInclude Include="font.h" />
     <ClInclude Include="log.h" />

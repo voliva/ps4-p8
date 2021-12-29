@@ -7,28 +7,31 @@
 #define FILENAME "debug.log"
 #endif
 
+Logger logger;
+
 Logger::Logger()
 {
-	this->buffer = new CircularBuffer<std::string>(100);
 	this->file_handle = fopen(FILENAME, "w");
 }
 
 Logger::~Logger()
 {
-	delete this->buffer;
 	fclose(this->file_handle);
 }
 
 Logger& Logger::operator<<(const char* v)
 {
-	printf("%s\n", v);
+	printf("%s", v);
 
-	this->buffer->push(v);
 	fputs(v, this->file_handle);
-	fputs("\n", this->file_handle);
 	fflush(this->file_handle);
 
 	return *this;
+}
+
+Logger& Logger::operator<<(std::string v)
+{
+	return *this << v.c_str();
 }
 
 Log Logger::log(std::string name)

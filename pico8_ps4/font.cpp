@@ -10,10 +10,9 @@
 #define PATH "../assets/misc/p8_font.txt"
 #endif
 
-#include "log.h";
+#include "log.h"
 
 CharData read_next(std::ifstream &file);
-extern Logger logger;
 
 Font::Font()
 {
@@ -25,11 +24,70 @@ Font::Font()
 		if (line != "") {
 			CharData c = read_next(myfile);
 			this->charData[line] = c;
-			logger << (line + " inserted").c_str();
+			// logger << (line + " inserted").c_str();
 		}
 	}
 
 	myfile.close();
+}
+
+void Font::drawChar(std::string c, int x, int y, SDL_Renderer* renderer)
+{
+	if (!this->charData.count(c)) {
+		logger << "Font::drawChar: Couldn't find CharData for " << c << ENDL;
+		return;
+	}
+
+	CharData charData = this->charData[c];
+	// logger << c.c_str() << c.length() << charData.coords.size() << "end";
+
+	if (charData.coords.size() == 0) {
+		// Space :)
+		return;
+	}
+
+	std::vector<SDL_Point> newCoords(charData.coords.size());
+	for (int i = 0; i < charData.coords.size(); i++) {
+		SDL_Point original = charData.coords[i];
+
+		newCoords[i].x = x + original.x;
+		newCoords[i].y = y + original.y;
+	}
+	SDL_RenderDrawPoints(renderer, &newCoords[0], newCoords.size());
+
+	// I think this could be faster
+	//SDL_Rect viewport{};
+	//SDL_RenderGetViewport(renderer, &viewport);
+	//viewport.x += x;
+	//viewport.y += y;
+	//SDL_RenderSetViewport(renderer, &viewport);
+	//SDL_RenderDrawPoints(renderer, &charData.coords[0], charData.coords.size());
+	//viewport.x -= x;
+	//viewport.y -= y;
+	//SDL_RenderSetViewport(renderer, &viewport);
+}
+
+void Font::print(std::string c, int x, int y, SDL_Renderer* renderer)
+{
+	int start = 0;
+
+	while (start < c.length()) {
+		int l = 1;
+		std::string grapheme = c.substr(start, l);
+		// logger << ("orig: " + c + ", trying: " + grapheme).c_str();
+		while (!this->charData.count(grapheme) && l < 8) {
+			l++;
+			grapheme = c.substr(start, l);
+		}
+		if (!this->charData.count(grapheme)) {
+			logger << "Font::print: Couldn't find CharData for " << grapheme << ENDL;
+			return;
+		}
+		CharData c = this->charData[grapheme];
+		this->drawChar(grapheme, x, y, renderer);
+		x += c.size + 1;
+		start += l;
+	}
 }
 
 CharData read_next(std::ifstream& file) {
@@ -37,18 +95,18 @@ CharData read_next(std::ifstream& file) {
 
 	std::string line;
 	int y = 0;
-	int size = 3;
+	ret.size = 3;
 	while (std::getline(file, line)) {
 		if (line == "") {
 			return ret;
 		}
-		if (line.length() > size) {
-			size = 7;
+		if (line.length() > ret.size) {
+			ret.size = 7;
 		}
 
 		for (int x = 0; x < line.length(); x++) {
 			if (line[x] == '#') {
-				Coord c{
+				SDL_Point c{
 					x, y
 				};
 				ret.coords.push_back(c);
