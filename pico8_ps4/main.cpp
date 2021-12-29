@@ -26,6 +26,7 @@ extern "C" {
 }
 
 #include "Color.h"
+#include "font.h"
 #include "log.h"
 
 // Logging
@@ -42,6 +43,7 @@ static int pong(lua_State* L);
 
 int main(void)
 {
+	Font f;
 	Log DEBUGLOG = logger.log("main");
 
 	int rc;
