@@ -153,16 +153,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cartridge.cpp" />
+    <ClCompile Include="events.cpp" />
     <ClCompile Include="font.cpp" />
     <ClCompile Include="log.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
     <ClInclude Include="cartridge.h" />
-    <ClInclude Include="Color.h" />
+    <ClInclude Include="events.h" />
     <ClInclude Include="font.h" />
     <ClInclude Include="log.h" />
+    <ClInclude Include="renderer.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\assets\misc\p8_font.txt" />
