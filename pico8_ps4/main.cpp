@@ -54,43 +54,51 @@ int main(void)
 	float hz = 440;
 	float inc = hz * 2 * M_PI / audio_spec.freq;
 	int AMP = 5000;
+	std::vector<int16_t> sin_buf(audio_spec.freq);
+	std::vector<int16_t> square_buf(audio_spec.freq);
+	std::vector<int16_t> triangle_buf(audio_spec.freq);
+	std::vector<int16_t> sawtooth_buf(audio_spec.freq);
+	std::vector<int16_t> noise_buf(audio_spec.freq);
+
 	for (int i = 0; i < audio_spec.freq * 1; i++) {
 		x += inc;
 
-		// SDL_QueueAudio expects a signed 16-bit value
-		// note: "5000" here is just gain so that we will hear something
 		// SIN
-		int16_t sample = sin(x) * AMP * 1.5;
+		sin_buf[i] = sin(x) * AMP * 1.5;
 
 		// Square
-		/*int16_t sample = 0;
 		if ((int)(x / M_PI) % 2) {
-			sample = AMP;
+			square_buf[i] = AMP;
 		}else{
-			sample = -AMP;
-		}*/
+			square_buf[i] = -AMP;
+		}
 
 		// Triangle
-		/*float mod = fmod(x, 2 * M_PI);
-		int16_t sample = (abs(mod / M_PI - 1) - 0.5) * 2 * AMP * 2;*/
+		float mod = fmod(x, 2 * M_PI);
+		triangle_buf[i] = (abs(mod / M_PI - 1) - 0.5) * 2 * AMP * 2;
 
 		// Sawtooth
-		/*float mod = fmod(x, 2 * M_PI);
-		int16_t sample = (mod / M_PI - 1) * AMP * 2;*/
+		// float mod = fmod(x, 2 * M_PI);
+		sawtooth_buf[i] = (mod / M_PI - 1) * AMP * 2;
 
 		// White noise
-		// int16_t sample = AMP * rand() / RAND_MAX;
-
-		const int sample_size = sizeof(int16_t) * 1;
-		SDL_QueueAudio(audio_device, &sample, sample_size);
+		noise_buf[i] = AMP * rand() / RAND_MAX;
 	}
+
+	// SDL_MixAudio(&sin_buf[0], &triangle_buf[0], audio_spec.freq, 100);
+	const int element_size = sizeof(int16_t) * 1;
+	SDL_QueueAudio(audio_device, &sin_buf[0], audio_spec.freq * element_size);
+	SDL_QueueAudio(audio_device, &triangle_buf[0], audio_spec.freq * element_size);
+	SDL_QueueAudio(audio_device, &square_buf[0], audio_spec.freq * element_size);
+	SDL_QueueAudio(audio_device, &sawtooth_buf[0], audio_spec.freq * element_size);
+	SDL_QueueAudio(audio_device, &noise_buf[0], audio_spec.freq * element_size);
 
 	DEBUGLOG << "Queued, playing" << ENDL;
 	// unpausing the audio device (starts playing):
 	SDL_PauseAudioDevice(audio_device, 0);
 
 	DEBUGLOG << "Wait" << ENDL;
-	SDL_Delay(1000);
+	SDL_Delay(5000);
 	return -1;
 
 	DEBUGLOG << "Close" << ENDL;
