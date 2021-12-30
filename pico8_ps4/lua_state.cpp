@@ -14,6 +14,7 @@ int flr(lua_State* L);
 int srand(lua_State* L);
 int tostr(lua_State* L);
 int sub(lua_State* L);
+int btn(lua_State* L);
 int btnp(lua_State* L);
 int cls(lua_State* L);
 int spr(lua_State* L);
@@ -24,10 +25,13 @@ int tonum(lua_State* L);
 int add(lua_State* L);
 int rectfill(lua_State* L);
 int noop(lua_State* L);
+int time(lua_State* L);
+int type(lua_State* L);
+int rect(lua_State* L);
 
 LuaState::LuaState()
 {
-	srand(time(NULL));
+	srand(std::time(NULL));
 
     this->state = luaL_newstate();
 	this->is60FPS = false;
@@ -44,6 +48,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "sub");
 	lua_pushcfunction(this->state, btnp);
 	lua_setglobal(this->state, "btnp");
+	lua_pushcfunction(this->state, btn);
+	lua_setglobal(this->state, "btn");
 	lua_pushcfunction(this->state, cls);
 	lua_setglobal(this->state, "cls");
 	lua_pushcfunction(this->state, spr);
@@ -64,6 +70,12 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "rectfill");
 	lua_pushcfunction(this->state, noop);
 	lua_setglobal(this->state, "sfx");
+	lua_pushcfunction(this->state, time);
+	lua_setglobal(this->state, "time");
+	lua_pushcfunction(this->state, type);
+	lua_setglobal(this->state, "type");
+	lua_pushcfunction(this->state, rect);
+	lua_setglobal(this->state, "rect");
 
 	std::string all =
 		"function all(t) \
@@ -124,6 +136,48 @@ int rectfill(lua_State* L) {
 	SDL_RenderFillRect(renderer, &rect);
 
 	return 0;
+}
+
+int rect(lua_State* L) {
+	int x0 = luaL_checkinteger(L, 1);
+	int y0 = luaL_checkinteger(L, 2);
+	int x1 = luaL_checkinteger(L, 3);
+	int y1 = luaL_checkinteger(L, 4);
+	int col = luaL_optnumber(L, 5, machineState->getColor());
+
+	machineState->setColor(col);
+	SDL_Rect rect{
+		x0, y0, x1 - x0 + 1, y1 - y0 + 1
+	};
+	SDL_RenderDrawRect(renderer, &rect);
+
+	return 0;
+}
+
+int type(lua_State* L) {
+	if (lua_isnumber(L, 1)) {
+		lua_pushstring(L, "number");
+	} else if (lua_isstring(L, 1)) {
+		lua_pushstring(L, "string");
+	}
+	else if (lua_isboolean(L, 1)) {
+		lua_pushstring(L, "boolean");
+	}
+	else if (lua_istable(L, 1)) {
+		lua_pushstring(L, "table");
+	}
+	else if (lua_isnil(L, 1)) {
+		lua_pushstring(L, "nil");
+	}
+	else {
+		lua_pushstring(L, "unknown");
+	}
+	return 1;
+}
+
+int time(lua_State* L) {
+	lua_pushnumber(L, machineState->getTime());
+	return 1;
 }
 
 LuaState::~LuaState()
@@ -313,6 +367,19 @@ int btnp(lua_State* L) {
 	return 1;
 }
 
+int btn(lua_State* L) {
+	if (lua_isinteger(L, 1)) {
+		int i = luaL_checkinteger(L, 1);
+		int p = luaL_optinteger(L, 2, 0);
+
+		lua_pushboolean(L, machineState->isButtonPressed(p, (P8_Key)i));
+	}
+	else {
+		lua_pushinteger(L, machineState->getButtonsState());
+	}
+	return 1;
+}
+
 int cls(lua_State* L) {
 	int original_color = machineState->getColor();
 	int col = luaL_optinteger(L, 3, 0);
@@ -359,17 +426,17 @@ int cursor(lua_State* L) {
 int print(lua_State* L) {
 	std::string text = luaL_checkstring(L, 1);
 	if (lua_isinteger(L, 4)) {
-		int x = luaL_checkinteger(L, 2);
-		int y = luaL_checkinteger(L, 3);
+		int x = luaL_checknumber(L, 2);
+		int y = luaL_checknumber(L, 3);
 		int col = luaL_checkinteger(L, 4);
 
 		machineState->setColor(col);
 		machineState->print(text, SDL_Point{ x, y });
 		return 0;
 	}
-	if (lua_isinteger(L, 3)) {
-		int x = luaL_checkinteger(L, 2);
-		int y = luaL_checkinteger(L, 3);
+	if (lua_isnumber(L, 3)) {
+		int x = luaL_checknumber(L, 2);
+		int y = luaL_checknumber(L, 3);
 
 		machineState->print(text, SDL_Point { x, y });
 		return 0;

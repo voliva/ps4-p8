@@ -7,10 +7,15 @@ Font f;
 #define DEBUGLOG MachineStateState_DEBUGLOG
 Log DEBUGLOG = logger.log("MachineState");
 
+MachineState::MachineState()
+{
+	this->started = std::chrono::system_clock::now();
+	this->color = 0;
+}
+
 void MachineState::print(std::string& text)
 {
 	this->print(text, this->cursor);
-
 	// TODO scroll
 }
 
@@ -85,4 +90,11 @@ void MachineState::registerFrame()
 			}
 		}
 	}
+}
+
+float MachineState::getTime()
+{
+	auto now = std::chrono::system_clock::now();
+	auto timediff = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->started).count();
+	return (float)timediff / 1000;
 }
