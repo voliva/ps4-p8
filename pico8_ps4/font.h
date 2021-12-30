@@ -15,7 +15,7 @@ class Font
 public:
 	Font();
 	void drawChar(std::string c, int x, int y, SDL_Renderer *renderer);
-	void print(std::string c, int x, int y, SDL_Renderer* renderer);
+	int print(std::string c, int x, int y, SDL_Renderer* renderer);
 
 private:
 	std::map<std::string, CharData> charData;

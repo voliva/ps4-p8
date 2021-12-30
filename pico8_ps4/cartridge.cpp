@@ -8,6 +8,7 @@
 #include <stb/stb_image.h>
 #include <sstream>
 #include <map>
+#include "events.h"
 
 std::string p8lua_to_std_lua(std::string& s);
 std::string decompress_lua(std::vector<unsigned char> &compressed_lua);
@@ -214,6 +215,16 @@ std::string replace_special_chars(std::string& line) {
     return line;
 }
 
+
+std::map<std::string, P8_Key> button_to_key = {
+    {"⬅️", P8_Key::left},
+    {"➡️", P8_Key::right},
+    {"⬆️", P8_Key::up},
+    {"⬇️", P8_Key::down},
+    {"🅾️", P8_Key::circle},
+    {"❎", P8_Key::cross},
+};
+
 const std::string WHITESPACE = " \n\r\t\f\v";
 std::string p8lua_to_std_lua(std::string& s) {
     std::ostringstream out;
@@ -223,22 +234,22 @@ std::string p8lua_to_std_lua(std::string& s) {
     while (std::getline(in, line)) {
         int pos;
 
-        // btn/btnp(x) => btn/btnp("x")
-        pos = 0;
-        while((pos = line.find("btn(", pos)) != std::string::npos) {
-            int pos2 = pos + line.substr(pos+4).find(")");
-            line = line.substr(0, pos + 4) + "\"" + line.substr(pos + 4, pos2) + "\"" + line.substr(pos + 4 + pos2);
-            pos++;
-        }
-        pos = 0;
-        while ((pos = line.find("btnp(", pos)) != std::string::npos) {
-            int pos2 = line.substr(pos + 5).find(")");
-            line = line.substr(0, pos + 5) + "\"" + line.substr(pos + 5, pos2) + "\"" + line.substr(pos + 5 + pos2);
-            pos++;
-        }
-
         // special chars
         line = replace_special_chars(line);
+
+        if (line.find("btn(") != std::string::npos || line.find("btnp(") != std::string::npos) {
+            bool replaced = true;
+            while (replaced) {
+                replaced = false;
+                for (const auto& myPair : button_to_key) {
+                    std::string key = myPair.first;
+                    if ((pos = line.find(key)) != std::string::npos) {
+                        line = line.replace(pos, key.length(), std::to_string((int)button_to_key[key]));
+                        replaced = true;
+                    }
+                }
+            }
+        }
 
         // ?"..." => print("...")
         pos = line.find_first_not_of(WHITESPACE);

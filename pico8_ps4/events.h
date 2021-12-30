@@ -4,7 +4,7 @@
 #include <SDL2/SDL.h>
 
 enum class P8_Key {
-	left = 0, right, up, down, circle, cross
+	left = 0, right, up, down, circle, cross, pause, reserved
 };
 typedef struct {
 	P8_Key key;

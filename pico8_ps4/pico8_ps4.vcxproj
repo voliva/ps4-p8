@@ -156,6 +156,8 @@
     <ClCompile Include="events.cpp" />
     <ClCompile Include="font.cpp" />
     <ClCompile Include="log.cpp" />
+    <ClCompile Include="lua_state.cpp" />
+    <ClCompile Include="machine_state.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="renderer.cpp" />
   </ItemGroup>
@@ -165,6 +167,8 @@
     <ClInclude Include="events.h" />
     <ClInclude Include="font.h" />
     <ClInclude Include="log.h" />
+    <ClInclude Include="lua_state.h" />
+    <ClInclude Include="machine_state.h" />
     <ClInclude Include="renderer.h" />
   </ItemGroup>
   <ItemGroup>

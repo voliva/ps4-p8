@@ -11,6 +11,7 @@
 #endif
 
 #include "log.h"
+#include "machine_state.h" // TODO circular depedency! => It's needed because control codes can change and persist color
 
 CharData read_next(std::ifstream &file);
 
@@ -67,13 +68,46 @@ void Font::drawChar(std::string c, int x, int y, SDL_Renderer* renderer)
 	//SDL_RenderSetViewport(renderer, &viewport);
 }
 
-void Font::print(std::string c, int x, int y, SDL_Renderer* renderer)
+int Font::print(std::string c, int x, int y, SDL_Renderer* renderer)
 {
 	int start = 0;
+	
+	// machine_state will need to know where the next line begins. This can change with modifiers such as \^w \n \^g \| \+
+	int y_offset = 6;
 
 	while (start < c.length()) {
 		int l = 1;
 		std::string grapheme = c.substr(start, l);
+
+		// Inline modifiers https://pico-8.fandom.com/wiki/P8SCII_Control_Codes
+		if (grapheme == "\\") {
+			if (c[start + 1] == '-') {
+				char offset_c = c[start + 2];
+				int offset = 0;
+				if (offset_c <= '9') {
+					offset = (offset_c - '0') - 16;
+				}
+				else {
+					offset = 10 + (offset_c - 'a') - 16;
+				}
+				x += offset;
+				start += 3;
+				continue;
+			}
+		}
+		else if (grapheme == "\f") { // Foreground color
+			char color_c = c[start + 1];
+			int color;
+			if (color_c <= '9')
+				color = color_c - '0';
+			else
+				color = 10 + color_c - 'a';
+
+			machineState->setColor(color);
+			start += 2;
+			continue;
+		}
+
 		// logger << ("orig: " + c + ", trying: " + grapheme).c_str();
 		while (!this->charData.count(grapheme) && l < 8) {
 			l++;
@@ -81,13 +115,17 @@ void Font::print(std::string c, int x, int y, SDL_Renderer* renderer)
 		}
 		if (!this->charData.count(grapheme)) {
 			logger << "Font::print: Couldn't find CharData for " << grapheme << ENDL;
-			return;
+			return y_offset;
 		}
+
+
 		CharData c = this->charData[grapheme];
 		this->drawChar(grapheme, x, y, renderer);
 		x += c.size + 1;
 		start += l;
 	}
+
+	return y_offset;
 }
 
 CharData read_next(std::ifstream& file) {

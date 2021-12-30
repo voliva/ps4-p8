@@ -33,6 +33,12 @@
     <ClCompile Include="events.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="machine_state.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lua_state.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -51,6 +57,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="events.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="machine_state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lua_state.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

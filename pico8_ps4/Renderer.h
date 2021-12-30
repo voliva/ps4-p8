@@ -39,10 +39,12 @@ static SDL_Color PALETTE[] = {
 	SDL_Color { 0xff, 0x00, 0x00, 0xff },
 };
 
-static SDL_Window* window;
-static SDL_Renderer* renderer;
-static SDL_Texture* spritesheet;
+extern SDL_Window* window;
+extern SDL_Renderer* renderer;
+extern SDL_Texture* spritesheet;
 
 bool init_renderer();
 void clear_screen();
 void load_spritesheet(std::vector<unsigned char>& sprite_map);
+void draw_sprite(int n, int x, int y, int w, int h);
+void set_color(int col);

@@ -8,6 +8,10 @@ std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>
 #define DEBUGLOG Renderer_DEBUGLOG
 Log DEBUGLOG = logger.log("renderer");
 
+SDL_Window* window = NULL;
+SDL_Renderer* renderer = NULL;
+SDL_Texture* spritesheet = NULL;
+
 SDL_Rect p8_area{
 	0,0,P8_WIDTH,P8_HEIGHT
 };
@@ -57,6 +61,7 @@ bool init_renderer()
 	SDL_RenderGetViewport(renderer, &viewport);
 	viewport.y = (viewport.h - P8_HEIGHT) / 2;
 	SDL_RenderSetViewport(renderer, &viewport);
+	SDL_RenderSetClipRect(renderer, &p8_area);
 
 	SDL_SetRenderDrawColor(renderer, 0x10, 0x10, 0x10, 0xFF);
 	SDL_RenderClear(renderer);
@@ -84,12 +89,28 @@ void load_spritesheet(std::vector<unsigned char>& sprite_map)
 	SDL_UpdateTexture(spritesheet, NULL, &pixels[0], 4 * 128);
 }
 
+void draw_sprite(int n, int x, int y, int w, int h)
+{
+	SDL_Rect src{
+		(n%16)*8,(n/16)*8,w,h
+	};
+	SDL_Rect dst{
+		x,y,w,h
+	};
+	SDL_RenderCopy(renderer, spritesheet, &src, &dst);
+}
+
+void set_color(int col)
+{
+	SDL_Color c = PALETTE[col];
+	SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+}
+
 #define SPRITESHEET_LENGTH 0x2000
 std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input)
 {
 	// TODO palt to change transparency
 	std::vector<unsigned char> ret(SPRITESHEET_LENGTH * 2 * 4); // Every byte encodes two pixels, each pixel is 4 bytes in RGBA
-	SDL_Color transparent = PALETTE[16];
 
 	int p = 0;
 	for (int i = 0; i < SPRITESHEET_LENGTH; i++) {
