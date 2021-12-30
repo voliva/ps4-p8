@@ -294,7 +294,7 @@ int rnd(lua_State* L) {
 
 int flr(lua_State* L) {
 	double num = luaL_checknumber(L, 1);
-	lua_pushnumber(L, floor(num));
+	lua_pushinteger(L, floor(num));
 	return 1;
 }
 
@@ -310,18 +310,18 @@ int tostr(lua_State* L) {
 	bool useHex = false;
 	if (lua_isboolean(L, 2)) {
 		useHex = lua_toboolean(L, 2);
-	}
+		}
 
-	std::ostringstream buf;
-	if (useHex) {
-		buf << "0x";
-		if (num < 0x1000) {
-			buf << "0";
-		}
-		if (num < 0x100) {
-			buf << "0";
-		}
-		if (num < 0x10) {
+		std::ostringstream buf;
+		if (useHex) {
+			buf << "0x";
+			if (num < 0x1000) {
+				buf << "0";
+			}
+			if (num < 0x100) {
+				buf << "0";
+			}
+			if (num < 0x10) {
 			buf << "0";
 		}
 		buf << std::hex;
@@ -467,14 +467,19 @@ int tonum(lua_State* L) {
 		ss << std::hex << str;
 		int out;
 		ss >> out;
-		lua_pushnumber(L, out);
+		lua_pushinteger(L, out);
 	}
 	else {
 		ss << str;
 		double out;
 		ss >> out;
+		if (str.find(".") != std::string::npos) {
+			lua_pushnumber(L, out);
+		}
+		else {
+			lua_pushinteger(L, out);
 
-		lua_pushnumber(L, out);
+		}
 	}
 
 	return 1;

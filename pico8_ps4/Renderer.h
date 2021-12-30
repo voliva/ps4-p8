@@ -48,3 +48,4 @@ void clear_screen();
 void load_spritesheet(std::vector<unsigned char>& sprite_map);
 void draw_sprite(int n, int x, int y, int w, int h);
 void set_color(int col);
+void clip_outside();

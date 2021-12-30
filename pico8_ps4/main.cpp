@@ -82,6 +82,7 @@ int main(void)
 
 		if (time_debt < ms_per_frame / 2) {
 			luaState.run_draw();
+			clip_outside();
 			SDL_UpdateWindowSurface(window);
 		}
 		else {

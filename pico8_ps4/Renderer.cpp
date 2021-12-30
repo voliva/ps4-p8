@@ -61,7 +61,9 @@ bool init_renderer()
 	SDL_RenderGetViewport(renderer, &viewport);
 	viewport.y = (viewport.h - P8_HEIGHT) / 2;
 	SDL_RenderSetViewport(renderer, &viewport);
-	SDL_RenderSetClipRect(renderer, &p8_area);
+
+    // On PS4 RenderSetClipRect freezes for some reason - workaround will be to manually paint the bounds
+	// SDL_RenderSetClipRect(renderer, &p8_area);
 
 	SDL_SetRenderDrawColor(renderer, 0x10, 0x10, 0x10, 0xFF);
 	SDL_RenderClear(renderer);
@@ -78,6 +80,22 @@ bool init_renderer()
 void clear_screen()
 {
 	SDL_RenderFillRect(renderer, &p8_area);
+}
+
+void clip_outside()
+{
+	unsigned char r, g, b, a;
+	SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
+	SDL_SetRenderDrawColor(renderer, 0x10, 0x10, 0x10, 0xFF);
+	SDL_Rect lower_area {
+		0,P8_HEIGHT,2*P8_WIDTH,P8_HEIGHT
+	};
+	SDL_Rect right_area {
+		P8_WIDTH,0,P8_WIDTH,P8_HEIGHT
+	};
+	SDL_RenderFillRect(renderer, &lower_area);
+	SDL_RenderFillRect(renderer, &right_area);
+	SDL_SetRenderDrawColor(renderer, r, g,b,a);
 }
 
 void load_spritesheet(std::vector<unsigned char>& sprite_map)
