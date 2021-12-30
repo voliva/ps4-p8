@@ -52,7 +52,7 @@ int main(void)
 	// pushing 3 seconds of samples to the audio buffer:
 	float x = 0;
 	float hz = 440;
-	float inc = hz * 2 * M_PI / audio_spec.freq;
+	float inc = hz / audio_spec.freq;
 	int AMP = 5000;
 	std::vector<int16_t> sin_buf(audio_spec.freq);
 	std::vector<int16_t> square_buf(audio_spec.freq);
@@ -64,22 +64,21 @@ int main(void)
 		x += inc;
 
 		// SIN
-		sin_buf[i] = sin(x) * AMP * 1.5;
+		sin_buf[i] = sin(x * M_PI * 2) * AMP * 2;
 
 		// Square
-		if ((int)(x / M_PI) % 2) {
-			square_buf[i] = AMP;
+		if ((int)(x*2) % 2) {
+			square_buf[i] = AMP / 2;
 		}else{
-			square_buf[i] = -AMP;
+			square_buf[i] = -AMP / 2;
 		}
 
 		// Triangle
-		float mod = fmod(x, 2 * M_PI);
-		triangle_buf[i] = (abs(mod / M_PI - 1) - 0.5) * 2 * AMP * 2;
+		float mod = x - floor(x);
+		triangle_buf[i] = (abs(mod*2 - 1) - 0.5) * 2 * AMP * 2;
 
 		// Sawtooth
-		// float mod = fmod(x, 2 * M_PI);
-		sawtooth_buf[i] = (mod / M_PI - 1) * AMP * 2;
+		sawtooth_buf[i] = (mod*2 - 1) * AMP / 2;
 
 		// White noise
 		noise_buf[i] = AMP * rand() / RAND_MAX;
