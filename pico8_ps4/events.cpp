@@ -64,7 +64,7 @@ KeyEvent* mapSdlEvent(SDL_Event& e)
 			P8_Key key = controller_to_key[e.jbutton.button];
 			return new KeyEvent{
 				key,
-				e.jbutton.which,
+				0, // TODO player e.jbutton.which, <= This is not index, it's a device id
 				true
 			};
 		}
@@ -74,7 +74,7 @@ KeyEvent* mapSdlEvent(SDL_Event& e)
 			P8_Key key = controller_to_key[e.jbutton.button];
 			return new KeyEvent{
 				key,
-				e.jbutton.which,
+				0, // TODO player e.jbutton.which,
 				false
 			};
 		}
