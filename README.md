@@ -4,6 +4,8 @@ An emulator to run pico-8 cartridges on a PS4.
 
 Project based on [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain)
 
+Pico-8 is a Fantasy Programmable Console made by Lexaloffe Games. This emulator is compatible with built pico-8 cartridges in PNG format, to build your own games you will need the original [Pico-8 console](https://www.lexaloffle.com/pico-8.php)
+
 ## Status
 
 Not finished - Currently it's complete just enough so that it can run one simple game I made, Minewalker, which is a game inspired by minesweeper. The cartridge is included in assets/misc/minewalker.p8.png:
@@ -17,6 +19,8 @@ Not finished - Currently it's complete just enough so that it can run one simple
 - Memory manipulation: not implemented yet.
 - Maps: not implemented yet.
 - Music: not implemented yet.
+
+When this is finished, one future idea is to have a cartridge explorer where you can just play any cartridge published on the internet.
 
 ## Building
 
