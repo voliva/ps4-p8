@@ -24,75 +24,21 @@ int millisecs_per_frame(bool is60Fps);
 #define DEBUGLOG Main_DEBUGLOG
 Log DEBUGLOG = logger.log("main");
 MachineState* machineState;
+AudioManager* audioManager;
 int main(void)
 {
 	if (!init_renderer()) {
 		return -1;
 	}
 
-	// opening an audio device:
-	SDL_AudioSpec audio_spec;
-	SDL_zero(audio_spec);
-	audio_spec.freq = P8_SAMPLE_RATE;
-	audio_spec.format = AUDIO_S16SYS;
-	audio_spec.channels = 1;
-	audio_spec.samples = 1024;
-	audio_spec.callback = NULL;
-
-	SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
-
-	unsigned int C = audio_get_wavelength(65.41);
-	unsigned int E = audio_get_wavelength(164.81);
-	unsigned int G = audio_get_wavelength(196.00);
-
-	// pushing 3 seconds of samples to the audio buffer:
-	int second = audio_get_points(1);
-	std::vector<float> waveform(8*second);
-	P8_SFX sfx{};
-
-	sfx.speed = 30;
-	for (int i = 0; i < 13; i++) {
-		sfx.notes[i].volume = 5;
-	}
-	sfx.notes[0].pitch = 24;
-	sfx.notes[1].pitch = 26;
-	sfx.notes[2].pitch = 28;
-	sfx.notes[3].pitch = 28;
-	sfx.notes[4].pitch = 31;
-	sfx.notes[5].pitch = 31;
-	sfx.notes[6].pitch = 31;
-	sfx.notes[6].pitch = 31;
-	sfx.notes[7].pitch = 31;
-	sfx.notes[8].pitch = 33;
-	sfx.notes[9].pitch = 31;
-	sfx.notes[10].pitch = 31;
-	sfx.notes[11].pitch = 28;
-	sfx.notes[12].pitch = 28;
-
-	std::vector<int16_t> buf = audio_buffer_from_sfx(sfx);
-
-	DEBUGLOG << buf.size() << ENDL;
-
-	const int element_size = sizeof(int16_t);
-	SDL_QueueAudio(audio_device, &buf[0], buf.size() * element_size);
-
-	DEBUGLOG << "Queued, playing" << ENDL;
-	// unpausing the audio device (starts playing):
-	SDL_PauseAudioDevice(audio_device, 0);
-
-	DEBUGLOG << "Wait" << ENDL;
-
-	SDL_Delay(1000 * buf.size() / P8_SAMPLE_RATE);
-
-	return -1;
-
-	DEBUGLOG << "Close" << ENDL;
-	SDL_CloseAudioDevice(audio_device);
+	DEBUGLOG << "Initializing audio..." << ENDL;
+	audioManager = new AudioManager();
 
 	DEBUGLOG << "Loading cartridge..." << ENDL;
 	Cartridge* r = load_from_png(MINEWALKER);
 
 	load_spritesheet(r->sprite_map);
+	audioManager->loadSfx(r->sfx);
 
 	LuaState luaState;
 	if (!luaState.loadProgram(r->lua)) {

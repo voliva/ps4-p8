@@ -4,6 +4,9 @@
 
 #define M_PI 3.14159265358979323
 
+#define DEBUGLOG Audio_DEBUGLOG
+Log DEBUGLOG = logger.log("audio");
+
 unsigned int audio_get_wavelength(float frequency) {
 	return P8_SAMPLE_RATE / frequency;
 }
@@ -189,8 +192,8 @@ void audio_generate_note(P8_Note& note, std::vector<float>& dest, unsigned int f
 	}
 }
 
-std::vector<int16_t> audio_buffer_from_sfx(P8_SFX &sfx) {
-	int num_notes = 32;
+std::vector<int16_t> *audio_buffer_from_sfx(P8_SFX &sfx) {
+	int num_notes = NOTE_AMOUNT;
 	while (num_notes > 0 && sfx.notes[num_notes - 1].volume == 0) {
 		num_notes--;
 	}
@@ -207,14 +210,97 @@ std::vector<int16_t> audio_buffer_from_sfx(P8_SFX &sfx) {
 		}
 	}
 
-	std::vector<int16_t> result(total_ticks);
+	std::vector<int16_t> *result = new std::vector<int16_t>(total_ticks);
 	for (int n = 0; n < num_notes; n++) {
 		if (sfx.notes[n].volume > 0) {
 			for (int i = 0; i < speed * P8_TICKS_PER_T; i++) {
-				result[n * speed * P8_TICKS_PER_T + i] = sfx.notes[n].volume * floats[n * speed * P8_TICKS_PER_T + i] * 2000;
+				(*result)[n * speed * P8_TICKS_PER_T + i] = sfx.notes[n].volume * floats[n * speed * P8_TICKS_PER_T + i] * 2000;
 			}
 		}
 	}
 
 	return result;
+}
+
+AudioManager::AudioManager()
+{
+	for (int i = 0; i < SFX_AMOUNT; i++) {
+		this->buffers[i] = NULL;
+	}
+
+	SDL_AudioSpec *audio_spec = new SDL_AudioSpec;
+	// SDL_zero(audio_spec);
+	audio_spec->freq = P8_SAMPLE_RATE;
+	audio_spec->format = AUDIO_S16SYS;
+	audio_spec->channels = 1;
+	audio_spec->samples = 1024;
+	audio_spec->callback = NULL;
+
+	this->audio_device = SDL_OpenAudioDevice(NULL, 0, audio_spec, NULL, 0);
+}
+AudioManager::~AudioManager()
+{
+	for (int i = 0; i < SFX_AMOUNT; i++) {
+		if (this->buffers[i] != NULL) {
+			delete this->buffers[i];
+		}
+	}
+
+	SDL_CloseAudioDevice(audio_device);
+}
+
+void AudioManager::loadSfx(std::vector<unsigned char>& sfx_data)
+{
+	for (int i = 0; i < SFX_AMOUNT; i++) {
+		if (this->buffers[i] != NULL) {
+			delete this->buffers[i];
+		}
+	}
+
+	for (int s = 0; s < SFX_AMOUNT; s++) {
+		for (int n = 0; n < NOTE_AMOUNT; n++) {
+			int offset = n * 2 + s * 68;
+			this->sfx[s].notes[n].pitch = sfx_data[offset] & 0x3F;
+			this->sfx[s].notes[n].instrument =
+				sfx_data[offset] >> 6 |
+				((sfx_data[offset + 1] & 0x01) << 2) |
+				((sfx_data[offset + 1] & 0x80) >> 4);
+			this->sfx[s].notes[n].volume = (sfx_data[offset + 1] >> 1) & 0x07;
+			this->sfx[s].notes[n].effect = (sfx_data[offset + 1] >> 4) & 0x07;
+		}
+		unsigned char flags = sfx_data[s * 68 + 64];
+		this->sfx[s].noiz = (flags & 0x2) > 0;
+		this->sfx[s].buzz = (flags & 0x4) > 0;
+		this->sfx[s].detune = flags / 8 % 3;
+		this->sfx[s].reverb = flags / 24 % 3;
+		this->sfx[s].dampen = flags / 72 % 3;
+		this->sfx[s].speed = sfx_data[s * 68 + 64 + 1];
+		this->sfx[s].loopStart = sfx_data[s * 68 + 64 + 2];
+		this->sfx[s].loopEnd = sfx_data[s * 68 + 64 + 3];
+	}
+
+	DEBUGLOG << "speed: " << this->sfx[3].speed << ENDL;
+	for (int n = 0; n < NOTE_AMOUNT; n++) {
+		DEBUGLOG << n
+			<< " pitch: " << this->sfx[3].notes[n].pitch
+			<< " instrument: " << this->sfx[3].notes[n].instrument
+			<< " volume: " << this->sfx[3].notes[n].volume
+			<< " effect: " << this->sfx[3].notes[n].effect
+		<< ENDL;
+	}
+}
+
+// TODO offset + length
+void AudioManager::playSfx(int n, int channel, int offset, int length)
+{
+	if (this->buffers[n] == NULL) {
+		this->buffers[n] = audio_buffer_from_sfx(this->sfx[n]);
+	}
+
+	std::vector<int16_t>* buf = this->buffers[n];
+
+	const int element_size = sizeof(int16_t);
+	SDL_QueueAudio(audio_device, &(*buf)[0], buf->size() * element_size);
+
+	SDL_PauseAudioDevice(audio_device, 0);
 }
