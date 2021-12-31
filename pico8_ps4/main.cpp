@@ -33,68 +33,48 @@ int main(void)
 	// opening an audio device:
 	SDL_AudioSpec audio_spec;
 	SDL_zero(audio_spec);
-	audio_spec.freq = 44100;
+	audio_spec.freq = P8_SAMPLE_RATE;
 	audio_spec.format = AUDIO_S16SYS;
 	audio_spec.channels = 1;
 	audio_spec.samples = 1024;
 	audio_spec.callback = NULL;
 
-	DEBUGLOG << "Open audio device" << ENDL;
-	SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(
-		NULL, 0, &audio_spec, NULL, 0);
-	DEBUGLOG << "Audio opened" << ENDL;
+	SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
 
-	unsigned int C = audio_get_wavelength(130.81, audio_spec.freq);
-	unsigned int E = audio_get_wavelength(164.81, audio_spec.freq);
-	unsigned int G = audio_get_wavelength(196.00, audio_spec.freq);
+	unsigned int C = audio_get_wavelength(65.41);
+	unsigned int E = audio_get_wavelength(164.81);
+	unsigned int G = audio_get_wavelength(196.00);
 
 	// pushing 3 seconds of samples to the audio buffer:
-	int second = audio_get_points(1, audio_spec.freq);
+	int second = audio_get_points(1);
 	std::vector<float> waveform(8*second);
-	std::vector<int16_t> buf(8*second);
+	P8_SFX sfx{};
 
-	//std::vector<float> wave_test(C);
-	//audio_generate_wave(audio_tilted_wave, C, wave_test);
-
-	//for (int i = 0; i < wave_test.size(); i++) {
-	//	DEBUGLOG << wave_test[i] << ", ";
-	//}
-	//DEBUGLOG << ENDL;
-
-	/*for (int i = 0; i < 3 * second; i++) {
-		buf[i] = 5000 * rand() / RAND_MAX;
-	}*/
-	/*audio_generate_noise(C, waveform, 0 * second, 1 * second);
-	audio_generate_noise(E, waveform, 1 * second, 3 * second);
-	audio_generate_noise(G, waveform, 2 * second, 3 * second);*/
-
-	// audio_generate_wave(audio_noise_wave, C, waveform, 0, 50);
-	// audio_generate_wave(audio_sin_wave, C, waveform, 2*E, 4*E);
-	/*for (int i = 0; i < 50; i++) {
-		DEBUGLOG << waveform[i] << ", ";
+	sfx.speed = 30;
+	for (int i = 0; i < 13; i++) {
+		sfx.notes[i].volume = 5;
 	}
-	DEBUGLOG << ENDL;
-	return -1;*/
-	
-	audio_generate_wave(audio_triangle_wave, C, waveform, 0 * second, 1 * second);
-	audio_generate_wave(audio_tilted_wave, C, waveform, 1 * second, 2 * second);
-	audio_generate_wave(audio_sawtooth_wave, C, waveform, 2 * second, 3 * second);
-	audio_generate_wave(audio_square_wave, C, waveform, 3 * second, 4 * second);
-	audio_generate_wave(audio_pulse_wave, C, waveform, 4 * second, 5 * second);
-	audio_generate_wave(audio_organ_wave, C, waveform, 5 * second, 6 * second);
-	audio_generate_noise(C, waveform, 6 * second, 7 * second);
-	audio_generate_phaser_wave(C, waveform, 7 * second, 8 * second);
-	
-	audio_amplify(waveform, buf, 10000);
-	// SDL_MixAudio((Uint8 *) &sin_buf[0], (Uint8*) &triangle_buf[0], audio_spec.freq, 10000);
+	sfx.notes[0].pitch = 24;
+	sfx.notes[1].pitch = 26;
+	sfx.notes[2].pitch = 28;
+	sfx.notes[3].pitch = 28;
+	sfx.notes[4].pitch = 31;
+	sfx.notes[5].pitch = 31;
+	sfx.notes[6].pitch = 31;
+	sfx.notes[6].pitch = 31;
+	sfx.notes[7].pitch = 31;
+	sfx.notes[8].pitch = 33;
+	sfx.notes[9].pitch = 31;
+	sfx.notes[10].pitch = 31;
+	sfx.notes[11].pitch = 28;
+	sfx.notes[12].pitch = 28;
 
-	const int element_size = sizeof(int16_t) * 1;
-	SDL_QueueAudio(audio_device, &buf[0], 8 * second * element_size);
-	// SDL_QueueAudio(audio_device, &triangle_buf[0], audio_spec.freq * element_size);
-	//SDL_QueueAudio(audio_device, &square_buf[0], audio_spec.freq * element_size);
-	//SDL_QueueAudio(audio_device, &sawtooth_buf[0], audio_spec.freq * element_size);
-	//SDL_QueueAudio(audio_device, &noise_buf[0], audio_spec.freq * element_size);
-	//SDL_QueueAudio(audio_device, &noise2_buf[0], audio_spec.freq * element_size);
+	std::vector<int16_t> buf = audio_buffer_from_sfx(sfx);
+
+	DEBUGLOG << buf.size() << ENDL;
+
+	const int element_size = sizeof(int16_t);
+	SDL_QueueAudio(audio_device, &buf[0], buf.size() * element_size);
 
 	DEBUGLOG << "Queued, playing" << ENDL;
 	// unpausing the audio device (starts playing):
@@ -102,7 +82,7 @@ int main(void)
 
 	DEBUGLOG << "Wait" << ENDL;
 
-	SDL_Delay(8000);
+	SDL_Delay(1000 * buf.size() / P8_SAMPLE_RATE);
 
 	return -1;
 

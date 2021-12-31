@@ -2,8 +2,10 @@
 
 #include <vector>;
 
-unsigned int audio_get_wavelength(float frequency, int sample_rate);
-unsigned int audio_get_points(float seconds, int sample_rate); // seconds => ticks
+#define P8_SAMPLE_RATE 22050
+
+unsigned int audio_get_wavelength(float frequency);
+unsigned int audio_get_points(float seconds); // seconds => ticks
 
 // Wave functions
 // phase = 0.0->1.0, returns value between -1.0 and 1.0 representing that wave
@@ -34,3 +36,25 @@ void audio_amplify(std::vector<float>& src, std::vector<int16_t>& dest, unsigned
 //void audio_effect_slide(std::vector<float>& wave);
 //void audio_eaffect_vibrato(std::vector<float>& wave);
 //void audio_effect_drop(std::vector<float>& wave);
+
+typedef struct {
+	unsigned char instrument; // [0-7 default instruments, 8-15 custom instruments]
+	unsigned char volume; // [0-7]
+	unsigned char effect; // [0-7]
+	unsigned char pitch; // [0-63]
+} P8_Note;
+
+#define P8_TICKS_PER_T 183
+typedef struct {
+	bool noiz;
+	bool buzz;
+	char detune;
+	char reverb;
+	char dampen;
+	char speed;
+	char loopStart;
+	char loopEnd;
+	P8_Note notes[32];
+} P8_SFX;
+
+std::vector<int16_t> audio_buffer_from_sfx(P8_SFX &sfx);
