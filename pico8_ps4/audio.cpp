@@ -57,17 +57,29 @@ void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::
 	audio_generate_wave(wave_fn, wavelength, dest, 0, dest.size());
 }
 void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
-	// Avoid jump with the previous wave
-	dest[from] = wave_fn(0);
-	for (unsigned int i = 1; i < from && fabs(dest[from-i] - dest[from-i+1]) >= 0.02; i++) {
-		dest[from - i] = wave_fn(1 - ((float)i / wavelength));
+	int phase_shift = 0;
+	// i => wave_fn((float)((i + phase_shift) % wavelength) / wavelength);
+
+	if (from >= 2) {
+		// Try and phase_shift until we match the previous value with a similar value+slope
+		bool positive_slope = dest[from-1] >= dest[from-2];
+
+		for (phase_shift = 0; phase_shift < wavelength; phase_shift++) {
+			float value = wave_fn((float)phase_shift / wavelength);
+			if (fabs(value - dest[from - 1]) < 0.01) {
+				bool would_be_positive_slope = wave_fn((float)(phase_shift +1) / wavelength) >= value;
+				if (positive_slope == would_be_positive_slope) {
+					break;
+				}
+			}
+		}
 	}
+	logger << phase_shift << ENDL;
 
 	unsigned int len = to - from;
-
 	// Generate the first wave
 	for (unsigned int i = 0; i < wavelength && i < len; i++) {
-		dest[from + i] = wave_fn((float)i / wavelength);
+		dest[from + i] = wave_fn((float)((i + phase_shift) % wavelength) / wavelength);
 	}
 
 	// Copy it until we reach the end

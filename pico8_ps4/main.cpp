@@ -62,18 +62,16 @@ int main(void)
 	//DEBUGLOG << ENDL;
 
 	audio_generate_wave(audio_triangle_wave, C, waveform, 0 * second, 1*second);
-	audio_generate_wave(audio_triangle_wave, E, waveform, 1 * second + C, 2 * second);
-	audio_generate_wave(audio_triangle_wave, G, waveform, 2 * second + C, 3 * second);
+	audio_generate_wave(audio_triangle_wave, E, waveform, 1 * second, 2 * second);
+	audio_generate_wave(audio_triangle_wave, G, waveform, 2 * second, 3 * second);
+
 	// audio_smooth(waveform, 1 * second);
-
-	//audio_generate_wave(audio_sin_wave, C, waveform, 0, E);
-	//audio_generate_wave(audio_sin_wave, C, waveform, E, 2 * E);
-
+	//audio_generate_wave(audio_sin_wave, C, waveform, 0, 2*E);
+	//audio_generate_wave(audio_sin_wave, C, waveform, 2*E, 4*E);
 	//for (int i = 0; i < 2*E; i++) {
 	//	DEBUGLOG << waveform[i] << ", ";
 	//}
 	//DEBUGLOG << ENDL;
-
 	//return -1;
 	
 	// audio_generate_wave(audio_organ_wave, C, waveform, 2 * second / 2, 3 * second / 2);
