@@ -88,20 +88,23 @@ void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::
 		dest[from + i] = dest[from + (i % wavelength)];
 	}
 }
+
+float audio_phaser_wave(float phase) {
+	return audio_triangle_wave(phase) * 0.9 + 0.09 * audio_triangle_wave(fmod(phase * 30, 1)) + 0.01 * audio_triangle_wave(fmod(phase * 40, 1));
+}
+
 void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest) {
 	audio_generate_phaser_wave(wavelength, dest, 0, dest.size());
 }
 void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
+	audio_generate_wave(audio_phaser_wave, wavelength, dest, from, to);
+	/*audio_generate_wave(audio_triangle_wave, wavelength, dest, from, to);
+
 	unsigned int len = to - from;
-	// Generate the first wave
-	for (unsigned int i = 0; i < wavelength && i < len; i++) {
-		dest[from + i] = audio_triangle_wave((float)i / wavelength);
-	}
-	// Copy it until we reach the end
-	for (unsigned int i = wavelength; i < len; i++) {
-		float a_m = (cos(i / 90 * 2 * M_PI) + 1) / 4 + 0.5;
-		dest[from + i] = dest[from + i % wavelength] * a_m;
-	}
+	for (unsigned int i = 0; i < len; i++) {
+		float a_m = (cos(2 * M_PI * i / (90 * wavelength)) + 1) / 4 + 0.5;
+		dest[from + i] = dest[from + i] * a_m;
+	}*/
 }
 
 void audio_amplify(std::vector<float>& src, std::vector<int16_t>& dest, unsigned int volume) {

@@ -61,18 +61,17 @@ int main(void)
 	//}
 	//DEBUGLOG << ENDL;
 
-	audio_generate_wave(audio_triangle_wave, C, waveform, 0 * second, 1*second);
-	audio_generate_wave(audio_triangle_wave, C, waveform, 1 * second, 2 * second);
-	audio_generate_wave(audio_triangle_wave, C, waveform, 2 * second, 3 * second);
+	audio_generate_wave(audio_noise_wave, C, waveform, 0 * second, 3*second);
+	// audio_generate_phaser_wave(C, waveform, 1 * second, 3 * second);
+	// audio_generate_phaser_wave(C, waveform, 2 * second, 3 * second);
 
-	// audio_smooth(waveform, 1 * second);
-	//audio_generate_wave(audio_sin_wave, C, waveform, 0, 2*E);
-	//audio_generate_wave(audio_sin_wave, C, waveform, 2*E, 4*E);
-	//for (int i = 0; i < 2*E; i++) {
-	//	DEBUGLOG << waveform[i] << ", ";
-	//}
-	//DEBUGLOG << ENDL;
-	//return -1;
+	// audio_generate_wave(audio_noise_wave, C, waveform, 0, 50);
+	// audio_generate_wave(audio_sin_wave, C, waveform, 2*E, 4*E);
+	/*for (int i = 0; i < 50; i++) {
+		DEBUGLOG << waveform[i] << ", ";
+	}
+	DEBUGLOG << ENDL;
+	return -1;*/
 	
 	// audio_generate_wave(audio_organ_wave, C, waveform, 2 * second / 2, 3 * second / 2);
 	// audio_smooth(waveform, 2 * second / 2);
@@ -84,7 +83,7 @@ int main(void)
 	//audio_generate_phaser_wave(C, waveform, 5 * second / 2, 6 * second / 2);
 	//audio_smooth(waveform, 5 * second / 2);
 
-	audio_amplify(waveform, buf, 10000);
+	audio_amplify(waveform, buf, 1000);
 	// SDL_MixAudio((Uint8 *) &sin_buf[0], (Uint8*) &triangle_buf[0], audio_spec.freq, 10000);
 
 	const int element_size = sizeof(int16_t) * 1;
