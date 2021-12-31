@@ -57,31 +57,22 @@ void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::
 	audio_generate_wave(wave_fn, wavelength, dest, 0, dest.size());
 }
 void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
+	// Avoid jump with the previous wave
+	dest[from] = wave_fn(0);
+	for (unsigned int i = 1; i < from && fabs(dest[from-i] - dest[from-i+1]) >= 0.02; i++) {
+		dest[from - i] = wave_fn(1 - ((float)i / wavelength));
+	}
+
 	unsigned int len = to - from;
+
 	// Generate the first wave
 	for (unsigned int i = 0; i < wavelength && i < len; i++) {
 		dest[from + i] = wave_fn((float)i / wavelength);
 	}
 
-	if (from > wavelength) {
-		// fade in one wavelength
-		for (unsigned int i = 0; i < wavelength; i++) {
-			float f = (float)i / wavelength;
-			dest[from-wavelength+i] += wave_fn((float)i / wavelength) * f;
-		}
-	}
-
 	// Copy it until we reach the end
 	for (unsigned int i = wavelength; i < len; i++) {
 		dest[from + i] = dest[from + (i % wavelength)];
-	}
-
-	if (to + wavelength < dest.size()) {
-		// fade out one wavelength
-		for (unsigned int i = len; i < len+wavelength; i++) {
-			float f = (float)(wavelength - (i - len)) / wavelength;
-			dest[from + i] = wave_fn((float)(i % wavelength) / wavelength) * f;
-		}
 	}
 }
 void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest) {
