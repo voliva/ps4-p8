@@ -49,22 +49,32 @@ int main(void)
 	std::vector<float> waveform(3*second);
 	std::vector<int16_t> buf(3*second);
 
+
 	unsigned int C = audio_get_wavelength(130.81, audio_spec.freq);
 	unsigned int E = audio_get_wavelength(164.81, audio_spec.freq);
 	unsigned int G = audio_get_wavelength(196.00, audio_spec.freq);
-	audio_generate_wave(audio_triangle_wave, C, waveform, 0 * second / 2, 1 * second / 2);
-	audio_generate_wave(audio_triangle_wave, E, waveform, 1 * second / 2, 2 * second / 2);
+
+	//std::vector<float> wave_test(C);
+	//audio_generate_wave(audio_tilted_wave, C, wave_test);
+
+	//for (int i = 0; i < wave_test.size(); i++) {
+	//	DEBUGLOG << wave_test[i] << ", ";
+	//}
+	//DEBUGLOG << ENDL;
+
+	audio_generate_wave(audio_organ_wave, C, waveform, 0 * second / 2, 1 * second / 2);
+	audio_generate_wave(audio_organ_wave, C, waveform, 1 * second / 2, 2 * second / 2);
 	audio_smooth(waveform, 1 * second / 2);
-	audio_generate_wave(audio_triangle_wave, G, waveform, 2 * second / 2, 3 * second / 2);
+	audio_generate_wave(audio_organ_wave, C, waveform, 2 * second / 2, 3 * second / 2);
 	audio_smooth(waveform, 2 * second / 2);
-	audio_generate_wave(audio_triangle_wave, C, waveform, 3 * second / 2, 4 * second / 2);
+	//audio_generate_phaser_wave(C, waveform, 3 * second / 2, 4 * second / 2);
 	audio_smooth(waveform, 3 * second / 2);
-	audio_generate_wave(audio_triangle_wave, E, waveform, 4 * second / 2, 5 * second / 2);
+	//audio_generate_phaser_wave(C, waveform, 4 * second / 2, 5 * second / 2);
 	audio_smooth(waveform, 4 * second / 2);
-	audio_generate_wave(audio_triangle_wave, G, waveform, 5 * second / 2, 6 * second / 2);
+	//audio_generate_phaser_wave(C, waveform, 5 * second / 2, 6 * second / 2);
 	audio_smooth(waveform, 5 * second / 2);
 
-	audio_amplify(waveform, buf, 5000);
+	audio_amplify(waveform, buf, 10000);
 	// SDL_MixAudio((Uint8 *) &sin_buf[0], (Uint8*) &triangle_buf[0], audio_spec.freq, 10000);
 
 	const int element_size = sizeof(int16_t) * 1;

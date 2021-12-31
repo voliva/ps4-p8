@@ -15,11 +15,12 @@ float audio_square_wave(float phase);
 float audio_pulse_wave(float phase);
 float audio_organ_wave(float phase);
 float audio_noise_wave(float phase);
-float audio_phaser_wave(float phase);
 
 // Wave generators
 void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest);
 void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to);
+void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest);
+void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to);
 void audio_smooth(std::vector<float>& dest, unsigned int position);
 void audio_amplify(std::vector<float>& src, std::vector<int16_t>& dest, unsigned int volume);
 void audio_amplify(std::vector<float>& src, std::vector<int16_t>& dest, unsigned int volume, unsigned int from);
