@@ -1,5 +1,6 @@
 #include "audio.h"
 #include <math.h>
+#include "log.h"
 
 #define M_PI 3.14159265358979323
 
@@ -61,9 +62,26 @@ void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::
 	for (unsigned int i = 0; i < wavelength && i < len; i++) {
 		dest[from + i] = wave_fn((float)i / wavelength);
 	}
+
+	if (from > wavelength) {
+		// fade in one wavelength
+		for (unsigned int i = 0; i < wavelength; i++) {
+			float f = (float)i / wavelength;
+			dest[from-wavelength+i] += wave_fn((float)i / wavelength) * f;
+		}
+	}
+
 	// Copy it until we reach the end
 	for (unsigned int i = wavelength; i < len; i++) {
-		dest[from + i] = dest[from + i % wavelength];
+		dest[from + i] = dest[from + (i % wavelength)];
+	}
+
+	if (to + wavelength < dest.size()) {
+		// fade out one wavelength
+		for (unsigned int i = len; i < len+wavelength; i++) {
+			float f = (float)(wavelength - (i - len)) / wavelength;
+			dest[from + i] = wave_fn((float)(i % wavelength) / wavelength) * f;
+		}
 	}
 }
 void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest) {
@@ -82,12 +100,22 @@ void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& des
 	}
 }
 
-#define SMOOTHNESS 100
+#define SMOOTHNESS 1000
 void audio_smooth(std::vector<float>& dest, unsigned int position) {
-	float start = dest[position - SMOOTHNESS / 2];
+	/*float start = dest[position - SMOOTHNESS / 2];
 	float end = dest[position + SMOOTHNESS / 2];
 	for (int i = 0; i < SMOOTHNESS; i++) {
 		dest[position + i - SMOOTHNESS / 2] = start + (end - start) * i / SMOOTHNESS;
+	}*/
+	std::vector<float> left(SMOOTHNESS);
+	for (int i = 0; i < SMOOTHNESS; i++) {
+		left[i] = dest[position - SMOOTHNESS + i];
+		float f = (float)i / SMOOTHNESS / 2;
+		dest[position - SMOOTHNESS + i] = (1-f) * dest[position - SMOOTHNESS + i] + f * dest[position + SMOOTHNESS - i];
+	}
+	for (int i = 0; i < SMOOTHNESS; i++) {
+		float f = (float)i / SMOOTHNESS / 2 + 0.5;
+		dest[position + i] = f * dest[position + i] + (1-f) * left[SMOOTHNESS - i - 1];
 	}
 }
 
