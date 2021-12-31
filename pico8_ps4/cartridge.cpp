@@ -221,18 +221,23 @@ std::map<unsigned char, std::string> special_char_replacement = {
     {152, "▤"},
     // Missing vertical lines
 };
+
+#include <algorithm>
 std::string replace_special_chars(std::string& line) {
-    /*for (std::map<unsigned char, std::string>::iterator iter = special_char_replacement.begin(); iter != special_char_replacement.end(); iter++)
-    {
-        unsigned char k = iter->first;
-    }*/
+    std::vector<std::pair<unsigned char, std::string>> replacements;
     for (const auto& myPair : special_char_replacement) {
         unsigned char key = myPair.first;
         int pos = line.find(key);
         if (pos != std::string::npos) {
-            line.replace(pos, 1, special_char_replacement[key]);
+            replacements.push_back({ pos, special_char_replacement[key] });
         }
     }
+
+    std::sort(replacements.begin(), replacements.end(), [](auto a, auto b) { return a.first > b.first; });
+    for (int i = 0; i < replacements.size(); i++) {
+        line.replace(replacements[i].first, 1, replacements[i].second);
+    }
+
     return line;
 }
 
@@ -348,6 +353,27 @@ std::string p8lua_to_std_lua(std::string& s) {
             int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
 
             line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "*" + line.substr(pos + 2);
+        }
+
+        // if (condition) something => if (condition) then something end
+        if ((pos = line.find("if")) != std::string::npos &&
+            line.find("then", pos) == std::string::npos &&
+            (pos = line.find("(", pos)) != std::string::npos) {
+            // Look for closing )
+            int stack = 1;
+            pos++;
+            while (pos < line.length() && stack > 0) {
+                if (line[pos] == '(') {
+                    stack++;
+                }
+                if (line[pos] == ')') {
+                    stack--;
+                }
+                pos++;
+            }
+            if (pos < line.length()) {
+                line = line.replace(pos, 0, " then ") + " end";
+            }
         }
 
         out << line << ENDL;

@@ -37,20 +37,28 @@ int main(void)
 	DEBUGLOG << "Loading cartridge..." << ENDL;
 	Cartridge* r = load_from_png(MINEWALKER);
 
+	DEBUGLOG << "Parsing spritesheet" << ENDL;
 	load_spritesheet(r->sprite_map);
+
+	DEBUGLOG << "Loading SFX" << ENDL;
 	audioManager->loadSfx(r->sfx);
 
 	LuaState luaState;
+
+	DEBUGLOG << "Loading LUA" << ENDL;
 	if (!luaState.loadProgram(r->lua)) {
 		DEBUGLOG << "Failed loading lua code from cartridge" << ENDL;
 		return -1;
 	}
 	machineState = new MachineState();
+
+	DEBUGLOG << "Run _init" << ENDL;
 	luaState.run_init();
 
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)
 	{
+		DEBUGLOG << "Initialize joysticks" << ENDL;
 		SDL_JoystickOpen(0);
 	}
 

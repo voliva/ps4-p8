@@ -78,6 +78,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "type");
 	lua_pushcfunction(this->state, rect);
 	lua_setglobal(this->state, "rect");
+	lua_pushcfunction(this->state, noop);
+	lua_setglobal(this->state, "poke");
 
 	std::string all =
 		"function all(t) \
@@ -203,6 +205,7 @@ bool LuaState::loadProgram(std::string& program)
     int error = luaL_loadbuffer(this->state, program.c_str(), program.length(), "program") || lua_pcall(this->state, 0, 0, 0);
 
 	if (error) {
+		// DEBUGLOG << program << ENDL;
 		std::string e = lua_tostring(this->state, -1);
 		lua_pop(this->state, 1);  // pop error message from the stack *
 		DEBUGLOG << e << ENDL;
