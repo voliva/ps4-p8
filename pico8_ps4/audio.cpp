@@ -89,15 +89,43 @@ void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::
 	}
 }
 
-float audio_phaser_wave(float phase) {
-	return audio_triangle_wave(phase) * 0.9 + 0.09 * audio_triangle_wave(fmod(phase * 30, 1)) + 0.01 * audio_triangle_wave(fmod(phase * 40, 1));
+// TODO
+void audio_generate_noise(unsigned int wavelength, std::vector<float>& dest) {
+	audio_generate_noise(wavelength, dest, 0, dest.size());
+}
+void audio_generate_noise(unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
+	unsigned int len = to - from;
+
+	for (int i = 0; i < len; i++) {
+		dest[from + i] = 2.0 * rand() / RAND_MAX - 1.0;
+	}
+
+	/*int step = 10;
+	float prev = 0;
+	for (int s = 0; s <= len / step; s++) {
+		float target = 2.0 * rand() / RAND_MAX - 1.0;
+		for (int i = 0; i < step && (s*step + i) < len; i++) {
+			dest[from + s * step + i] = prev + (i+1) * (target - prev) / step;
+		}
+		prev = target;
+	}*/
+
+	/*
+	float f = 1;
+	for (int i = 0; i < len; i++) {
+		dest[from+i] = 2.0 * rand() / RAND_MAX - 1.0;
+		if (i > 0) {
+			dest[from + i] = (dest[from + i - 1] + f * (dest[from + i] - dest[from + i - 1])) / f;
+		}
+	}*/
 }
 
+// TODO
 void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest) {
 	audio_generate_phaser_wave(wavelength, dest, 0, dest.size());
 }
 void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
-	audio_generate_wave(audio_phaser_wave, wavelength, dest, from, to);
+	audio_generate_wave(audio_triangle_wave, wavelength, dest, from, to);
 	/*audio_generate_wave(audio_triangle_wave, wavelength, dest, from, to);
 
 	unsigned int len = to - from;

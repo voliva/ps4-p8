@@ -50,8 +50,8 @@ int main(void)
 
 	// pushing 3 seconds of samples to the audio buffer:
 	int second = audio_get_points(1, audio_spec.freq);
-	std::vector<float> waveform(3*second);
-	std::vector<int16_t> buf(3*second);
+	std::vector<float> waveform(8*second);
+	std::vector<int16_t> buf(8*second);
 
 	//std::vector<float> wave_test(C);
 	//audio_generate_wave(audio_tilted_wave, C, wave_test);
@@ -61,9 +61,12 @@ int main(void)
 	//}
 	//DEBUGLOG << ENDL;
 
-	audio_generate_wave(audio_noise_wave, C, waveform, 0 * second, 3*second);
-	// audio_generate_phaser_wave(C, waveform, 1 * second, 3 * second);
-	// audio_generate_phaser_wave(C, waveform, 2 * second, 3 * second);
+	/*for (int i = 0; i < 3 * second; i++) {
+		buf[i] = 5000 * rand() / RAND_MAX;
+	}*/
+	/*audio_generate_noise(C, waveform, 0 * second, 1 * second);
+	audio_generate_noise(E, waveform, 1 * second, 3 * second);
+	audio_generate_noise(G, waveform, 2 * second, 3 * second);*/
 
 	// audio_generate_wave(audio_noise_wave, C, waveform, 0, 50);
 	// audio_generate_wave(audio_sin_wave, C, waveform, 2*E, 4*E);
@@ -73,21 +76,20 @@ int main(void)
 	DEBUGLOG << ENDL;
 	return -1;*/
 	
-	// audio_generate_wave(audio_organ_wave, C, waveform, 2 * second / 2, 3 * second / 2);
-	// audio_smooth(waveform, 2 * second / 2);
-	//audio_smooth(waveform, 2 * second / 2);
-	//audio_generate_phaser_wave(C, waveform, 3 * second / 2, 4 * second / 2);
-	//audio_smooth(waveform, 3 * second / 2);
-	//audio_generate_phaser_wave(C, waveform, 4 * second / 2, 5 * second / 2);
-	//audio_smooth(waveform, 4 * second / 2);
-	//audio_generate_phaser_wave(C, waveform, 5 * second / 2, 6 * second / 2);
-	//audio_smooth(waveform, 5 * second / 2);
-
-	audio_amplify(waveform, buf, 1000);
+	audio_generate_wave(audio_triangle_wave, C, waveform, 0 * second, 1 * second);
+	audio_generate_wave(audio_tilted_wave, C, waveform, 1 * second, 2 * second);
+	audio_generate_wave(audio_sawtooth_wave, C, waveform, 2 * second, 3 * second);
+	audio_generate_wave(audio_square_wave, C, waveform, 3 * second, 4 * second);
+	audio_generate_wave(audio_pulse_wave, C, waveform, 4 * second, 5 * second);
+	audio_generate_wave(audio_organ_wave, C, waveform, 5 * second, 6 * second);
+	audio_generate_noise(C, waveform, 6 * second, 7 * second);
+	audio_generate_phaser_wave(C, waveform, 7 * second, 8 * second);
+	
+	audio_amplify(waveform, buf, 10000);
 	// SDL_MixAudio((Uint8 *) &sin_buf[0], (Uint8*) &triangle_buf[0], audio_spec.freq, 10000);
 
 	const int element_size = sizeof(int16_t) * 1;
-	SDL_QueueAudio(audio_device, &buf[0], 3 * second * element_size);
+	SDL_QueueAudio(audio_device, &buf[0], 8 * second * element_size);
 	// SDL_QueueAudio(audio_device, &triangle_buf[0], audio_spec.freq * element_size);
 	//SDL_QueueAudio(audio_device, &square_buf[0], audio_spec.freq * element_size);
 	//SDL_QueueAudio(audio_device, &sawtooth_buf[0], audio_spec.freq * element_size);
@@ -100,7 +102,7 @@ int main(void)
 
 	DEBUGLOG << "Wait" << ENDL;
 
-	SDL_Delay(3000);
+	SDL_Delay(8000);
 
 	return -1;
 
