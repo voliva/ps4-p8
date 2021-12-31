@@ -5,6 +5,7 @@
 #include <sstream>
 #include "renderer.h"
 #include "machine_state.h"
+#include "audio.h"
 
 #define DEBUGLOG LuaState_DEBUGLOG
 Log DEBUGLOG = logger.log("LuaState");
@@ -28,6 +29,7 @@ int noop(lua_State* L);
 int time(lua_State* L);
 int type(lua_State* L);
 int rect(lua_State* L);
+int sfx(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -68,7 +70,7 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "menuitem");
 	lua_pushcfunction(this->state, rectfill);
 	lua_setglobal(this->state, "rectfill");
-	lua_pushcfunction(this->state, noop);
+	lua_pushcfunction(this->state, sfx);
 	lua_setglobal(this->state, "sfx");
 	lua_pushcfunction(this->state, time);
 	lua_setglobal(this->state, "time");
@@ -104,6 +106,17 @@ LuaState::LuaState()
 		end";
 	luaL_loadbuffer(this->state, max.c_str(), max.length(), "max");
 	lua_pcall(this->state, 0, 0, 0);
+}
+
+int sfx(lua_State* L) {
+	int n = luaL_checkinteger(L, 1);
+	int channel = luaL_optinteger(L, 2, -1);
+	int offset = luaL_optinteger(L, 3, 0);
+	int length = luaL_optinteger(L, 4, 31);
+
+	audioManager->playSfx(n, channel, offset, length);
+
+	return 0;
 }
 
 int add(lua_State* L) {

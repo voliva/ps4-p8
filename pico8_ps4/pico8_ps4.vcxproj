@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -152,6 +152,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="audio.cpp" />
     <ClCompile Include="cartridge.cpp" />
     <ClCompile Include="events.cpp" />
     <ClCompile Include="font.cpp" />
@@ -163,6 +164,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
+    <ClInclude Include="audio.h" />
     <ClInclude Include="cartridge.h" />
     <ClInclude Include="events.h" />
     <ClInclude Include="font.h" />

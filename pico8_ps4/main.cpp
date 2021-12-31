@@ -10,6 +10,8 @@
 #include "events.h"
 #include "lua_state.h"
 #include "machine_state.h"
+#include <math.h>
+#include "audio.h"
 
 #ifdef __PS4__
 #define MINEWALKER "/app0/assets/misc/minewalker.p8.png"
@@ -22,16 +24,21 @@ int millisecs_per_frame(bool is60Fps);
 #define DEBUGLOG Main_DEBUGLOG
 Log DEBUGLOG = logger.log("main");
 MachineState* machineState;
+AudioManager* audioManager;
 int main(void)
 {
 	if (!init_renderer()) {
 		return -1;
 	}
 
+	DEBUGLOG << "Initializing audio..." << ENDL;
+	audioManager = new AudioManager();
+
 	DEBUGLOG << "Loading cartridge..." << ENDL;
 	Cartridge* r = load_from_png(MINEWALKER);
 
 	load_spritesheet(r->sprite_map);
+	audioManager->loadSfx(r->sfx);
 
 	LuaState luaState;
 	if (!luaState.loadProgram(r->lua)) {

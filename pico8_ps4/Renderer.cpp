@@ -21,7 +21,7 @@ bool init_renderer()
 	// Initialize SDL functions
 	DEBUGLOG << "Initializing SDL" << ENDL;
 
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO) != 0)
 	{
 		DEBUGLOG << "Failed to initialize SDL: " << SDL_GetError() << ENDL;
 		return false;
