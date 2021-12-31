@@ -11,6 +11,7 @@
 #include "lua_state.h"
 #include "machine_state.h"
 #include <math.h>
+#include "audio.h"
 
 #ifdef __PS4__
 #define MINEWALKER "/app0/assets/misc/minewalker.p8.png"
@@ -25,15 +26,9 @@ Log DEBUGLOG = logger.log("main");
 MachineState* machineState;
 int main(void)
 {
-	DEBUGLOG << "Initialize" << ENDL;
 	if (!init_renderer()) {
 		return -1;
 	}
-
-	DEBUGLOG << "Initialized" << ENDL;
-
-	// the representation of our audio device in SDL:
-	SDL_AudioDeviceID audio_device;
 
 	// opening an audio device:
 	SDL_AudioSpec audio_spec;
@@ -45,59 +40,49 @@ int main(void)
 	audio_spec.callback = NULL;
 
 	DEBUGLOG << "Open audio device" << ENDL;
-	audio_device = SDL_OpenAudioDevice(
+	SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(
 		NULL, 0, &audio_spec, NULL, 0);
-	DEBUGLOG << "Opened? " << audio_device << ENDL;
+	DEBUGLOG << "Audio opened" << ENDL;
 
 	// pushing 3 seconds of samples to the audio buffer:
-	float x = 0;
-	float hz = 440;
-	float inc = hz / audio_spec.freq;
-	int AMP = 5000;
-	std::vector<int16_t> sin_buf(audio_spec.freq);
-	std::vector<int16_t> square_buf(audio_spec.freq);
-	std::vector<int16_t> triangle_buf(audio_spec.freq);
-	std::vector<int16_t> sawtooth_buf(audio_spec.freq);
-	std::vector<int16_t> noise_buf(audio_spec.freq);
+	int second = audio_get_points(1, audio_spec.freq);
+	std::vector<float> waveform(3*second);
+	std::vector<int16_t> buf(3*second);
 
-	for (int i = 0; i < audio_spec.freq * 1; i++) {
-		x += inc;
+	unsigned int C = audio_get_wavelength(130.81, audio_spec.freq);
+	unsigned int E = audio_get_wavelength(164.81, audio_spec.freq);
+	unsigned int G = audio_get_wavelength(196.00, audio_spec.freq);
+	audio_generate_wave(audio_triangle_wave, C, waveform, 0 * second / 2, 1 * second / 2);
+	audio_generate_wave(audio_triangle_wave, E, waveform, 1 * second / 2, 2 * second / 2);
+	audio_smooth(waveform, 1 * second / 2);
+	audio_generate_wave(audio_triangle_wave, G, waveform, 2 * second / 2, 3 * second / 2);
+	audio_smooth(waveform, 2 * second / 2);
+	audio_generate_wave(audio_triangle_wave, C, waveform, 3 * second / 2, 4 * second / 2);
+	audio_smooth(waveform, 3 * second / 2);
+	audio_generate_wave(audio_triangle_wave, E, waveform, 4 * second / 2, 5 * second / 2);
+	audio_smooth(waveform, 4 * second / 2);
+	audio_generate_wave(audio_triangle_wave, G, waveform, 5 * second / 2, 6 * second / 2);
+	audio_smooth(waveform, 5 * second / 2);
 
-		// SIN
-		sin_buf[i] = sin(x * M_PI * 2) * AMP * 2;
+	audio_amplify(waveform, buf, 5000);
+	// SDL_MixAudio((Uint8 *) &sin_buf[0], (Uint8*) &triangle_buf[0], audio_spec.freq, 10000);
 
-		// Square
-		if ((int)(x*2) % 2) {
-			square_buf[i] = AMP / 2;
-		}else{
-			square_buf[i] = -AMP / 2;
-		}
-
-		// Triangle
-		float mod = x - floor(x);
-		triangle_buf[i] = (abs(mod*2 - 1) - 0.5) * 2 * AMP * 2;
-
-		// Sawtooth
-		sawtooth_buf[i] = (mod*2 - 1) * AMP / 2;
-
-		// White noise
-		noise_buf[i] = AMP * rand() / RAND_MAX;
-	}
-
-	// SDL_MixAudio(&sin_buf[0], &triangle_buf[0], audio_spec.freq, 100);
 	const int element_size = sizeof(int16_t) * 1;
-	SDL_QueueAudio(audio_device, &sin_buf[0], audio_spec.freq * element_size);
-	SDL_QueueAudio(audio_device, &triangle_buf[0], audio_spec.freq * element_size);
-	SDL_QueueAudio(audio_device, &square_buf[0], audio_spec.freq * element_size);
-	SDL_QueueAudio(audio_device, &sawtooth_buf[0], audio_spec.freq * element_size);
-	SDL_QueueAudio(audio_device, &noise_buf[0], audio_spec.freq * element_size);
+	SDL_QueueAudio(audio_device, &buf[0], 3 * second * element_size);
+	// SDL_QueueAudio(audio_device, &triangle_buf[0], audio_spec.freq * element_size);
+	//SDL_QueueAudio(audio_device, &square_buf[0], audio_spec.freq * element_size);
+	//SDL_QueueAudio(audio_device, &sawtooth_buf[0], audio_spec.freq * element_size);
+	//SDL_QueueAudio(audio_device, &noise_buf[0], audio_spec.freq * element_size);
+	//SDL_QueueAudio(audio_device, &noise2_buf[0], audio_spec.freq * element_size);
 
 	DEBUGLOG << "Queued, playing" << ENDL;
 	// unpausing the audio device (starts playing):
 	SDL_PauseAudioDevice(audio_device, 0);
 
 	DEBUGLOG << "Wait" << ENDL;
-	SDL_Delay(5000);
+
+	SDL_Delay(3000);
+
 	return -1;
 
 	DEBUGLOG << "Close" << ENDL;
