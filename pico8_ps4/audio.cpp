@@ -278,16 +278,6 @@ void AudioManager::loadSfx(std::vector<unsigned char>& sfx_data)
 		this->sfx[s].loopStart = sfx_data[s * 68 + 64 + 2];
 		this->sfx[s].loopEnd = sfx_data[s * 68 + 64 + 3];
 	}
-
-	DEBUGLOG << "speed: " << this->sfx[3].speed << ENDL;
-	for (int n = 0; n < NOTE_AMOUNT; n++) {
-		DEBUGLOG << n
-			<< " pitch: " << this->sfx[3].notes[n].pitch
-			<< " instrument: " << this->sfx[3].notes[n].instrument
-			<< " volume: " << this->sfx[3].notes[n].volume
-			<< " effect: " << this->sfx[3].notes[n].effect
-		<< ENDL;
-	}
 }
 
 // TODO offset + length

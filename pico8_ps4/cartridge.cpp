@@ -192,13 +192,34 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
 
 // TODO https://www.lexaloffle.com/bbs/?tid=3739
 std::map<unsigned char, std::string> special_char_replacement = {
-    {148, "⬆️"},
+    {126, "~"},
+    // Missing nubbin
+    {128, "█"},
+    {129, "▒"},
+    {130, "🐱"},
     {131, "⬇️"},
-    {142, "🅾️"},
-    {139, "⬅️"},
-    {145, "➡️"},
-    {151, "❎"},
+    {132, "░"},
+    {133, "✽"},
+    {134, "●"},
+    {135, "♥"},
+    {136, "☉"},
+    {137, "웃"},
     {138, "⌂"},
+    {139, "⬅️"},
+    {140, "😐"},
+    {141, "♪"},
+    {142, "🅾️"},
+    {143, "◆"},
+    {144, "…"},
+    {145, "➡️"},
+    // Missing star
+    {147, "⧗"},
+    {148, "⬆️"},
+    {149, "ˇ"},
+    {150, "∧"},
+    {151, "❎"},
+    {152, "▤"},
+    // Missing vertical lines
 };
 std::string replace_special_chars(std::string& line) {
     /*for (std::map<unsigned char, std::string>::iterator iter = special_char_replacement.begin(); iter != special_char_replacement.end(); iter++)
@@ -251,6 +272,11 @@ std::string p8lua_to_std_lua(std::string& s) {
             }
         }
 
+        // TODO fillp patterns
+        if (line.find("fillp(") != std::string::npos) {
+            line = "";
+        }
+
         // ?"..." => print("...")
         pos = line.find_first_not_of(WHITESPACE);
         if (pos != std::string::npos && line[pos] == '?') {
@@ -269,6 +295,59 @@ std::string p8lua_to_std_lua(std::string& s) {
         while ((pos = line.find("\\-", pos)) != std::string::npos) {
             line.replace(pos, 2, "\\\\-");
             pos += 2;
+        }
+
+        // \ => // (integer division)
+        pos = 0;
+        while ((pos = line.find("\\", pos)) != std::string::npos) {
+            // Skip escaped characters
+            if (line[pos + 1] != '\\') {
+                line.replace(pos, 1, "//");
+            }
+            pos += 2;
+        }
+
+        // This is all so very hacky... but I don't want to write a custom lua (yet) if I can get away with it
+        // binary literals
+        pos = 0;
+        while ((pos = line.find("0b", pos)) != std::string::npos) {
+            int p = pos + 2;
+            int number = 0;
+            while (p < line.length() && (line[p] == '0' || line[p] == '1')) {
+                number = number << 1;
+                if (line[p] == '1') {
+                    number = number | 1;
+                }
+                p++;
+            }
+
+            line.replace(pos, p-pos, std::to_string(number));
+            pos += 2;
+        }
+
+        if ((pos = line.find("-=")) != std::string::npos) {
+            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
+            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+
+            line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "-" + line.substr(pos+2);
+        }
+        if ((pos = line.find("+=")) != std::string::npos) {
+            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
+            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+
+            line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "+" + line.substr(pos + 2);
+        }
+        if ((pos = line.find("/=")) != std::string::npos) {
+            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
+            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+
+            line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "/" + line.substr(pos + 2);
+        }
+        if ((pos = line.find("*=")) != std::string::npos) {
+            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
+            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+
+            line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "*" + line.substr(pos + 2);
         }
 
         out << line << ENDL;
