@@ -62,8 +62,8 @@ int main(void)
 	//DEBUGLOG << ENDL;
 
 	audio_generate_wave(audio_triangle_wave, C, waveform, 0 * second, 1*second);
-	audio_generate_wave(audio_triangle_wave, E, waveform, 1 * second, 2 * second);
-	audio_generate_wave(audio_triangle_wave, G, waveform, 2 * second, 3 * second);
+	audio_generate_wave(audio_triangle_wave, C, waveform, 1 * second, 2 * second);
+	audio_generate_wave(audio_triangle_wave, C, waveform, 2 * second, 3 * second);
 
 	// audio_smooth(waveform, 1 * second);
 	//audio_generate_wave(audio_sin_wave, C, waveform, 0, 2*E);

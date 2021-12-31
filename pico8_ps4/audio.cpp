@@ -56,6 +56,8 @@ float audio_noise_wave(float phase) {
 void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest) {
 	audio_generate_wave(wave_fn, wavelength, dest, 0, dest.size());
 }
+
+#define SMOOTH_THRESHOLD 0.01 // Depends on sample rate :( - At 44100 for 130.81Hz breaks at 0.0005, but 0.01 is not noticable
 void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
 	int phase_shift = 0;
 	// i => wave_fn((float)((i + phase_shift) % wavelength) / wavelength);
@@ -66,7 +68,7 @@ void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::
 
 		for (phase_shift = 0; phase_shift < wavelength; phase_shift++) {
 			float value = wave_fn((float)phase_shift / wavelength);
-			if (fabs(value - dest[from - 1]) < 0.01) {
+			if (fabs(value - dest[from - 1]) <= SMOOTH_THRESHOLD) {
 				bool would_be_positive_slope = wave_fn((float)(phase_shift +1) / wavelength) >= value;
 				if (positive_slope == would_be_positive_slope) {
 					break;
@@ -74,7 +76,6 @@ void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::
 			}
 		}
 	}
-	logger << phase_shift << ENDL;
 
 	unsigned int len = to - from;
 	// Generate the first wave
@@ -100,25 +101,6 @@ void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& des
 	for (unsigned int i = wavelength; i < len; i++) {
 		float a_m = (cos(i / 90 * 2 * M_PI) + 1) / 4 + 0.5;
 		dest[from + i] = dest[from + i % wavelength] * a_m;
-	}
-}
-
-#define SMOOTHNESS 1000
-void audio_smooth(std::vector<float>& dest, unsigned int position) {
-	/*float start = dest[position - SMOOTHNESS / 2];
-	float end = dest[position + SMOOTHNESS / 2];
-	for (int i = 0; i < SMOOTHNESS; i++) {
-		dest[position + i - SMOOTHNESS / 2] = start + (end - start) * i / SMOOTHNESS;
-	}*/
-	std::vector<float> left(SMOOTHNESS);
-	for (int i = 0; i < SMOOTHNESS; i++) {
-		left[i] = dest[position - SMOOTHNESS + i];
-		float f = (float)i / SMOOTHNESS / 2;
-		dest[position - SMOOTHNESS + i] = (1-f) * dest[position - SMOOTHNESS + i] + f * dest[position + SMOOTHNESS - i];
-	}
-	for (int i = 0; i < SMOOTHNESS; i++) {
-		float f = (float)i / SMOOTHNESS / 2 + 0.5;
-		dest[position + i] = f * dest[position + i] + (1-f) * left[SMOOTHNESS - i - 1];
 	}
 }
 
