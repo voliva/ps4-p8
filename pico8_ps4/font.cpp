@@ -40,7 +40,7 @@ void Font::drawChar(std::string c, int x, int y, SDL_Renderer* renderer)
 	}
 
 	CharData charData = this->charData[c];
-	// logger << c.c_str() << c.length() << charData.coords.size() << "end";
+	// logger << c.c_str() << " " << c.length() << " " << charData.coords.size() << ", " << x << " " << y << ENDL;
 
 	if (charData.coords.size() == 0) {
 		// Space :)

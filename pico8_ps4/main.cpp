@@ -52,15 +52,22 @@ int main(void)
 	}
 	machineState = new MachineState();
 
-	DEBUGLOG << "Run _init" << ENDL;
-	luaState.run_init();
-
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)
 	{
 		DEBUGLOG << "Initialize joysticks" << ENDL;
 		SDL_JoystickOpen(0);
 	}
+
+	/* Not needed, and doesn't work on PS4
+	DEBUGLOG << "Wait for screen ready..." << ENDL;
+	if (!renderer_wait_until_ready()) {
+		return 0;
+	}
+	*/
+
+	DEBUGLOG << "Run _init" << ENDL;
+	luaState.run_init();
 
 	// Enter the render loop
 	DEBUGLOG << "Entering render loop..." << ENDL;

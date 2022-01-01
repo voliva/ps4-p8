@@ -2,6 +2,7 @@
 #include <vector>;
 
 #include "log.h"
+#include <thread>
 
 std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input);
 
@@ -75,6 +76,28 @@ bool init_renderer()
 	SDL_UpdateWindowSurface(window);
 
 	return true;
+}
+
+bool renderer_wait_until_ready()
+{
+	bool success = false;
+	bool quit = false;
+	SDL_Event e;
+
+	while (!quit && !success) {
+		while (SDL_PollEvent(&e) != 0)
+		{
+			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE)) {
+				quit = true;
+			}
+
+			if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WindowEventID::SDL_WINDOWEVENT_EXPOSED) {
+				success = true;
+			}
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+	return success;
 }
 
 void clear_screen()

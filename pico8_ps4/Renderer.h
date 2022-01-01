@@ -44,6 +44,7 @@ extern SDL_Renderer* renderer;
 extern SDL_Texture* spritesheet;
 
 bool init_renderer();
+bool renderer_wait_until_ready();
 void clear_screen();
 void load_spritesheet(std::vector<unsigned char>& sprite_map);
 void draw_sprite(int n, int x, int y, int w, int h);

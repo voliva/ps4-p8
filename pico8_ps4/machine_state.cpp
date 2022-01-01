@@ -11,6 +11,15 @@ MachineState::MachineState()
 {
 	this->started = std::chrono::system_clock::now();
 	this->color = 0;
+	this->cursor.x = 0;
+	this->cursor.y = 0;
+
+	for (int p = 0; p < 8; p++) {
+		this->player_btns[p] = 0;
+		for (int b = 0; b < 8; b++) {
+			this->btn_countdown[p][b] = 0;
+		}
+	}
 }
 
 void MachineState::print(std::string& text)

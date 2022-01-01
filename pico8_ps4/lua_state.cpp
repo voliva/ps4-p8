@@ -24,6 +24,7 @@ int print(lua_State* L);
 int color(lua_State* L);
 int tonum(lua_State* L);
 int add(lua_State* L);
+int deli(lua_State* L);
 int rectfill(lua_State* L);
 int noop(lua_State* L);
 int time(lua_State* L);
@@ -66,6 +67,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "tonum");
 	lua_pushcfunction(this->state, add);
 	lua_setglobal(this->state, "add");
+	lua_pushcfunction(this->state, deli);
+	lua_setglobal(this->state, "deli");
 	lua_pushcfunction(this->state, noop);
 	lua_setglobal(this->state, "menuitem");
 	lua_pushcfunction(this->state, rectfill);
@@ -161,6 +164,25 @@ int add(lua_State* L) {
 	lua_copy(L, 2, -1);
 	lua_seti(L, 1, pos);
 	lua_copy(L, 2, -1);
+
+	return 1;
+}
+
+int deli(lua_State* L) {
+	int length = luaL_len(L, 1);
+	int index = luaL_optinteger(L, 2, length);
+
+	lua_geti(L, 1, index); // Push value to the stack
+
+	// Shift all values
+	for (int i = index; i < length; i++) {
+		lua_geti(L, 1, i + 1);
+		lua_seti(L, 1, i);
+	}
+
+	// Remove last element
+	lua_pushnil(L);
+	lua_seti(L, 1, length);
 
 	return 1;
 }
@@ -468,7 +490,14 @@ int cursor(lua_State* L) {
 }
 
 int print(lua_State* L) {
-	std::string text = luaL_checkstring(L, 1);
+	std::string text;
+	if (!lua_isstring(L, 1)) {
+		text = "[]";
+	}
+	else {
+		text = luaL_checkstring(L, 1);
+	}
+
 	if (lua_isinteger(L, 4)) {
 		int x = luaL_checknumber(L, 2);
 		int y = luaL_checknumber(L, 3);
