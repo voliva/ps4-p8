@@ -108,6 +108,34 @@ LuaState::LuaState()
 		end";
 	luaL_loadbuffer(this->state, max.c_str(), max.length(), "max");
 	lua_pcall(this->state, 0, 0, 0);
+
+	std::string foreach =
+		"function foreach(tbl, fn) \
+			for v in all(tbl) do \
+				fn(v) \
+			end \
+		end";
+	luaL_loadbuffer(this->state, foreach.c_str(), foreach.length(), "foreach");
+	lua_pcall(this->state, 0, 0, 0);
+
+	std::string mid =
+		"function mid(a, b, c) \
+			if b <= a and a <= c then return a end \
+			if c <= a and a <= b then return a end \
+			if a <= b and b <= c then return b end \
+			if c <= b and b <= a then return b end \
+			return c \
+		end";
+	luaL_loadbuffer(this->state, mid.c_str(), mid.length(), "mid");
+	lua_pcall(this->state, 0, 0, 0);
+
+	std::string abs =
+		"function abs(a) \
+			if a < 0 then return -a end \
+			return a \
+		end";
+	luaL_loadbuffer(this->state, abs.c_str(), abs.length(), "abs");
+	lua_pcall(this->state, 0, 0, 0);
 }
 
 int sfx(lua_State* L) {
@@ -411,8 +439,8 @@ int cls(lua_State* L) {
 // TODO flip
 int spr(lua_State* L) {
 	int n = luaL_checkinteger(L, 1);
-	int x = luaL_checkinteger(L, 2);
-	int y = luaL_checkinteger(L, 3);
+	int x = luaL_checknumber(L, 2);
+	int y = luaL_checknumber(L, 3);
 	int w = luaL_optnumber(L, 4, 1.0) * 8;
 	int h = luaL_optnumber(L, 5, 1.0) * 8;
 
