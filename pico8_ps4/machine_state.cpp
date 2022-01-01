@@ -2,6 +2,7 @@
 #include "renderer.h"
 #include "font.h";
 #include "log.h"
+#include "memory.h"
 
 Font f;
 #define DEBUGLOG MachineStateState_DEBUGLOG
@@ -10,40 +11,56 @@ Log DEBUGLOG = logger.log("MachineState");
 MachineState::MachineState()
 {
 	this->started = std::chrono::system_clock::now();
-	this->color = 0;
-	this->cursor.x = 0;
-	this->cursor.y = 0;
 
 	for (int p = 0; p < 8; p++) {
-		this->player_btns[p] = 0;
 		for (int b = 0; b < 8; b++) {
 			this->btn_countdown[p][b] = 0;
 		}
 	}
 }
 
-void MachineState::print(std::string& text)
+void MachineState::initialize()
 {
-	this->print(text, this->cursor);
-	// TODO scroll
-}
+	char transp_mask = 0x10; // Color 0 = black set to transparent
+	for (int i = 0; i < 16; i++) {
+		p8_memory[ADDR_DS_DRAW_PAL + i] = i | transp_mask;
+		p8_memory[ADDR_DS_SCREEN_PAL + i] = i;
+		transp_mask = 0; // Only the first mask
+	}
 
-void MachineState::print(std::string& text, SDL_Point position)
-{
-	int y_pos = f.print(text, position.x, position.y, renderer);
-	this->cursor = position;
-	this->cursor.y += y_pos;
-}
+	p8_memory[ADDR_DS_CLIP_RECT] = 0;
+	p8_memory[ADDR_DS_CLIP_RECT+1] = 0;
+	p8_memory[ADDR_DS_CLIP_RECT+2] = 128;
+	p8_memory[ADDR_DS_CLIP_RECT+3] = 128;
 
-int MachineState::getColor()
-{
-	return this->color;
-}
+	p8_memory[ADDR_DS_COLOR] = 6;
 
-void MachineState::setColor(int color)
-{
-	this->color = color;
-	set_color(color);
+	p8_memory[ADDR_DS_CURSOR_HOME_X] = 0;
+	p8_memory[ADDR_DS_CURSOR_X] = 0;
+	p8_memory[ADDR_DS_CURSOR_Y] = 0;
+
+	memory_write_short(ADDR_DS_CAMERA_X, 0);
+	memory_write_short(ADDR_DS_CAMERA_Y, 0);
+
+	// RNG Seed => https://en.wikipedia.org/wiki/Linear_congruential_generator#m_a_power_of_2,_c_=_0
+	for (int i = 0; i < 8; i++) {
+		p8_memory[ADDR_HW_RAND_STATE+i] = rand() % 0xFF;
+	}
+	// The number must be odd => The last bit must be 1
+	unsigned long long seed = memory_read_long(ADDR_HW_RAND_STATE) | 0x01;
+	memory_write_long(ADDR_HW_RAND_STATE, seed);
+
+	for (int i = 0; i < 8; i++) {
+		p8_memory[ADDR_HW_BTN_STATES] = 0;
+	}
+
+	// Things that are not in p8's memory
+	this->started = std::chrono::system_clock::now();
+	for (int p = 0; p < 8; p++) {
+		for (int b = 0; b < 8; b++) {
+			this->btn_countdown[p][b] = 0;
+		}
+	}
 }
 
 void MachineState::processKeyEvent(KeyEvent evt)
@@ -51,16 +68,16 @@ void MachineState::processKeyEvent(KeyEvent evt)
 	int btnBit = 1 << (int)evt.key;
 	this->btn_countdown[evt.player][(int)evt.key] = 0;
 	if (evt.down) {
-		this->player_btns[evt.player] |= btnBit;
+		p8_memory[ADDR_HW_BTN_STATES + evt.player] |= btnBit;
 	} else {
-		this->player_btns[evt.player] &= ~btnBit;
+		p8_memory[ADDR_HW_BTN_STATES + evt.player] &= ~btnBit;
 	}
 }
 
 bool MachineState::isButtonPressed(int p, P8_Key key)
 {
 	int btnBit = 1 << (int)key;
-	return (this->player_btns[p] & btnBit) > 0;
+	return (p8_memory[ADDR_HW_BTN_STATES + p] & btnBit) > 0;
 }
 
 // for btnp - It was pressed in the last frame
@@ -85,9 +102,9 @@ bool MachineState::wasButtonPressed(int p, P8_Key btn)
 	return false;
 }
 
-int MachineState::getButtonsState()
+unsigned short MachineState::getButtonsState()
 {
-	return this->player_btns[0] | (this->player_btns[1] << 8);
+	return memory_read_short(ADDR_HW_BTN_STATES);
 }
 
 void MachineState::registerFrame()

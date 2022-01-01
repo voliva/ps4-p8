@@ -12,6 +12,7 @@
 #include "machine_state.h"
 #include <math.h>
 #include "audio.h"
+#include "memory.h"
 
 #ifdef __PS4__
 #define MINEWALKER "/app0/assets/misc/minewalker.p8.png"
@@ -37,6 +38,11 @@ int main(void)
 	DEBUGLOG << "Loading cartridge..." << ENDL;
 	Cartridge* r = load_from_png(MINEWALKER);
 
+	memory_load_cartridge(*r);
+
+	machineState = new MachineState();
+	machineState->initialize();
+
 	DEBUGLOG << "Parsing spritesheet" << ENDL;
 	load_spritesheet(r->sprite_map);
 
@@ -50,7 +56,6 @@ int main(void)
 		DEBUGLOG << "Failed loading lua code from cartridge" << ENDL;
 		return -1;
 	}
-	machineState = new MachineState();
 
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)

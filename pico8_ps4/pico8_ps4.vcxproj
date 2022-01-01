@@ -160,6 +160,7 @@
     <ClCompile Include="lua_state.cpp" />
     <ClCompile Include="machine_state.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="memory.cpp" />
     <ClCompile Include="renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -171,6 +172,7 @@
     <ClInclude Include="log.h" />
     <ClInclude Include="lua_state.h" />
     <ClInclude Include="machine_state.h" />
+    <ClInclude Include="memory.h" />
     <ClInclude Include="renderer.h" />
   </ItemGroup>
   <ItemGroup>
