@@ -356,12 +356,12 @@ std::string p8lua_to_std_lua(std::string& s) {
         }
 
         // if (condition) something => if (condition) then something end
-        if ((pos = line.find("if")) != std::string::npos &&
-            line.find("then", pos) == std::string::npos &&
-            (pos = line.find("(", pos)) != std::string::npos) {
+        if (((pos = line.find("if(")) != std::string::npos ||
+            (pos = line.find("if (")) != std::string::npos) &&
+            line.find("then", pos) == std::string::npos) {
             // Look for closing )
             int stack = 1;
-            pos++;
+            pos += 4;
             while (pos < line.length() && stack > 0) {
                 if (line[pos] == '(') {
                     stack++;

@@ -83,6 +83,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "rect");
 	lua_pushcfunction(this->state, noop);
 	lua_setglobal(this->state, "poke");
+	lua_pushcfunction(this->state, noop);
+	lua_setglobal(this->state, "music");
 
 	std::string all =
 		"function all(t) \
