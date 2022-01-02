@@ -34,6 +34,10 @@ int type(lua_State* L);
 int rect(lua_State* L);
 int sfx(lua_State* L);
 int poke(lua_State* L);
+int pal(lua_State* L);
+int palt(lua_State* L);
+int camera(lua_State* L);
+int sqrt(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -88,6 +92,14 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "poke");
 	lua_pushcfunction(this->state, noop);
 	lua_setglobal(this->state, "music");
+	lua_pushcfunction(this->state, pal);
+	lua_setglobal(this->state, "pal");
+	lua_pushcfunction(this->state, palt);
+	lua_setglobal(this->state, "palt");
+	lua_pushcfunction(this->state, camera);
+	lua_setglobal(this->state, "camera");
+	lua_pushcfunction(this->state, sqrt);
+	lua_setglobal(this->state, "sqrt");
 
 	std::string all =
 		"function all(t) \
@@ -567,6 +579,84 @@ int tonum(lua_State* L) {
 
 		}
 	}
+
+	return 1;
+}
+
+int pal(lua_State* L) {
+	if (lua_gettop(L) == 0) {
+		renderer->reset_draw_pal();
+		renderer->reset_screen_pal();
+		return 0;
+	}
+
+	if (lua_istable(L, 1)) {
+		DEBUGLOG << "pal with table unsupported" << ENDL;
+
+		return 0;
+	}
+
+	int c0 = luaL_checkinteger(L, 1);
+	int c1 = luaL_checkinteger(L, 2);
+	int p = luaL_optinteger(L, 3, 0);
+	if (p > 1) {
+		DEBUGLOG << "pal for pattern unsupported" << ENDL;
+		return 0;
+	}
+	int addr = ADDR_DS_DRAW_PAL;
+	if (p == 1) {
+		addr = ADDR_DS_SCREEN_PAL;
+	}
+
+	p8_memory[addr + c0] = c1;
+
+	return 0;
+}
+
+int palt(lua_State* L) {
+	if (lua_gettop(L) == 0) {
+		renderer->reset_transparency_pal();
+		return 0;
+	}
+
+	if (lua_gettop(L) == 1) {
+		int transp = luaL_checkinteger(L, 1);
+		for (int c = 0; c < 16; c++) {
+			int mask = 0x01 << (15 - c);
+			renderer->set_color_transparent(c, (transp & c) > 0);
+		}
+
+		return 0;
+	}
+
+	int col = luaL_checkinteger(L, 1);
+	int t = lua_toboolean(L, 2);
+
+	renderer->set_color_transparent(col, t);
+
+	return 0;
+}
+
+int camera(lua_State* L) {
+	int original_x = p8_memory[ADDR_DS_CAMERA_X];
+	int original_y = p8_memory[ADDR_DS_CAMERA_Y];
+
+	int x = luaL_optinteger(L, 1, 0);
+	int y = luaL_optinteger(L, 2, 0);
+
+	p8_memory[ADDR_DS_CAMERA_X] = x;
+	p8_memory[ADDR_DS_CAMERA_Y] = y;
+
+	lua_pushinteger(L, original_x);
+	lua_pushinteger(L, original_y);
+
+	return 2;
+}
+
+int sqrt(lua_State* L) {
+	float f = luaL_checknumber(L, 0);
+
+	lua_pushnumber(L, std::sqrtf(f));
 
 	return 1;
 }

@@ -154,12 +154,8 @@ Renderer::Renderer()
 
 void Renderer::initialize()
 {
-	char transp_mask = 0x10; // Color 0 = black set to transparent
-	for (int i = 0; i < 16; i++) {
-		p8_memory[ADDR_DS_DRAW_PAL + i] = i | transp_mask;
-		p8_memory[ADDR_DS_SCREEN_PAL + i] = i;
-		transp_mask = 0; // Only the first mask
-	}
+	this->reset_draw_pal();
+	this->reset_screen_pal();
 
 	p8_memory[ADDR_DS_CLIP_RECT] = 0;
 	p8_memory[ADDR_DS_CLIP_RECT + 1] = 0;
@@ -257,6 +253,40 @@ void Renderer::scroll(unsigned char lines)
 		unsigned int length = (128 - lines) * LINE_JMP;
 		memmove(&p8_memory[ADDR_SCREEN], &p8_memory[ADDR_SCREEN + lines * LINE_JMP], length);
 		memset(&p8_memory[ADDR_SCREEN + length], 0, 0x2000 - length);
+	}
+}
+
+void Renderer::reset_draw_pal()
+{
+	char transp_mask = 0x10; // Color 0 = black set to transparent
+	for (int i = 0; i < 16; i++) {
+		p8_memory[ADDR_DS_DRAW_PAL + i] = i | transp_mask;
+		transp_mask = 0; // Only the first mask
+	}
+}
+
+void Renderer::reset_screen_pal()
+{
+	for (int i = 0; i < 16; i++) {
+		p8_memory[ADDR_DS_SCREEN_PAL + i] = i;
+	}
+}
+
+void Renderer::set_color_transparent(unsigned char color, bool transparent)
+{
+	if (transparent) {
+		p8_memory[ADDR_DS_DRAW_PAL + color] = p8_memory[ADDR_DS_DRAW_PAL + color] | 0x10;
+	} else {
+		p8_memory[ADDR_DS_DRAW_PAL + color] = p8_memory[ADDR_DS_DRAW_PAL + color] & 0x0F;
+	}
+}
+
+void Renderer::reset_transparency_pal()
+{
+	char transp_mask = 0x10; // Color 0 = black set to transparent
+	for (int i = 0; i < 16; i++) {
+		p8_memory[ADDR_DS_DRAW_PAL + i] = (p8_memory[ADDR_DS_DRAW_PAL + i] & 0x0F) | transp_mask;
+		transp_mask = 0; // Only the first mask
 	}
 }
 

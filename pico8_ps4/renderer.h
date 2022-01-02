@@ -37,6 +37,13 @@ public:
 	void draw_circle(int x, int y, int radius, bool fill);
 	void draw_rectangle(int x0, int y0, int x1, int y1, bool fill);
 	void scroll(unsigned char lines);
+
+	// Palette
+	void reset_draw_pal();
+	void reset_screen_pal();
+	void set_color_transparent(unsigned char color, bool transparent);
+	void reset_transparency_pal();
+
 	void present();
 
 private:
