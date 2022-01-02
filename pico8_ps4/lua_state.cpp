@@ -38,6 +38,8 @@ int pal(lua_State* L);
 int palt(lua_State* L);
 int camera(lua_State* L);
 int sqrt(lua_State* L);
+int cos(lua_State* L);
+int sin(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -100,6 +102,10 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "camera");
 	lua_pushcfunction(this->state, sqrt);
 	lua_setglobal(this->state, "sqrt");
+	lua_pushcfunction(this->state, cos);
+	lua_setglobal(this->state, "cos");
+	lua_pushcfunction(this->state, sin);
+	lua_setglobal(this->state, "sin");
 
 	std::string all =
 		"function all(t) \
@@ -156,6 +162,54 @@ LuaState::LuaState()
 		end";
 	luaL_loadbuffer(this->state, abs.c_str(), abs.length(), "abs");
 	lua_pcall(this->state, 0, 0, 0);
+
+	std::string split =
+		"function split(str, separator, convert_numbers) \
+			separator = separator or \",\" \n \
+			convert_numbers = convert_numbers ~= false \n \
+			local result = {} \n \
+			if separator == \"\" then \
+				for i=1,#str do \
+					add(result, sub(str, i, i)) \
+				end \
+			else \n \
+				local current = \"\" \n \
+				for i=1,#str do \n \
+					local c = sub(str, i, i) \n \
+					if c == separator then \n \
+						add(result, current) \n \
+						current = \"\" \n \
+					else \n \
+						current = current..c \n \
+					end \n \
+				end \n \
+				add(result, current) \
+			end \n \
+			for i=1,#result do \n \
+				local value = tonum(result[i]) \n \
+				if value ~= nil then \
+					result[i] = value \
+				end \
+			end \
+			return result \
+		end";
+	luaL_loadbuffer(this->state, split.c_str(), split.length(), "split");
+	lua_pcall(this->state, 0, 0, 0);
+
+	std::string del =
+		"function del(table, value) \
+			for i=1,#table do \n \
+				if table[i] == value then \n \
+					return deli(table, i) \n \
+				end \
+			end \
+		end";
+	luaL_loadbuffer(this->state, del.c_str(), del.length(), "del");
+	lua_pcall(this->state, 0, 0, 0);
+
+	// DEBUGLOG << program << ENDL;
+	/*std::string e = lua_tostring(this->state, -1);
+	DEBUGLOG << e << ENDL;*/
 }
 
 int sfx(lua_State* L) {
@@ -378,8 +432,23 @@ int poke(lua_State* L) {
 	return 0;
 }
 
+int string_to_num(std::string& str, short* shortval, double* doubleval);
 int rnd(lua_State* L) {
-	double max = luaL_optnumber(L, 1, 1);
+	double max = 0;
+	if (lua_isstring(L, 1)) {
+		std::string str = luaL_checkstring(L, 1);
+		short intval = 0;
+		int r = string_to_num(str, &intval, &max);
+		if (r == 0) {
+			max = 0; // Ok? - Undocumented, taken experimentally from pico-8
+		}
+		else if (r == 1) {
+			max = intval;
+		}
+	}
+	else {
+		max = luaL_optnumber(L, 1, 1);
+	}
 	double result = std::rand() * max / RAND_MAX;
 	lua_pushnumber(L, result);
 	return 1;
@@ -555,29 +624,147 @@ int color(lua_State* L) {
 	return 0;
 }
 
-// TODO decimal hex
-int tonum(lua_State* L) {
-	std::string str = luaL_checkstring(L, 1);
-
-	std::stringstream ss;
-	if (str.find("0x") == 0) {
-		str = str.replace(0, 2, "");
-		ss << std::hex << str;
-		int out;
-		ss >> out;
-		lua_pushinteger(L, out);
-	}
-	else {
-		ss << str;
-		double out;
-		ss >> out;
-		if (str.find(".") != std::string::npos) {
-			lua_pushnumber(L, out);
+bool hexint_to_num(std::string &hex, short* dest) {
+	*dest = 0;
+	for (int i = 0; i < hex.size(); i++) {
+		char c = hex[i];
+		unsigned char val;
+		if (c >= '0' && c <= '9') {
+			val = c - '0';
+		}
+		else if (c >= 'a' && c <= 'f') {
+			val = 10 + (c - 'a');
 		}
 		else {
-			lua_pushinteger(L, out);
-
+			return false;
 		}
+
+		*dest = (*dest << 4) | val;
+	}
+	return true;
+}
+bool decint_to_num(std::string &dec, short* dest) {
+	*dest = 0;
+	for (int i = 0; i < dec.size(); i++) {
+		char c = dec[i];
+		if (c >= '0' && c <= '9') {
+			*dest = (*dest * 10) + (c - '0');
+		}
+		else {
+			return false;
+		}
+	}
+	return true;
+}
+bool binint_to_num(std::string &bin, short* dest) {
+	*dest = 0;
+	for (int i = 0; i < bin.size(); i++) {
+		char c = bin[i];
+		if (c == '0' || c == '1') {
+			*dest = (*dest << 1) + (c - '0');
+		}
+		else {
+			return false;
+		}
+	}
+	return true;
+}
+bool decimal_to_num(std::string &str, int base, double* dest) {
+	bool (*fn)(std::string &, short *) = NULL;
+	if (base == 2) {
+		fn = &binint_to_num;
+	} else if(base == 10) {
+		fn = &decint_to_num;
+	} else if (base == 16) {
+		fn = &hexint_to_num;
+	}
+	else {
+		return false;
+	}
+
+	int dec_pos = str.find(".");
+	short integer_part = 0;
+	std::string integer_string = str.substr(0, dec_pos);
+	bool r = fn(integer_string, &integer_part);
+	if (!r) {
+		return false;
+	}
+
+	*dest = (double)integer_part;
+	double factor = 1;
+	for (int i = dec_pos + 1; i < str.size(); i++) {
+		short value;
+		std::string character = str.substr(i, 1);
+		r = fn(character, &value);
+		if (!r) {
+			return false;
+		}
+		factor *= base;
+		*dest += (double)value / factor;
+	}
+
+	return true;
+}
+
+// 0 = nil, 1 = int, 2 = dec
+int string_to_num(std::string& str, short* shortval, double* doubleval) {
+	if (str.find("0x") == 0) {
+		str = str.replace(0, 2, "");
+
+		if (str.find(".") == std::string::npos) {
+			if (hexint_to_num(str, shortval)) {
+				return 1;
+			}
+		}
+		else {
+			if (decimal_to_num(str, 16, doubleval)) {
+				return 2;
+			}
+		}
+		return 0;
+	}
+	if (str.find("0b") == 0) {
+		if (str.find(".") == std::string::npos) {
+			if (binint_to_num(str, shortval)) {
+				return 1;
+			}
+		}
+		else {
+			if (decimal_to_num(str, 2, doubleval)) {
+				return 2;
+			}
+		}
+		return 0;
+	}
+
+	if (str.find(".") == std::string::npos) {
+		if (decint_to_num(str, shortval)) {
+			return 1;
+		}
+	}
+	else {
+		if (decimal_to_num(str, 10, doubleval)) {
+			return 2;
+		}
+	}
+	return 0;
+}
+
+int tonum(lua_State* L) {
+	std::string str = luaL_checkstring(L, 1);
+	double decimal_value;
+	short integer_value;
+
+	int result = string_to_num(str, &integer_value, &decimal_value);
+
+	if (result == 1) {
+		lua_pushinteger(L, integer_value);
+	}
+	else if (result == 2) {
+		lua_pushnumber(L, decimal_value);
+	}
+	else {
+		lua_pushnil(L);
 	}
 
 	return 1;
@@ -597,7 +784,7 @@ int pal(lua_State* L) {
 	}
 
 	int c0 = luaL_checkinteger(L, 1);
-	int c1 = luaL_checkinteger(L, 2);
+	int c1 = luaL_optinteger(L, 2, 0);
 	int p = luaL_optinteger(L, 3, 0);
 	if (p > 1) {
 		DEBUGLOG << "pal for pattern unsupported" << ENDL;
@@ -657,6 +844,22 @@ int sqrt(lua_State* L) {
 	float f = luaL_checknumber(L, 0);
 
 	lua_pushnumber(L, std::sqrtf(f));
+
+	return 1;
+}
+
+int sin(lua_State* L) {
+	float f = luaL_checknumber(L, 0);
+
+	lua_pushnumber(L, std::sinf(f * 2 * M_PI));
+
+	return 1;
+}
+
+int cos(lua_State* L) {
+	float f = luaL_checknumber(L, 0);
+
+	lua_pushnumber(L, std::cosf(f * 2 * M_PI));
 
 	return 1;
 }
