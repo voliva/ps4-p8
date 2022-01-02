@@ -26,11 +26,11 @@ int millisecs_per_frame(bool is60Fps);
 Log DEBUGLOG = logger.log("main");
 MachineState* machineState;
 AudioManager* audioManager;
+Renderer* renderer;
 int main(void)
 {
-	if (!init_renderer()) {
-		return -1;
-	}
+	DEBUGLOG << "Initializing renderer..." << ENDL;
+	renderer = new Renderer();
 
 	DEBUGLOG << "Initializing audio..." << ENDL;
 	audioManager = new AudioManager();
@@ -43,8 +43,7 @@ int main(void)
 	machineState = new MachineState();
 	machineState->initialize();
 
-	DEBUGLOG << "Parsing spritesheet" << ENDL;
-	load_spritesheet(r->sprite_map);
+	renderer->initialize();
 
 	DEBUGLOG << "Loading SFX" << ENDL;
 	audioManager->loadSfx(r->sfx);
@@ -109,8 +108,7 @@ int main(void)
 
 		if (time_debt < ms_per_frame / 2) {
 			luaState.run_draw();
-			clip_outside();
-			SDL_UpdateWindowSurface(window);
+			renderer->present();
 		}
 		else {
 			DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;

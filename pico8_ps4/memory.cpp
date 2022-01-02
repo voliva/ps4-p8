@@ -1,6 +1,10 @@
 #include "memory.h"
+#include "log.h"
 
 char p8_memory[P8_TOTAL_MEMORY];
+
+#define DEBUGLOG Memory_DEBUGLOG
+Log DEBUGLOG = logger.log("memory");
 
 void memory_load_cartridge(Cartridge& cartrige)
 {
@@ -17,6 +21,11 @@ void memory_load_cartridge(Cartridge& cartrige)
 
 	// Reset the rest to zero
 	memset(&p8_memory[0x4300], 0, P8_TOTAL_MEMORY - 0x4300);
+
+	// Except the memory pointers :'D
+	p8_memory[ADDR_SPRITE_SHEET_POINTER] = 0x00;
+	p8_memory[ADDR_SCREEN_POINTER] = 0x60;
+	p8_memory[ADDR_MAP_POINTER] = 0x20;
 }
 
 void memory_write_short(unsigned int addr, unsigned short value)
@@ -61,8 +70,8 @@ unsigned long long memory_read_long(unsigned int addr)
 {
 	unsigned long long res;
 
-	res = memory_read_long(addr);
-	res |= (long long)memory_read_long(addr + 4) << 32;
+	res = memory_read_int(addr);
+	res |= (long long)memory_read_int(addr + 4) << 32;
 
 	return res;
 }

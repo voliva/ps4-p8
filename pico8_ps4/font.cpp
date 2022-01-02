@@ -11,6 +11,7 @@
 #endif
 
 #include "log.h"
+#include "memory.h"
 #include "machine_state.h" // TODO circular depedency! => It's needed because control codes can change and persist color
 
 CharData read_next(std::ifstream &file);
@@ -103,7 +104,7 @@ int Font::print(std::string c, int x, int y, SDL_Renderer* renderer)
 			else
 				color = 10 + color_c - 'a';
 
-			machineState->setColor(color);
+			p8_memory[ADDR_DS_COLOR] = color;
 			start += 2;
 			continue;
 		}

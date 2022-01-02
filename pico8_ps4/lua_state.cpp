@@ -6,6 +6,7 @@
 #include "renderer.h"
 #include "machine_state.h"
 #include "audio.h"
+#include "memory.h"
 
 #define DEBUGLOG LuaState_DEBUGLOG
 Log DEBUGLOG = logger.log("LuaState");
@@ -194,13 +195,10 @@ int rectfill(lua_State* L) {
 	int y0 = luaL_checkinteger(L, 2);
 	int x1 = luaL_checkinteger(L, 3);
 	int y1 = luaL_checkinteger(L, 4);
-	int col = luaL_optnumber(L, 5, machineState->getColor());
+	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
 
-	machineState->setColor(col);
-	SDL_Rect rect{
-		x0, y0, x1 - x0 + 1, y1 - y0 + 1
-	};
-	SDL_RenderFillRect(renderer, &rect);
+	p8_memory[ADDR_DS_COLOR] = col;
+	renderer->draw_rectangle(x0, y0, x1, y1, true);
 
 	return 0;
 }
@@ -210,13 +208,10 @@ int rect(lua_State* L) {
 	int y0 = luaL_checkinteger(L, 2);
 	int x1 = luaL_checkinteger(L, 3);
 	int y1 = luaL_checkinteger(L, 4);
-	int col = luaL_optnumber(L, 5, machineState->getColor());
+	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
 
-	machineState->setColor(col);
-	SDL_Rect rect{
-		x0, y0, x1 - x0 + 1, y1 - y0 + 1
-	};
-	SDL_RenderDrawRect(renderer, &rect);
+	p8_memory[ADDR_DS_COLOR] = col;
+	renderer->draw_rectangle(x0, y0, x1, y1, false);
 
 	return 0;
 }
@@ -449,14 +444,12 @@ int btn(lua_State* L) {
 }
 
 int cls(lua_State* L) {
-	int original_color = machineState->getColor();
 	int col = luaL_optinteger(L, 3, 0);
-	machineState->setColor(col);
-	clear_screen();
-	machineState->setColor(original_color);
 
-	machineState->cursor.x = 0;
-	machineState->cursor.y = 0;
+	renderer->clear_screen(col);
+	p8_memory[ADDR_DS_CURSOR_X] = 0;
+	p8_memory[ADDR_DS_CURSOR_Y] = 0;
+
 	return 0;
 }
 
@@ -468,26 +461,27 @@ int spr(lua_State* L) {
 	int w = luaL_optnumber(L, 4, 1.0) * 8;
 	int h = luaL_optnumber(L, 5, 1.0) * 8;
 
-	draw_sprite(n, x, y, w, h);
+	renderer->draw_sprite(n, x, y, w, h);
 
 	return 0;
 }
 
 int cursor(lua_State* L) {
-	int original_color = machineState->getColor();
-	SDL_Point original_cursor = machineState->cursor; // TODO is it getting copied?
+	int original_x = p8_memory[ADDR_DS_CURSOR_X];
+	int original_y = p8_memory[ADDR_DS_CURSOR_Y];
+	int original_color = p8_memory[ADDR_DS_COLOR];
 
 	int x = luaL_optinteger(L, 1, 0);
 	int y = luaL_optinteger(L, 2, 0);
 	int col = luaL_optinteger(L, 3, original_color);
 
-	machineState->cursor.x = x;
-	machineState->cursor.y = y;
-	machineState->setColor(col);
+	p8_memory[ADDR_DS_CURSOR_X] = x;
+	p8_memory[ADDR_DS_CURSOR_Y] = y;
+	p8_memory[ADDR_DS_COLOR] = col;
 
-	lua_pushinteger(L, x);
-	lua_pushinteger(L, y);
-	lua_pushinteger(L, col);
+	lua_pushinteger(L, original_x);
+	lua_pushinteger(L, original_y);
+	lua_pushinteger(L, original_color);
 	return 3;
 }
 
@@ -505,30 +499,30 @@ int print(lua_State* L) {
 		int y = luaL_checknumber(L, 3);
 		int col = luaL_checkinteger(L, 4);
 
-		machineState->setColor(col);
-		machineState->print(text, SDL_Point{ x, y });
+		p8_memory[ADDR_DS_COLOR] = col;
+		// machineState->print(text, SDL_Point{ x, y });
 		return 0;
 	}
 	if (lua_isnumber(L, 3)) {
 		int x = luaL_checknumber(L, 2);
 		int y = luaL_checknumber(L, 3);
 
-		machineState->print(text, SDL_Point { x, y });
+		// machineState->print(text, SDL_Point { x, y });
 		return 0;
 	}
 
 	if (lua_isinteger(L, 2)) {
 		int col = luaL_checkinteger(L, 2);
-		machineState->setColor(col);
+		p8_memory[ADDR_DS_COLOR] = col;
 	}
-	machineState->print(text);
+	// machineState->print(text);
 
 	return 0;
 }
 
 int color(lua_State* L) {
 	int col = luaL_optinteger(L, 1, 6);
-	machineState->setColor(col);
+	p8_memory[ADDR_DS_COLOR] = col;
 	return 0;
 }
 

@@ -26,7 +26,7 @@ extern char p8_memory[P8_TOTAL_MEMORY];
 /// Detailed pointers ///
 // Draw state
 #define ADDR_DS_DRAW_PAL 0x5F00
-#define ADDR_DS_SCREEN_PAL 0xF10
+#define ADDR_DS_SCREEN_PAL 0x5F10
 #define ADDR_DS_CLIP_RECT 0x5F20
 #define ADDR_DS_CURSOR_HOME_X 0x5F24
 #define ADDR_DS_COLOR 0x5F25
