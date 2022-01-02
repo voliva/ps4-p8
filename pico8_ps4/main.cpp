@@ -42,6 +42,7 @@ int main(void)
 
 	memory_load_cartridge(*r);
 
+	audioManager->initialize();
 	renderer->initialize();
 
 	machineState = new MachineState();
@@ -49,9 +50,6 @@ int main(void)
 
 	font = new Font();
 	font->initialize();
-
-	DEBUGLOG << "Loading SFX" << ENDL;
-	audioManager->loadSfx(r->sfx);
 
 	LuaState luaState;
 

@@ -8,6 +8,9 @@ Log DEBUGLOG = logger.log("memory");
 
 void memory_load_cartridge(Cartridge& cartrige)
 {
+	// Reset everything to zero
+	memset(p8_memory, 0, P8_TOTAL_MEMORY);
+
 	// Reset pointers
 	p8_memory[ADDR_SPRITE_SHEET_POINTER] = 0x00;
 	p8_memory[ADDR_SCREEN_POINTER] = 0x60;
@@ -18,14 +21,6 @@ void memory_load_cartridge(Cartridge& cartrige)
 	memcpy(&p8_memory[ADDR_SPRITE_FLAGS], &cartrige.sprite_flags[0], 0x0100);
 	memcpy(&p8_memory[ADDR_MUSIC], &cartrige.music[0], 0x0200);
 	memcpy(&p8_memory[ADDR_SFX], &cartrige.sfx[0], 0x1100);
-
-	// Reset the rest to zero
-	memset(&p8_memory[0x4300], 0, P8_TOTAL_MEMORY - 0x4300);
-
-	// Except the memory pointers :'D
-	p8_memory[ADDR_SPRITE_SHEET_POINTER] = 0x00;
-	p8_memory[ADDR_SCREEN_POINTER] = 0x60;
-	p8_memory[ADDR_MAP_POINTER] = 0x20;
 }
 
 void memory_write_short(unsigned int addr, unsigned short value)

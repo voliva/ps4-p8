@@ -5,6 +5,20 @@
 
 #define P8_SAMPLE_RATE 22050
 
+#define SFX_AMOUNT 64
+class AudioManager {
+public:
+	AudioManager();
+	~AudioManager();
+	void initialize();
+	void playSfx(int n, int channel, int offset, int length);
+
+private:
+	SDL_AudioDeviceID audio_device;
+	std::vector<int16_t>* buffers[SFX_AMOUNT];
+};
+extern AudioManager* audioManager;
+
 typedef struct {
 	unsigned char instrument; // [0-7 default instruments, 8-15 custom instruments]
 	unsigned char volume; // [0-7]
@@ -25,21 +39,6 @@ typedef struct {
 	char loopEnd;
 	P8_Note notes[NOTE_AMOUNT];
 } P8_SFX;
-
-#define SFX_AMOUNT 64
-class AudioManager {
-public:
-	AudioManager();
-	~AudioManager();
-	void loadSfx(std::vector<unsigned char>& sfx_data);
-	void playSfx(int n, int channel, int offset, int length);
-
-private:
-	SDL_AudioDeviceID audio_device;
-	P8_SFX sfx[SFX_AMOUNT];
-	std::vector<int16_t>* buffers[SFX_AMOUNT];
-};
-extern AudioManager* audioManager;
 
 unsigned int audio_get_wavelength(float frequency);
 unsigned int audio_get_points(float seconds); // seconds => ticks

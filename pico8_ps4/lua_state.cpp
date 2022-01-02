@@ -474,6 +474,7 @@ int srand(lua_State* L) {
 // TODO https://pico-8.fandom.com/wiki/Tostr decimal hex?
 int tostr(lua_State* L) {
 	if (lua_isstring(L, 1)) {
+		lua_copy(L, 1, -1);
 		return 1;
 	};
 
