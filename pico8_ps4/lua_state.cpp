@@ -867,7 +867,7 @@ int camera(lua_State* L) {
 int sqrt(lua_State* L) {
 	float f = luaL_checknumber(L, 0);
 
-	lua_pushnumber(L, std::sqrtf(f));
+	lua_pushnumber(L, sqrtf(f));
 
 	return 1;
 }
@@ -875,7 +875,7 @@ int sqrt(lua_State* L) {
 int sin(lua_State* L) {
 	float f = luaL_checknumber(L, 0);
 
-	lua_pushnumber(L, std::sinf(f * 2 * M_PI));
+	lua_pushnumber(L, sinf(f * 2 * M_PI));
 
 	return 1;
 }
@@ -883,7 +883,7 @@ int sin(lua_State* L) {
 int cos(lua_State* L) {
 	float f = luaL_checknumber(L, 0);
 
-	lua_pushnumber(L, std::cosf(f * 2 * M_PI));
+	lua_pushnumber(L, cosf(f * 2 * M_PI));
 
 	return 1;
 }
