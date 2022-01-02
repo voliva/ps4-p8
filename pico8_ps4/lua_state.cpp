@@ -21,6 +21,7 @@ int btn(lua_State* L);
 int btnp(lua_State* L);
 int cls(lua_State* L);
 int spr(lua_State* L);
+int sspr(lua_State* L);
 int cursor(lua_State* L);
 int print(lua_State* L);
 int color(lua_State* L);
@@ -66,6 +67,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "cls");
 	lua_pushcfunction(this->state, spr);
 	lua_setglobal(this->state, "spr");
+	lua_pushcfunction(this->state, sspr);
+	lua_setglobal(this->state, "sspr");
 	lua_pushcfunction(this->state, cursor);
 	lua_setglobal(this->state, "cursor");
 	lua_pushcfunction(this->state, print);
@@ -106,6 +109,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "cos");
 	lua_pushcfunction(this->state, sin);
 	lua_setglobal(this->state, "sin");
+	lua_pushcfunction(this->state, noop);
+	lua_setglobal(this->state, "map");
 
 	std::string all =
 		"function all(t) \
@@ -468,22 +473,26 @@ int srand(lua_State* L) {
 
 // TODO https://pico-8.fandom.com/wiki/Tostr decimal hex?
 int tostr(lua_State* L) {
+	if (lua_isstring(L, 1)) {
+		return 1;
+	};
+
 	double num = luaL_checknumber(L, 1);
 	bool useHex = false;
 	if (lua_isboolean(L, 2)) {
 		useHex = lua_toboolean(L, 2);
-		}
+	}
 
-		std::ostringstream buf;
-		if (useHex) {
-			buf << "0x";
-			if (num < 0x1000) {
-				buf << "0";
-			}
-			if (num < 0x100) {
-				buf << "0";
-			}
-			if (num < 0x10) {
+	std::ostringstream buf;
+	if (useHex) {
+		buf << "0x";
+		if (num < 0x1000) {
+			buf << "0";
+		}
+		if (num < 0x100) {
+			buf << "0";
+		}
+		if (num < 0x10) {
 			buf << "0";
 		}
 		buf << std::hex;
@@ -561,6 +570,20 @@ int spr(lua_State* L) {
 	int h = luaL_optnumber(L, 5, 1.0) * 8;
 
 	renderer->draw_sprite(n, x, y, w, h);
+
+	return 0;
+}
+
+// TODO stretch+flip
+int sspr(lua_State* L) {
+	int sx = luaL_checkinteger(L, 1);
+	int sy = luaL_checkinteger(L, 2);
+	int sw = luaL_checkinteger(L, 3);
+	int sh = luaL_checkinteger(L, 4);
+	int dx = luaL_checknumber(L, 5);
+	int dy = luaL_checknumber(L, 6);
+
+	renderer->draw_from_spritesheet(sx, sy, sw, sh, dx, dy);
 
 	return 0;
 }

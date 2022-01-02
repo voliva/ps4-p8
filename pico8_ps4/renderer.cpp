@@ -178,13 +178,19 @@ void Renderer::clear_screen(unsigned char color)
 #define LINE_JMP 128 / 2
 void Renderer::draw_sprite(int n, int x, int y, int w, int h)
 {
-	// I can't use memcpy because this is all effected by the draw state (pal, palt, clip, camera, etc.)
-
 	int sprite_col = n % 16;
 	int sprite_row = n / 16;
-	int sprite_addr = ADDR_SPRITE_SHEET + sprite_row * LINE_JMP * 8 + sprite_col * 8 / 2;
-	for (int _y = 0; _y < h; _y++) {
-		for (int _x = 0; _x < w; _x++) {
+
+	this->draw_from_spritesheet(sprite_col * 8, sprite_row * 8, w, h, x, y);
+}
+
+void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int dy)
+{
+	// I can't use memcpy because this is all effected by the draw state (pal, palt, clip, camera, etc.)
+
+	int sprite_addr = ADDR_SPRITE_SHEET + sy * LINE_JMP + sx / 2;
+	for (int _y = 0; _y < sh; _y++) {
+		for (int _x = 0; _x < sw; _x++) {
 			unsigned char color = p8_memory[sprite_addr + _y * LINE_JMP + _x / 2];
 			if (_x % 2 == 0) {
 				color = color & 0x0F;
@@ -192,7 +198,7 @@ void Renderer::draw_sprite(int n, int x, int y, int w, int h)
 			else {
 				color = color >> 4;
 			}
-			this->set_transform_pixel(x + _x, y + _y, color, true);
+			this->set_transform_pixel(dx + _x, dy + _y, color, true);
 		}
 	}
 }

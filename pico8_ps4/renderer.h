@@ -30,7 +30,8 @@ public:
 	void initialize();
 
 	void clear_screen(unsigned char color);
-	void draw_sprite(int n, int x, int y, int w, int h);
+	void draw_sprite(int n, int x, int y, int w, int h); // TODO flip
+	void draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int dy); // TODO stretch + flip
 	void draw_point(int x, int y);
 	void draw_points(std::vector<Renderer_Point> &points);
 	void draw_line(int x0, int y0, int x1, int y1);
