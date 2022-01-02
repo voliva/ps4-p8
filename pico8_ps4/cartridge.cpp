@@ -306,7 +306,7 @@ std::string p8lua_to_std_lua(std::string& s) {
         pos = 0;
         while ((pos = line.find("\\", pos)) != std::string::npos) {
             // Skip escaped characters
-            if (line[pos + 1] != '\\') {
+            if (line[pos + 1] != '\\' && line[pos + 1] != 'f') {
                 line.replace(pos, 1, "//");
             }
             pos += 2;
