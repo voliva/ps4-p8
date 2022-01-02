@@ -1,7 +1,7 @@
 #include "memory.h"
 #include "log.h"
 
-char p8_memory[P8_TOTAL_MEMORY];
+unsigned char p8_memory[P8_TOTAL_MEMORY];
 
 #define DEBUGLOG Memory_DEBUGLOG
 Log DEBUGLOG = logger.log("memory");

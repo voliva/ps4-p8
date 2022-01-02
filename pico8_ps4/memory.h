@@ -2,7 +2,7 @@
 #include "cartridge.h"
 
 #define P8_TOTAL_MEMORY 0x10000
-extern char p8_memory[P8_TOTAL_MEMORY];
+extern unsigned char p8_memory[P8_TOTAL_MEMORY];
 
 // Pointers
 #define ADDR_SPRITE_SHEET_POINTER 0x5F54

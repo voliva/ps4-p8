@@ -248,6 +248,18 @@ void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 	}
 }
 
+void Renderer::scroll(unsigned char lines)
+{
+	if (lines >= 128) {
+		this->clear_screen(0);
+	}
+	else {
+		unsigned int length = (128 - lines) * LINE_JMP;
+		memmove(&p8_memory[ADDR_SCREEN], &p8_memory[ADDR_SCREEN + lines * LINE_JMP], length);
+		memset(&p8_memory[ADDR_SCREEN + length], 0, 0x2000 - length);
+	}
+}
+
 void Renderer::present()
 {
 	for (int i = 0; i < 0x2000; i++) {

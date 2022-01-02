@@ -36,6 +36,7 @@ public:
 	void draw_line(int x0, int y0, int x1, int y1);
 	void draw_circle(int x, int y, int radius, bool fill);
 	void draw_rectangle(int x0, int y0, int x1, int y1, bool fill);
+	void scroll(unsigned char lines);
 	void present();
 
 private:

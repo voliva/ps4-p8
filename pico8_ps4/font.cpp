@@ -126,8 +126,11 @@ void Font::print(std::string c, int x, int y, bool scroll)
 		start += l;
 	}
 
-	// TODO scroll if needed
 	p8_memory[ADDR_DS_CURSOR_Y] += y_offset;
+	if (scroll && ((p8_memory[ADDR_DS_CURSOR_Y]+6) >= 128)) {
+		p8_memory[ADDR_DS_CURSOR_Y] -= y_offset;
+		renderer->scroll(y_offset);
+	}
 }
 
 CharData read_next(std::ifstream& file) {
