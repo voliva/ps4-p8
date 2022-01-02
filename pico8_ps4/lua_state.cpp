@@ -33,6 +33,7 @@ int time(lua_State* L);
 int type(lua_State* L);
 int rect(lua_State* L);
 int sfx(lua_State* L);
+int poke(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -83,7 +84,7 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "type");
 	lua_pushcfunction(this->state, rect);
 	lua_setglobal(this->state, "rect");
-	lua_pushcfunction(this->state, noop);
+	lua_pushcfunction(this->state, poke);
 	lua_setglobal(this->state, "poke");
 	lua_pushcfunction(this->state, noop);
 	lua_setglobal(this->state, "music");
@@ -347,6 +348,22 @@ void LuaState::run_update()
 			lua_pop(this->state, 1);
 		}
 	}
+}
+
+int poke(lua_State* L) {
+	unsigned char addr = luaL_checkinteger(L, 1) & 0x0FF;
+	unsigned char value = luaL_optinteger(L, 2, 0) & 0x0FF;
+	DEBUGLOG << "Poked " << addr << ENDL;
+	p8_memory[addr] = value;
+
+	for (int i = 3; lua_isinteger(L, i); i++) {
+		value = lua_tointeger(L, 2) & 0x0FF;
+		addr++;
+		DEBUGLOG << "Poked " << addr << ENDL;
+		p8_memory[addr] = value;
+	}
+
+	return 0;
 }
 
 int rnd(lua_State* L) {
