@@ -46,6 +46,7 @@ Cartridge *load_from_png(std::string path)
 
     std::vector<unsigned char> compressed_lua(p8_bytes.begin() + 0x4300, p8_bytes.begin() + 0x7FFF);
     std::string p8_lua = decompress_lua(compressed_lua);
+    // logger << p8_lua << ENDL;
 
     ret->lua = p8lua_to_std_lua(p8_lua);
 

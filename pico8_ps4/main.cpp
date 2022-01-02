@@ -12,6 +12,8 @@
 #include "machine_state.h"
 #include <math.h>
 #include "audio.h"
+#include "memory.h"
+#include "font.h"
 
 #ifdef __PS4__
 #define MINEWALKER "/app0/assets/misc/minewalker.p8.png"
@@ -25,11 +27,12 @@ int millisecs_per_frame(bool is60Fps);
 Log DEBUGLOG = logger.log("main");
 MachineState* machineState;
 AudioManager* audioManager;
+Renderer* renderer;
+Font* font;
 int main(void)
 {
-	if (!init_renderer()) {
-		return -1;
-	}
+	DEBUGLOG << "Initializing renderer..." << ENDL;
+	renderer = new Renderer();
 
 	DEBUGLOG << "Initializing audio..." << ENDL;
 	audioManager = new AudioManager();
@@ -37,11 +40,16 @@ int main(void)
 	DEBUGLOG << "Loading cartridge..." << ENDL;
 	Cartridge* r = load_from_png(MINEWALKER);
 
-	DEBUGLOG << "Parsing spritesheet" << ENDL;
-	load_spritesheet(r->sprite_map);
+	memory_load_cartridge(*r);
 
-	DEBUGLOG << "Loading SFX" << ENDL;
-	audioManager->loadSfx(r->sfx);
+	audioManager->initialize();
+	renderer->initialize();
+
+	machineState = new MachineState();
+	machineState->initialize();
+
+	font = new Font();
+	font->initialize();
 
 	LuaState luaState;
 
@@ -50,7 +58,6 @@ int main(void)
 		DEBUGLOG << "Failed loading lua code from cartridge" << ENDL;
 		return -1;
 	}
-	machineState = new MachineState();
 
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)
@@ -104,8 +111,7 @@ int main(void)
 
 		if (time_debt < ms_per_frame / 2) {
 			luaState.run_draw();
-			clip_outside();
-			SDL_UpdateWindowSurface(window);
+			renderer->present();
 		}
 		else {
 			DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;
