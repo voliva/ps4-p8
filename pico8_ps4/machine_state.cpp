@@ -21,10 +21,6 @@ MachineState::MachineState()
 
 void MachineState::initialize()
 {
-	p8_memory[ADDR_DS_CURSOR_HOME_X] = 0;
-	p8_memory[ADDR_DS_CURSOR_X] = 0;
-	p8_memory[ADDR_DS_CURSOR_Y] = 0;
-
 	// RNG Seed => https://en.wikipedia.org/wiki/Linear_congruential_generator#m_a_power_of_2,_c_=_0
 	for (int i = 0; i < 8; i++) {
 		p8_memory[ADDR_HW_RAND_STATE+i] = rand() % 0xFF;

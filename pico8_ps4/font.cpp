@@ -16,6 +16,9 @@
 
 CharData read_next(std::ifstream &file);
 
+#define DEBUGLOG Font_DEBUGLOG
+Log DEBUGLOG = logger.log("font");
+
 Font::Font()
 {
 	std::ifstream myfile;
@@ -26,14 +29,20 @@ Font::Font()
 		if (line != "") {
 			CharData c = read_next(myfile);
 			this->charData[line] = c;
-			// logger << (line + " inserted").c_str();
 		}
 	}
 
 	myfile.close();
 }
 
-void Font::drawChar(std::string c, int x, int y, SDL_Renderer* renderer)
+void Font::initialize()
+{
+	p8_memory[ADDR_DS_CURSOR_HOME_X] = 0;
+	p8_memory[ADDR_DS_CURSOR_X] = 0;
+	p8_memory[ADDR_DS_CURSOR_Y] = 0;
+}
+
+void Font::drawChar(std::string c, int x, int y)
 {
 	if (!this->charData.count(c)) {
 		logger << "Font::drawChar: Couldn't find CharData for " << c << ENDL;
@@ -48,32 +57,24 @@ void Font::drawChar(std::string c, int x, int y, SDL_Renderer* renderer)
 		return;
 	}
 
-	std::vector<SDL_Point> newCoords(charData.coords.size());
+	std::vector<Renderer_Point> newCoords(charData.coords.size());
 	for (int i = 0; i < charData.coords.size(); i++) {
-		SDL_Point original = charData.coords[i];
+		Renderer_Point original = charData.coords[i];
 
 		newCoords[i].x = x + original.x;
 		newCoords[i].y = y + original.y;
 	}
-	SDL_RenderDrawPoints(renderer, &newCoords[0], newCoords.size());
-
-	// I think this could be faster
-	//SDL_Rect viewport{};
-	//SDL_RenderGetViewport(renderer, &viewport);
-	//viewport.x += x;
-	//viewport.y += y;
-	//SDL_RenderSetViewport(renderer, &viewport);
-	//SDL_RenderDrawPoints(renderer, &charData.coords[0], charData.coords.size());
-	//viewport.x -= x;
-	//viewport.y -= y;
-	//SDL_RenderSetViewport(renderer, &viewport);
+	renderer->draw_points(newCoords);
 }
 
-int Font::print(std::string c, int x, int y, SDL_Renderer* renderer)
+void Font::print(std::string c, int x, int y, bool scroll)
 {
+	p8_memory[ADDR_DS_CURSOR_X] = x;
+	p8_memory[ADDR_DS_CURSOR_Y] = y;
+
 	int start = 0;
 	
-	// machine_state will need to know where the next line begins. This can change with modifiers such as \^w \n \^g \| \+
+	//we will need to update the cursor. This can change with modifiers such as \^w \n \^g \| \+
 	int y_offset = 6;
 
 	while (start < c.length()) {
@@ -116,17 +117,17 @@ int Font::print(std::string c, int x, int y, SDL_Renderer* renderer)
 		}
 		if (!this->charData.count(grapheme)) {
 			logger << "Font::print: Couldn't find CharData for " << grapheme << ENDL;
-			return y_offset;
+			continue;
 		}
 
-
 		CharData c = this->charData[grapheme];
-		this->drawChar(grapheme, x, y, renderer);
+		this->drawChar(grapheme, x, y);
 		x += c.size + 1;
 		start += l;
 	}
 
-	return y_offset;
+	// TODO scroll if needed
+	p8_memory[ADDR_DS_CURSOR_Y] += y_offset;
 }
 
 CharData read_next(std::ifstream& file) {
@@ -145,7 +146,7 @@ CharData read_next(std::ifstream& file) {
 
 		for (int x = 0; x < line.length(); x++) {
 			if (line[x] == '#') {
-				SDL_Point c{
+				Renderer_Point c{
 					x, y
 				};
 				ret.coords.push_back(c);

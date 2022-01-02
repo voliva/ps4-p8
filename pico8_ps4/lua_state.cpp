@@ -7,6 +7,7 @@
 #include "machine_state.h"
 #include "audio.h"
 #include "memory.h"
+#include "font.h"
 
 #define DEBUGLOG LuaState_DEBUGLOG
 Log DEBUGLOG = logger.log("LuaState");
@@ -500,14 +501,13 @@ int print(lua_State* L) {
 		int col = luaL_checkinteger(L, 4);
 
 		p8_memory[ADDR_DS_COLOR] = col;
-		// machineState->print(text, SDL_Point{ x, y });
-		return 0;
+		font->print(text, x, y, false);
 	}
 	if (lua_isnumber(L, 3)) {
 		int x = luaL_checknumber(L, 2);
 		int y = luaL_checknumber(L, 3);
 
-		// machineState->print(text, SDL_Point { x, y });
+		font->print(text, x, y, false);
 		return 0;
 	}
 
@@ -515,7 +515,7 @@ int print(lua_State* L) {
 		int col = luaL_checkinteger(L, 2);
 		p8_memory[ADDR_DS_COLOR] = col;
 	}
-	// machineState->print(text);
+	font->print(text, p8_memory[ADDR_DS_CURSOR_X], p8_memory[ADDR_DS_CURSOR_Y], true);
 
 	return 0;
 }

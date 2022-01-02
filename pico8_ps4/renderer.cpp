@@ -196,17 +196,22 @@ void Renderer::draw_sprite(int n, int x, int y, int w, int h)
 			else {
 				color = color >> 4;
 			}
-			this->set_transform_pixel(x + _x, y + _y, color);
+			this->set_transform_pixel(x + _x, y + _y, color, true);
 		}
 	}
 }
 
 void Renderer::draw_point(int x, int y)
 {
+	unsigned char color = p8_memory[ADDR_DS_COLOR] & 0x0F;
+	this->set_transform_pixel(x, y, color, false);
 }
 
 void Renderer::draw_points(std::vector<Renderer_Point>& points)
 {
+	for (int i = 0; i < points.size(); i++) {
+		this->draw_point(points[i].x, points[i].y);
+	}
 }
 
 void Renderer::draw_line(int x0, int y0, int x1, int y1)
@@ -219,6 +224,28 @@ void Renderer::draw_circle(int x, int y, int radius, bool fill)
 
 void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 {
+	unsigned char color = p8_memory[ADDR_DS_COLOR] & 0x0F;
+
+	// TODO pattern
+	// TODO optimize
+
+	if (fill) {
+		for (int x = x0; x <= x1; x++) {
+			for (int y = y0; y <= y1; y++) {
+				this->set_transform_pixel(x, y, color, false);
+			}
+		}
+	}
+	else {
+		for (int x = x0; x <= x1; x++) {
+			this->set_transform_pixel(x, y0, color, false);
+			this->set_transform_pixel(x, y1, color, false);
+		}
+		for (int y = y0; y <= y1; y++) {
+			this->set_transform_pixel(x0, y, color, false);
+			this->set_transform_pixel(x1, y, color, false);
+		}
+	}
 }
 
 void Renderer::present()
@@ -247,11 +274,11 @@ void Renderer::present()
 	SDL_UpdateWindowSurface(this->window);
 }
 
-void Renderer::set_transform_pixel(int x, int y, unsigned char color)
+void Renderer::set_transform_pixel(int x, int y, unsigned char color, bool transparency)
 {
 	unsigned char mapped_color = p8_memory[ADDR_DS_DRAW_PAL + color];
 	// Skip if it's transparent
-	if (mapped_color >= 0x10) {
+	if (transparency && mapped_color >= 0x10) {
 		return;
 	}
 	mapped_color = mapped_color & 0x0F;

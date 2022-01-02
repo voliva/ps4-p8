@@ -13,6 +13,7 @@
 #include <math.h>
 #include "audio.h"
 #include "memory.h"
+#include "font.h"
 
 #ifdef __PS4__
 #define MINEWALKER "/app0/assets/misc/minewalker.p8.png"
@@ -27,6 +28,7 @@ Log DEBUGLOG = logger.log("main");
 MachineState* machineState;
 AudioManager* audioManager;
 Renderer* renderer;
+Font* font;
 int main(void)
 {
 	DEBUGLOG << "Initializing renderer..." << ENDL;
@@ -40,10 +42,13 @@ int main(void)
 
 	memory_load_cartridge(*r);
 
+	renderer->initialize();
+
 	machineState = new MachineState();
 	machineState->initialize();
 
-	renderer->initialize();
+	font = new Font();
+	font->initialize();
 
 	DEBUGLOG << "Loading SFX" << ENDL;
 	audioManager->loadSfx(r->sfx);

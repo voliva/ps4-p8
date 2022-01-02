@@ -42,6 +42,6 @@ private:
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 
-	void set_transform_pixel(int x, int y, unsigned char color);
+	void set_transform_pixel(int x, int y, unsigned char color, bool transparency);
 };
 extern Renderer *renderer;
