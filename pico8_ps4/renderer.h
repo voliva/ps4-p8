@@ -48,10 +48,10 @@ public:
 
 	void present();
 
-private:
-	SDL_Window* window;
 	SDL_Renderer* renderer;
+	SDL_Window* window;
 
+private:
 	void set_transform_pixel(int x, int y, unsigned char color, bool transparency);
 };
 extern Renderer *renderer;

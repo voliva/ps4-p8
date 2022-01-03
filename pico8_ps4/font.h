@@ -5,6 +5,10 @@
 #include <string>
 #include "renderer.h"
 
+#define SYS_SCALE 10
+#define SYS_CHAR_WIDTH SYS_SCALE * 4
+#define SYS_CHAR_HEIGHT SYS_SCALE * 4
+
 typedef struct {
 	int size;
 	std::vector<Renderer_Point> coords;
@@ -18,6 +22,9 @@ public:
 
 	void drawChar(std::string c, int x, int y);
 	void print(std::string c, int x, int y, bool scroll);
+
+	void sys_print(std::string c, int x, int y);
+	void sys_print(std::string c, int x, int y, double scale);
 
 private:
 	std::map<std::string, CharData> charData;

@@ -9,3 +9,5 @@ pkg.gp4
 /Debug
 *.log
 ps4_int
+/p8-cartridges/*
+!.gitkeep

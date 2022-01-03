@@ -13,3 +13,8 @@ typedef struct {
 } KeyEvent;
 
 KeyEvent* mapSdlEvent(SDL_Event& e);
+
+enum class Key {
+	None, left, right, up, down, circle, cross, pause, L2, R2
+};
+Key getKeyDown(SDL_Event& e);

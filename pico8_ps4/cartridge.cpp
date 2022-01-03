@@ -184,8 +184,35 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
         }
         return std::string(decompressed.begin(), decompressed.end());
     }
-    if (compressed_lua[0] == ':' && compressed_lua[1] == 'c' && compressed_lua[1] == ':' && compressed_lua[1] == 0) {
-        // TODO old compression
+    if (compressed_lua[0] == ':' && compressed_lua[1] == 'c' && compressed_lua[2] == ':' && compressed_lua[3] == 0) {
+        std::vector<unsigned char> header(8);
+        for (int i = 0; i < header.size(); i++) {
+            header[i] = br.next_u8(8);
+        }
+        unsigned int decompressed_length = (header[4] << 8) | header[5];
+        std::vector<unsigned char> decompressed(decompressed_length);
+        unsigned int d_i = 0;
+
+        std::string lut = "\n 0123456789abcdefghijklmnopqrstuvwxyz!#%(){}[]<>+=/*:;.,~_";
+        while (d_i < decompressed_length) {
+            unsigned char byte = br.next_u8(8);
+            if (byte == 0) {
+                decompressed[d_i++] = br.next_u8(8);
+            }
+            else if (byte < 0x3c) {
+                decompressed[d_i++] = lut[byte-1];
+            }
+            else {
+                unsigned char next = br.next_u8(8);
+                unsigned int offset = (byte - 0x3c) * 16 + (next & 0x0f);
+                unsigned int length = (next >> 4) + 2;
+                unsigned int start = d_i - offset;
+                for (int i = 0; i < length; i++) {
+                    decompressed[d_i++] = decompressed[start + i];
+                }
+            }
+        }
+        return std::string(decompressed.begin(), decompressed.end());
     }
 
     return std::string(compressed_lua.begin(), compressed_lua.end());
