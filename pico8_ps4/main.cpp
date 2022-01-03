@@ -37,7 +37,7 @@ Renderer* renderer;
 Font* font;
 
 typedef struct {
-	SDL_Surface* surface;
+	SDL_Texture* surface;
 	std::string path;
 } LocalCartridge;
 typedef struct {
@@ -90,6 +90,8 @@ int main(void)
 
 	SDL_Event e;
 	bool quit = false;
+
+	auto frame_start = std::chrono::high_resolution_clock::now();
 	while (!quit) {
 		int prevScreen = currentScreen - 1;
 		while (prevScreen >= 0 && screens[prevScreen].cartridges.size() == 0) {
@@ -141,8 +143,12 @@ int main(void)
 			}
 		}
 
+		auto now = std::chrono::high_resolution_clock::now();
+		auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - frame_start).count();
+		frame_start = now;
+
 		double target_diff = selectedCart - renderingTargetCart;
-		double movement = target_diff * 0.1;
+		double movement = target_diff * 0.1 * delta / 15;
 		if (movement > 0) {
 			if (movement < 0.01) {
 				movement = 0.01;
@@ -177,20 +183,34 @@ int main(void)
 		}
 
 		for (int i = 0; i < scr.cartridges.size(); i++) {
-			SDL_Surface* srf = scr.cartridges[i].surface;
-			int width = srf->w * ((double)CAROUSEL_CART_HEIGHT / srf->h);
+			double rendering_diff = fabs(renderingTargetCart - i);
+			if (rendering_diff > 2.2) {
+				continue;
+			}
 
-			double scale = 1.2 - 0.2 * abs(renderingTargetCart - i);
+			SDL_Texture* srf = scr.cartridges[i].surface;
+			int width = 160 * ((double)CAROUSEL_CART_HEIGHT / 205);
+
+			int alpha = 255 - 255 * rendering_diff / 2.2;
+			if (alpha < 0) alpha = 0;
+			SDL_SetTextureAlphaMod(srf, alpha);
+
+			double scale = 1.2 - 0.2 * rendering_diff;
 			if (scale < 1) scale = 1;
 
 			int x_center = FRAME_WIDTH / 2 + (width + 100) * ((double)i - renderingTargetCart);
+			double x = x_center - width * scale / 2;
+			double y = 30 + SYS_CHAR_HEIGHT + 100 + (1 - scale) * CAROUSEL_CART_HEIGHT / 2;
+			double w = (double)width * scale;
+			double h = (double)CAROUSEL_CART_HEIGHT * scale;
+
 			SDL_Rect dest {
-				(int)(x_center - width * scale / 2),
-				(int)(30 + SYS_CHAR_HEIGHT + 100 + (1-scale) * CAROUSEL_CART_HEIGHT / 2),
-				(int)(width * scale),
-				(int)(CAROUSEL_CART_HEIGHT * scale)
+				(int)x,
+				(int)y,
+				(int)w,
+				(int)h
 			};
-			SDL_BlitScaled(srf, NULL, screenSurface, &dest);
+			SDL_RenderCopy(renderer->renderer, srf, NULL, &dest);
 		}
 		std::string currentPath = scr.cartridges[round(renderingTargetCart)].path;
 		std::string filename = currentPath.substr(currentPath.find_last_of("/") + 1);
@@ -202,8 +222,6 @@ int main(void)
 		);
 
 		SDL_UpdateWindowSurface(renderer->window);
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 
 	SDL_Quit();
@@ -211,11 +229,16 @@ int main(void)
 	return 0;
 }
 
-SDL_Surface* surface_from_file(std::string path) {
+SDL_Texture* surface_from_file(std::string path) {
 	int width, height, channels;
 	unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+
 	// For some reason stbi_load gives rgb_a as [a,b,g,r] stream
-	return SDL_CreateRGBSurfaceFrom(data, width, height, 4*8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
+	SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(data, width, height, 4 * 8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
+	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer->renderer, surface);
+	SDL_FreeSurface(surface);
+
+	return texture;
 }
 std::vector<LocalCartridge> load_local_cartridges(std::string directory) {
 	std::vector<LocalCartridge> result;
@@ -227,7 +250,7 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory) {
 			std::string filename = ent->d_name;
 			if (filename.find(".p8.png") != std::string::npos) {
 				std::string path = directory + "/" + filename;
-				SDL_Surface* surface = surface_from_file(path);
+				SDL_Texture* surface = surface_from_file(path);
 				if (surface != NULL) {
 					result.push_back({
 						surface,
