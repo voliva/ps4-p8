@@ -631,7 +631,7 @@ int btn(lua_State* L) {
 }
 
 int cls(lua_State* L) {
-	int col = luaL_optinteger(L, 3, 0);
+	int col = luaL_optinteger(L, 1, 0);
 
 	renderer->clear_screen(col);
 	p8_memory[ADDR_DS_CURSOR_X] = 0;
