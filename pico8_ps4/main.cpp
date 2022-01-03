@@ -86,7 +86,6 @@ int main(void)
 	//renderer->present();
 	//while (!quit) {
 	//	machineState->registerFrame();
-
 	//	while (SDL_PollEvent(&e) != 0)
 	//	{
 	//		if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE)) {
@@ -152,7 +151,7 @@ int main(void)
 		}
 
 		if (remainingTime > 1) {
-			DEBUGLOG << "sleep for " << remainingTime << ENDL;
+			// DEBUGLOG << "sleep for " << remainingTime << ENDL;
 			std::this_thread::sleep_for(std::chrono::milliseconds(remainingTime));
 		}
 	}

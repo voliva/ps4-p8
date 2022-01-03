@@ -30,6 +30,7 @@ public:
 	void initialize();
 
 	void clear_screen(unsigned char color);
+	void draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned char layer);
 	void draw_sprite(int n, int x, int y, int w, int h); // TODO flip
 	void draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int dy); // TODO stretch + flip
 	void draw_point(int x, int y);

@@ -22,6 +22,9 @@ int btnp(lua_State* L);
 int cls(lua_State* L);
 int spr(lua_State* L);
 int sspr(lua_State* L);
+int map(lua_State* L);
+int mget(lua_State* L);
+int mset(lua_State* L);
 int cursor(lua_State* L);
 int print(lua_State* L);
 int color(lua_State* L);
@@ -74,6 +77,12 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "spr");
 	lua_pushcfunction(this->state, sspr);
 	lua_setglobal(this->state, "sspr");
+	lua_pushcfunction(this->state, map);
+	lua_setglobal(this->state, "map");
+	lua_pushcfunction(this->state, mget);
+	lua_setglobal(this->state, "mget");
+	lua_pushcfunction(this->state, mset);
+	lua_setglobal(this->state, "mset");
 	lua_pushcfunction(this->state, cursor);
 	lua_setglobal(this->state, "cursor");
 	lua_pushcfunction(this->state, print);
@@ -124,8 +133,6 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "cos");
 	lua_pushcfunction(this->state, sin);
 	lua_setglobal(this->state, "sin");
-	lua_pushcfunction(this->state, noop);
-	lua_setglobal(this->state, "map");
 
 	std::string all =
 		"function all(t) \
@@ -663,6 +670,49 @@ int sspr(lua_State* L) {
 	int dy = luaL_checknumber(L, 6);
 
 	renderer->draw_from_spritesheet(sx, sy, sw, sh, dx, dy);
+
+	return 0;
+}
+
+int map(lua_State* L) {
+	int cellx = luaL_checkinteger(L, 1);
+	int celly = luaL_checkinteger(L, 2);
+	int sx = luaL_checkinteger(L, 3);
+	int sy = luaL_checkinteger(L, 4);
+	int cellw = luaL_checkinteger(L, 5);
+	int cellh = luaL_checkinteger(L, 6);
+	int layer = luaL_optinteger(L, 7, 0);
+
+	renderer->draw_map(cellx, celly, sx, sy, cellw, cellh, layer);
+
+	return 0;
+}
+
+int mget(lua_State* L) {
+	int cellx = luaL_optinteger(L, 1, 0);
+	int celly = luaL_optinteger(L, 2, 0);
+
+	int row_offset = ADDR_MAP + celly * 128;
+	if (celly >= 32) {
+		row_offset = ADDR_MAP_SHARED + (celly - 32) * 128;
+	}
+	int n = p8_memory[row_offset + cellx];
+
+	lua_pushinteger(L, n);
+
+	return 1;
+}
+
+int mset(lua_State* L) {
+	int cellx = luaL_optinteger(L, 1, 0);
+	int celly = luaL_optinteger(L, 2, 0);
+	int snum = luaL_optinteger(L, 3, 0);
+
+	int row_offset = ADDR_MAP + celly * 128;
+	if (celly >= 32) {
+		row_offset = ADDR_MAP_SHARED + (celly - 32) * 128;
+	}
+	p8_memory[row_offset + cellx] = snum;
 
 	return 0;
 }

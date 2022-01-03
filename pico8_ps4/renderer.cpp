@@ -4,6 +4,7 @@
 #include "log.h"
 #include <thread>
 #include "efla.e.h"
+#include <math.h>
 
 std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input);
 
@@ -176,6 +177,27 @@ void Renderer::clear_screen(unsigned char color)
 	memset(&p8_memory[ADDR_SCREEN], color, 0x2000);
 }
 
+void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned char layer)
+{
+	for (int y = 0; y < ch; y++) {
+		int row = cy + y;
+		int row_offset = ADDR_MAP + row * 128;
+		if (row >= 32) {
+			row_offset = ADDR_MAP_SHARED + (row-32) * 128;
+		}
+		int screen_y = sy + y * 8;
+
+		for (int x = 0; x < cw; x++) {
+			int col = cx + x;
+			int n = p8_memory[row_offset + col];
+			int screen_x = sx + x * 8;
+
+			// TODO layer filter
+			this->draw_sprite(n, screen_x, screen_y, 8, 8);
+		}
+	}
+}
+
 #define LINE_JMP 128 / 2
 void Renderer::draw_sprite(int n, int x, int y, int w, int h)
 {
@@ -223,7 +245,7 @@ void Renderer::draw_line(int x0, int y0, int x1, int y1)
 	this->draw_points(points);
 }
 
-// TODO fill + pattern + improve (it's more like a squished circle vs original pico-8)
+// TODO fill + pattern
 void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 {
 	int width = x1 - x0;
@@ -231,48 +253,37 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 	double mid_x = x0 + (double)width / 2;
 	double mid_y = y0 + (double)height / 2;
 
-	if (width >= height) {
-		// from x0..midpoint there will be two pixels drawn with a vertical symmetry.
-		// it's also mirrored to the other side (midpoint..x1)
-		double prev_dy = 0;
-		for (int x = x0; x <= ceil(mid_x); x++) {
-			// an oval is a squished circle, so we can just use pythagoras if we transform the coordinate
-			double x_t = 1 - 2 * (double)(x-x0) / width; // x / (width/2) = 2 * x / width
-			double y_t = sqrt(1 - x_t * x_t);
-			double dy = y_t * height / 2;
-			// Draw line to connect with current dy
-			for (int y = prev_dy + 1; y < dy; y++) {
-				this->draw_point(x-1, mid_y - y);
-				this->draw_point(x-1, ceil(mid_y + y));
-				this->draw_point(x1 - (x-1 - x0), mid_y - y);
-				this->draw_point(x1 - (x-1 - x0), ceil(mid_y + y));
-			}
-			prev_dy = dy;
-			this->draw_point(x, mid_y - dy);
-			this->draw_point(x, ceil(mid_y + dy));
-			this->draw_point(x1 - (x-x0), mid_y - dy);
-			this->draw_point(x1 - (x - x0), ceil(mid_y + dy));
-		}
+	// The second part of this formula was taken temptatively.... halfway_t is cos(M_PI/4) for circles, but not for ellipses where they are squished
+	// On the limit when width or height = 0, then it needs to go all the way from 0..1. So this seems to work.
+	double halfway_t = cos(M_PI / 4 - (double)abs(width-height) / std::max(width, height) * M_PI / 4);
+	int halfway_h = ceil(halfway_t * height / 2);
+	for (int dy = 0; dy <= halfway_h; dy++) {
+		double y_t = 2 * (double)dy / height; // dy/(height/2) = 2*dy/height
+		double x_t = sqrt(1 - y_t * y_t);
+
+		int x2 = round(mid_x + x_t * width / 2);
+		int x3 = round(mid_x - x_t * width / 2);
+		int y2 = round(mid_y + dy);
+		int y3 = round(mid_y - dy);
+		this->draw_point(x2, y2);
+		this->draw_point(x2, y3);
+		this->draw_point(x3, y2);
+		this->draw_point(x3, y3);
 	}
-	else {
-		// Same but in the other direction
-		double prev_dx = 0;
-		for (int y = y0; y <= ceil(mid_y); y++) {
-			double y_t = 1 - 2 * (double)(y-y0) / height;
-			double x_t = sqrt(1 - y_t * y_t);
-			double dx = x_t * width / 2;
-			for (int x = prev_dx + 1; x < dx; x++) {
-				this->draw_point(mid_x - x, y - 1);
-				this->draw_point(ceil(mid_x + x), y - 1);
-				this->draw_point(mid_x - x, y1 - (y - 1 - y0));
-				this->draw_point(ceil(mid_x + x), y1 - (y - 1 - y0));
-			}
-			prev_dx = dx;
-			this->draw_point(mid_x - dx, y);
-			this->draw_point(mid_x + dx, y);
-			this->draw_point(mid_x - dx, y1 - (y - y0));
-			this->draw_point(mid_x + dx, y1 - (y - y0));
-		}
+	
+	int halfway_w = ceil(halfway_t * width / 2);
+	for (int dx = 0; dx <= halfway_w; dx++) {
+		double x_t = 2 * (double)dx / width;
+		double y_t = sqrt(1 - x_t * x_t);
+
+		int x2 = round(mid_x + x_t * width / 2);
+		int x3 = round(mid_x - x_t * width / 2);
+		int y2 = round(mid_y + y_t * height / 2);
+		int y3 = round(mid_y - y_t * height / 2);
+		this->draw_point(x2, y2);
+		this->draw_point(x2, y3);
+		this->draw_point(x3, y2);
+		this->draw_point(x3, y3);
 	}
 }
 
