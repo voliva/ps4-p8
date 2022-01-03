@@ -4,20 +4,24 @@ An emulator to run pico-8 cartridges on a PS4.
 
 Project based on [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain)
 
-Pico-8 is a Fantasy Programmable Console made by Lexaloffe Games. This emulator is compatible with built pico-8 cartridges in PNG format, to build your own games you will need the original [Pico-8 console](https://www.lexaloffle.com/pico-8.php)
+Pico-8 is a Fantasy Programmable Console made by Lexaloffle Games. This emulator is compatible with built pico-8 cartridges in PNG format, to build your own games you will need the original [Pico-8 console](https://www.lexaloffle.com/pico-8.php)
 
 ## Status
 
-Not finished - Currently it's complete just enough so that it can run one simple game I made, Minewalker, which is a game inspired by minesweeper. The cartridge is included in assets/misc/minewalker.p8.png:
+Not finished - Currently it's complete just enough so that it can run very simple games, but most of them don't fully work just yet.
 
-![minewalker.p8.png](https://github.com/voliva/ps4-p8/blob/audio/assets/misc/minewalker.p8.png?raw=true)
+It comes with one simple game which fully works, Minewalker, which is a game inspired by minesweeper. The cartridge is included in assets/misc/minewalker.p8.png:
 
-- `print`: It prints text on the screen, but it's missing some P8SCII control codes, non-ascii characters, and autoscroll.
-- Sprites: It draws them correctly.
+![minewalker.p8.png](https://github.com/voliva/ps4-p8/blob/main/assets/misc/minewalker.p8.png?raw=true)
+
+More .p8.png cartridges can be bundled with the .pkg file by adding them into `/assets/misc` folder, or they will be loaded in runtime from PS4's `/data/p8-cartridges` folder.
+
+- `print`: It prints text on the screen, but it's missing some P8SCII control codes, non-ascii characters.
+- Sprites: It draws sprites without stretching.
 - Sfx: Plays sound effects on one channel, a bit buggy if you try to play more than one.
-- Menu: not implemented yet.
-- Memory manipulation: not implemented yet.
-- Maps: not implemented yet.
+- Menu: WIP.
+- Memory manipulation: Almost complete.
+- Maps: WIP.
 - Music: not implemented yet.
 
 When this is finished, one future idea is to have a cartridge explorer where you can just play any cartridge published on the internet.
@@ -29,8 +33,12 @@ The project is cross-platform for Windows + PS4.
 You'll need to add the external libraries in `${SolutionDir}/lib`:
 
 - lib/include/stb/stb_image.h: Grab this file from https://github.com/nothings/stb
-- lib/include/SDL2: SDL2 headers (needed for Windows)
-- lib/lib/SDL2.lib: SDL2 lib (needed for Windows)
+
+Additionally, to run it on windows, you will need:
+
+- lib/include/SDL2: SDL2 headers
+- lib/include/dirent.h: Dirent port for windows, grab from https://github.com/tronkko/dirent
+- lib/lib/SDL2.lib: SDL2 lib
 
 ### Windows
 
@@ -42,14 +50,15 @@ Run `./build.bat` - First of `${SolutionDir}/lua` project, then `${SolutionDir}/
 
 ## License
 
-### External dependencies used
+### External tools and dependencies used
 
-- [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain)
-- [Lua](https://www.lua.org/)
-- [STB](https://github.com/nothings/stb)
+- [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) GPL v3
+- [Lua](https://www.lua.org/) MIT
+- [STB](https://github.com/nothings/stb) MIT
 - [EFLA](http://www.edepot.com/algorithm.html)
-- SDL2
-- Pico-8 Font
+- [dirent](https://github.com/tronkko/dirent) MIT
+- [SDL2](https://www.libsdl.org/) ZLib
+- [Pico-8 Font + Palette](https://www.lexaloffle.com/pico-8.php?page=faq) CC-0
 
 ### PS4-P8
 
