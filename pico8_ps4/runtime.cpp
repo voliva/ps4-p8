@@ -7,6 +7,7 @@
 #include "lua_state.h"
 
 #include <thread>
+#include "pause_menu.h"
 
 #define DEBUGLOG Runtime_DEBUGLOG
 Log DEBUGLOG = logger.log("Runtime");
@@ -38,9 +39,11 @@ bool run_cartridge(Cartridge* r)
 
 	SDL_Event e;
 	bool quit = false;
+	bool paused = false;
 
 	unsigned char time_debt = 0;
 	short ms_per_frame = millisecs_per_frame(luaState.is60FPS);
+
 	while (!quit) {
 		machineState->registerFrame();
 
@@ -50,29 +53,46 @@ bool run_cartridge(Cartridge* r)
 		while (SDL_PollEvent(&e) != 0)
 		{
 			// DEBUGLOG << e.type << ENDL;
-
-			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE)) {
+			if (e.type == SDL_QUIT) {
 				quit = true;
 			}
 
 			KeyEvent* result = mapSdlEvent(e);
 
 			if (result != NULL) {
-				machineState->processKeyEvent(*result);
+				if (paused) {
+					switch (pauseMenu->manageEvent(*result)) {
+					case 1:
+						paused = false;
+						break;
+					case 2:
+						quit = true;
+						break;
+					}
+				} else if (result->down && result->key == P8_Key::pause) {
+					paused = true;
+				} else {
+					machineState->processKeyEvent(*result);
+				}
 			}
 
 			delete result;
 		}
 		auto frame_start = std::chrono::high_resolution_clock::now();
 
-		luaState.run_update();
-
-		if (time_debt < ms_per_frame / 2) {
-			luaState.run_draw();
-			renderer->present();
+		if (paused) {
+			pauseMenu->draw();
 		}
 		else {
-			DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;
+			luaState.run_update();
+
+			if (time_debt < ms_per_frame / 2) {
+				luaState.run_draw();
+				renderer->present();
+			}
+			else {
+				DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;
+			}
 		}
 
 		auto frame_end = std::chrono::high_resolution_clock::now();
@@ -111,4 +131,11 @@ int millisecs_per_frame(bool is60Fps) {
 	}
 
 	return 1000 / fps;
+}
+
+// Crec que es millor si faig una classe d'aixo....
+// Perque necesita un estat intern, perque l'he de cridar quan hi hagi events, i perque pinti. I perque desde fora
+// la poden potinejar per afegir items (com coi funcionarà les funcions per parametre?) https://stackoverflow.com/questions/38156237/lua-get-function-from-argument
+int draw_pause() {
+	return 0;
 }

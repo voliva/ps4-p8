@@ -11,10 +11,12 @@ std::map<SDL_Scancode, KeyEvent> key_to_event = {
 	{SDL_SCANCODE_DOWN, KeyEvent{ P8_Key::down, 0 }},
 	{SDL_SCANCODE_LEFT, KeyEvent{ P8_Key::left, 0 }},
 	{SDL_SCANCODE_RIGHT, KeyEvent{ P8_Key::right, 0 }},
+	{SDL_SCANCODE_RETURN, KeyEvent{ P8_Key::pause, 0 }},
 };
 std::map<Uint8, P8_Key> controller_to_key = {
 	{0, P8_Key::cross},
 	{1, P8_Key::circle},
+	{9, P8_Key::pause},
 	{13, P8_Key::up},
 	{14, P8_Key::down},
 	{15, P8_Key::left},

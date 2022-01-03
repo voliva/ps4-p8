@@ -17,6 +17,7 @@
 #include <stb/stb_image.h>
 #include <dirent.h>
 #include "runtime.h"
+#include "pause_menu.h"
 
 #ifdef __PS4__
 #define BUNDLED_FOLDER "/app0/assets/misc"
@@ -34,6 +35,7 @@ MachineState* machineState;
 AudioManager* audioManager;
 Renderer* renderer;
 Font* font;
+PauseMenu* pauseMenu;
 
 typedef struct {
 	SDL_Texture* surface;
@@ -55,6 +57,7 @@ int main(void)
 
 	machineState = new MachineState();
 	font = new Font();
+	pauseMenu = new PauseMenu();
 
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)
