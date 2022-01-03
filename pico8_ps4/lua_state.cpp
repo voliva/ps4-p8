@@ -28,11 +28,16 @@ int color(lua_State* L);
 int tonum(lua_State* L);
 int add(lua_State* L);
 int deli(lua_State* L);
-int rectfill(lua_State* L);
 int noop(lua_State* L);
 int time(lua_State* L);
 int type(lua_State* L);
+int line(lua_State* L);
 int rect(lua_State* L);
+int rectfill(lua_State* L);
+int circ(lua_State* L);
+int circfill(lua_State* L);
+int oval(lua_State* L);
+int ovalfill(lua_State* L);
 int sfx(lua_State* L);
 int poke(lua_State* L);
 int pal(lua_State* L);
@@ -83,16 +88,26 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "deli");
 	lua_pushcfunction(this->state, noop);
 	lua_setglobal(this->state, "menuitem");
-	lua_pushcfunction(this->state, rectfill);
-	lua_setglobal(this->state, "rectfill");
 	lua_pushcfunction(this->state, sfx);
 	lua_setglobal(this->state, "sfx");
 	lua_pushcfunction(this->state, time);
 	lua_setglobal(this->state, "time");
 	lua_pushcfunction(this->state, type);
 	lua_setglobal(this->state, "type");
+	lua_pushcfunction(this->state, line);
+	lua_setglobal(this->state, "line");
 	lua_pushcfunction(this->state, rect);
 	lua_setglobal(this->state, "rect");
+	lua_pushcfunction(this->state, rectfill);
+	lua_setglobal(this->state, "rectfill");
+	lua_pushcfunction(this->state, circ);
+	lua_setglobal(this->state, "circ");
+	lua_pushcfunction(this->state, circfill);
+	lua_setglobal(this->state, "circfill");
+	lua_pushcfunction(this->state, oval);
+	lua_setglobal(this->state, "oval");
+	lua_pushcfunction(this->state, ovalfill);
+	lua_setglobal(this->state, "ovalfill");
 	lua_pushcfunction(this->state, poke);
 	lua_setglobal(this->state, "poke");
 	lua_pushcfunction(this->state, noop);
@@ -263,6 +278,19 @@ int deli(lua_State* L) {
 	return 1;
 }
 
+int line(lua_State* L) {
+	int x0 = luaL_checkinteger(L, 1);
+	int y0 = luaL_checkinteger(L, 2);
+	int x1 = luaL_checkinteger(L, 3);
+	int y1 = luaL_checkinteger(L, 4);
+	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
+
+	p8_memory[ADDR_DS_COLOR] = col;
+	renderer->draw_line(x0, y0, x1, y1);
+
+	return 0;
+}
+
 int rectfill(lua_State* L) {
 	int x0 = luaL_checkinteger(L, 1);
 	int y0 = luaL_checkinteger(L, 2);
@@ -285,6 +313,56 @@ int rect(lua_State* L) {
 
 	p8_memory[ADDR_DS_COLOR] = col;
 	renderer->draw_rectangle(x0, y0, x1, y1, false);
+
+	return 0;
+}
+
+int ovalfill(lua_State* L) {
+	int x0 = luaL_checkinteger(L, 1);
+	int y0 = luaL_checkinteger(L, 2);
+	int x1 = luaL_checkinteger(L, 3);
+	int y1 = luaL_checkinteger(L, 4);
+	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
+
+	p8_memory[ADDR_DS_COLOR] = col;
+	renderer->draw_oval(x0, y0, x1, y1, true);
+
+	return 0;
+}
+
+int oval(lua_State* L) {
+	int x0 = luaL_checkinteger(L, 1);
+	int y0 = luaL_checkinteger(L, 2);
+	int x1 = luaL_checkinteger(L, 3);
+	int y1 = luaL_checkinteger(L, 4);
+	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
+
+	p8_memory[ADDR_DS_COLOR] = col;
+	renderer->draw_oval(x0, y0, x1, y1, false);
+
+	return 0;
+}
+
+int circfill(lua_State* L) {
+	int x = luaL_checkinteger(L, 1);
+	int y = luaL_checkinteger(L, 2);
+	int r = luaL_optnumber(L, 3, 4);
+	int col = luaL_optnumber(L, 4, p8_memory[ADDR_DS_COLOR]);
+
+	p8_memory[ADDR_DS_COLOR] = col;
+	renderer->draw_oval(x-r, y-r, x+r, y+r, true);
+
+	return 0;
+}
+
+int circ(lua_State* L) {
+	int x = luaL_checkinteger(L, 1);
+	int y = luaL_checkinteger(L, 2);
+	int r = luaL_optnumber(L, 3, 4);
+	int col = luaL_optnumber(L, 4, p8_memory[ADDR_DS_COLOR]);
+
+	p8_memory[ADDR_DS_COLOR] = col;
+	renderer->draw_oval(x - r, y - r, x + r, y + r, false);
 
 	return 0;
 }

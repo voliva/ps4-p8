@@ -45,6 +45,9 @@
     <ClCompile Include="memory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="efla.e.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -75,6 +78,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="efla.e.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -47,7 +47,9 @@ Run `./build.bat` - First of `${SolutionDir}/lua` project, then `${SolutionDir}/
 - [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain)
 - [Lua](https://www.lua.org/)
 - [STB](https://github.com/nothings/stb)
+- [EFLA](http://www.edepot.com/algorithm.html)
 - SDL2
+- Pico-8 Font
 
 ### PS4-P8
 

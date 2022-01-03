@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "log.h"
 #include <thread>
+#include "efla.e.h"
 
 std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input);
 
@@ -218,10 +219,61 @@ void Renderer::draw_points(std::vector<Renderer_Point>& points)
 
 void Renderer::draw_line(int x0, int y0, int x1, int y1)
 {
+	std::vector<Renderer_Point> points = efla_small_line(x0, y0, x1, y1);
+	this->draw_points(points);
 }
 
-void Renderer::draw_circle(int x, int y, int radius, bool fill)
+// TODO fill + pattern + improve (it's more like a squished circle vs original pico-8)
+void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 {
+	int width = x1 - x0;
+	int height = y1 - y0;
+	double mid_x = x0 + (double)width / 2;
+	double mid_y = y0 + (double)height / 2;
+
+	if (width >= height) {
+		// from x0..midpoint there will be two pixels drawn with a vertical symmetry.
+		// it's also mirrored to the other side (midpoint..x1)
+		double prev_dy = 0;
+		for (int x = x0; x <= ceil(mid_x); x++) {
+			// an oval is a squished circle, so we can just use pythagoras if we transform the coordinate
+			double x_t = 1 - 2 * (double)(x-x0) / width; // x / (width/2) = 2 * x / width
+			double y_t = sqrt(1 - x_t * x_t);
+			double dy = y_t * height / 2;
+			// Draw line to connect with current dy
+			for (int y = prev_dy + 1; y < dy; y++) {
+				this->draw_point(x-1, mid_y - y);
+				this->draw_point(x-1, ceil(mid_y + y));
+				this->draw_point(x1 - (x-1 - x0), mid_y - y);
+				this->draw_point(x1 - (x-1 - x0), ceil(mid_y + y));
+			}
+			prev_dy = dy;
+			this->draw_point(x, mid_y - dy);
+			this->draw_point(x, ceil(mid_y + dy));
+			this->draw_point(x1 - (x-x0), mid_y - dy);
+			this->draw_point(x1 - (x - x0), ceil(mid_y + dy));
+		}
+	}
+	else {
+		// Same but in the other direction
+		double prev_dx = 0;
+		for (int y = y0; y <= ceil(mid_y); y++) {
+			double y_t = 1 - 2 * (double)(y-y0) / height;
+			double x_t = sqrt(1 - y_t * y_t);
+			double dx = x_t * width / 2;
+			for (int x = prev_dx + 1; x < dx; x++) {
+				this->draw_point(mid_x - x, y - 1);
+				this->draw_point(ceil(mid_x + x), y - 1);
+				this->draw_point(mid_x - x, y1 - (y - 1 - y0));
+				this->draw_point(ceil(mid_x + x), y1 - (y - 1 - y0));
+			}
+			prev_dx = dx;
+			this->draw_point(mid_x - dx, y);
+			this->draw_point(mid_x + dx, y);
+			this->draw_point(mid_x - dx, y1 - (y - y0));
+			this->draw_point(mid_x + dx, y1 - (y - y0));
+		}
+	}
 }
 
 void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)

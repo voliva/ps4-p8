@@ -81,6 +81,20 @@ int main(void)
 
 	SDL_Event e;
 	bool quit = false;
+
+	//renderer->draw_oval(10, 10, 100, 100, false);
+	//renderer->present();
+	//while (!quit) {
+	//	machineState->registerFrame();
+
+	//	while (SDL_PollEvent(&e) != 0)
+	//	{
+	//		if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE)) {
+	//			quit = true;
+	//		}
+	//	}
+	//}
+
 	unsigned char time_debt = 0;
 	short ms_per_frame = millisecs_per_frame(luaState.is60FPS);
 	while (!quit) {
@@ -138,7 +152,7 @@ int main(void)
 		}
 
 		if (remainingTime > 1) {
-			// DEBUGLOG << "sleep for " << remainingTime << ENDL;
+			DEBUGLOG << "sleep for " << remainingTime << ENDL;
 			std::this_thread::sleep_for(std::chrono::milliseconds(remainingTime));
 		}
 	}

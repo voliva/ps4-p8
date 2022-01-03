@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClCompile Include="audio.cpp" />
     <ClCompile Include="cartridge.cpp" />
+    <ClCompile Include="efla.e.cpp" />
     <ClCompile Include="events.cpp" />
     <ClCompile Include="font.cpp" />
     <ClCompile Include="log.cpp" />
@@ -167,6 +168,7 @@
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
     <ClInclude Include="audio.h" />
     <ClInclude Include="cartridge.h" />
+    <ClInclude Include="efla.e.h" />
     <ClInclude Include="events.h" />
     <ClInclude Include="font.h" />
     <ClInclude Include="log.h" />
