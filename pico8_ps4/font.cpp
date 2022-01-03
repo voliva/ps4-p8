@@ -116,7 +116,7 @@ void Font::print(std::string c, int x, int y, bool scroll)
 			grapheme = c.substr(start, l);
 		}
 		if (!this->charData.count(grapheme)) {
-			logger << "Font::print: Couldn't find CharData for " << grapheme << ENDL;
+			DEBUGLOG << "print: Couldn't find CharData for " << grapheme << ENDL;
 			continue;
 		}
 
@@ -130,6 +130,48 @@ void Font::print(std::string c, int x, int y, bool scroll)
 	if (scroll && ((p8_memory[ADDR_DS_CURSOR_Y]+6) >= 128)) {
 		p8_memory[ADDR_DS_CURSOR_Y] -= y_offset;
 		renderer->scroll(y_offset);
+	}
+}
+
+void Font::sys_print(std::string c, int x, int y)
+{
+	this->sys_print(c, x, y, 1);
+}
+void Font::sys_print(std::string c, int x, int y, double scale)
+{
+	int start = 0;
+
+	while (start < c.length()) {
+		int l = 1;
+		std::string grapheme = c.substr(start, l);
+		// logger << ("orig: " + c + ", trying: " + grapheme).c_str();
+		while (!this->charData.count(grapheme) && l < 8) {
+			l++;
+			grapheme = c.substr(start, l);
+		}
+		if (!this->charData.count(grapheme)) {
+			DEBUGLOG << "sys_print: Couldn't find CharData for " << grapheme << ENDL;
+			continue;
+		}
+
+		CharData charData = this->charData[grapheme];
+
+		if (charData.coords.size() == 0) {
+			return;
+		}
+
+		for (int i = 0; i < charData.coords.size(); i++) {
+			SDL_Rect r{
+				(int)(x + (charData.coords[i].x * SYS_SCALE * scale)),
+				(int)(y + (charData.coords[i].y * SYS_SCALE * scale)),
+				(int)(SYS_SCALE * scale),
+				(int)(SYS_SCALE * scale)
+			};
+			SDL_RenderFillRect(renderer->renderer, &r);
+		}
+
+		x += (charData.size + 1) * SYS_SCALE * scale;
+		start += l;
 	}
 }
 

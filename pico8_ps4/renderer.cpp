@@ -126,7 +126,10 @@ Renderer::Renderer()
 		SDL_Quit();
 		exit(1);
 	}
+}
 
+void Renderer::initialize()
+{
 	// If we make a logical size of P8_HEIGHT, then SDL struggles with decimal scales and adds random black lines.
 	// So we need a logical size that divides P8_HEIGHT
 	unsigned int scale = FRAME_HEIGHT / P8_HEIGHT;
@@ -140,9 +143,6 @@ Renderer::Renderer()
 	viewport.y = (viewport.h - P8_HEIGHT) / 2;
 	SDL_RenderSetViewport(this->renderer, &viewport);
 
-	// On PS4 RenderSetClipRect freezes for some reason - workaround will be to manually paint the bounds
-	// SDL_RenderSetClipRect(renderer, &p8_area);
-
 	SDL_SetRenderDrawColor(this->renderer, 0x10, 0x10, 0x10, 0xFF);
 	SDL_RenderClear(this->renderer);
 
@@ -152,10 +152,6 @@ Renderer::Renderer()
 	SDL_SetRenderDrawColor(this->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 	SDL_UpdateWindowSurface(this->window);
 
-}
-
-void Renderer::initialize()
-{
 	this->reset_draw_pal();
 	this->reset_screen_pal();
 
