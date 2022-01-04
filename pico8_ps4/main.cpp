@@ -82,7 +82,7 @@ int main(void)
 		},
 		// TODO BBS
 	};
-	int currentScreen = 0;
+	int currentScreen = 1;
 	if (localCartridges.size() == 0) {
 		currentScreen = 0;
 	}
