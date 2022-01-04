@@ -219,45 +219,26 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
 }
 
 // TODO https://www.lexaloffle.com/bbs/?tid=3739
-std::map<unsigned char, std::string> special_char_replacement = {
-    {126, "~"},
-    // Missing nubbin
-    {128, "█"},
-    {129, "▒"},
-    {130, "🐱"},
-    {131, "⬇️"},
-    {132, "░"},
-    {133, "✽"},
-    {134, "●"},
-    {135, "♥"},
-    {136, "☉"},
-    {137, "웃"},
-    {138, "⌂"},
-    {139, "⬅️"},
-    {140, "😐"},
-    {141, "♪"},
-    {142, "🅾️"},
-    {143, "◆"},
-    {144, "…"},
-    {145, "➡️"},
-    // Missing star
-    {147, "⧗"},
-    {148, "⬆️"},
-    {149, "ˇ"},
-    {150, "∧"},
-    {151, "❎"},
-    {152, "▤"},
-    // Missing vertical lines
+std::string special_chars[] = {
+    "~", "○", "█", "▒", "🐱", "⬇️", "░", "✽", "●", "♥", "☉", "웃", "⌂", "⬅️",
+    "😐", "♪", "🅾️", "◆", "…", "➡️", "★", "⧗", "⬆️", "ˇ", "∧", "❎", "▤",
+    "▥", "あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ", "さ", "し",
+    "す", "せ", "そ", "た", "ち", "つ", "て", "と", "な", "に", "ぬ", "ね", "の",
+    "は", "ひ", "ふ", "へ", "ほ", "ま", "み", "む", "め", "も", "や", "ゆ", "よ",
+    "ら", "り", "る", "れ", "ろ", "わ", "を", "ん", "っ", "ゃ", "ゅ", "ょ", "ア",
+    "イ", "ウ", "エ", "オ", "カ", "キ", "ク", "ケ", "コ", "サ", "シ", "ス", "セ",
+    "ソ", "タ", "チ", "ツ", "テ", "ト", "ナ", "ニ", "ヌ", "ネ", "ノ", "ハ", "ヒ",
+    "フ", "ヘ", "ホ", "マ", "ミ", "ム", "メ", "モ", "ヤ", "ユ", "ヨ", "ラ", "リ",
+    "ル", "レ", "ロ", "ワ", "ヲ", "ン", "ッ", "ャ", "ュ", "ョ", "◜", "◝" 
 };
 
 #include <algorithm>
 std::string replace_special_chars(std::string& line) {
     std::vector<std::pair<unsigned char, std::string>> replacements;
-    for (const auto& myPair : special_char_replacement) {
-        unsigned char key = myPair.first;
-        int pos = line.find(key);
-        if (pos != std::string::npos) {
-            replacements.push_back({ pos, special_char_replacement[key] });
+
+    for (int i=0; i<line.size(); i++) {
+        if ((unsigned char)line[i] >= 0x7E) {
+            replacements.push_back({ i, special_chars[(unsigned char)line[i] - 0x7E] });
         }
     }
 
