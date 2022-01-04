@@ -74,37 +74,17 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 	this->mtx.lock();
 
 	if (channel == -1) {
-		// Option 1. Out from the ones that are not reserved, pick the first that's free or is playing the same sfx.
+		// Option 1. Pick the first that's free or is playing the same sfx.
 		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
 			Channel ch = this->channels[c];
-			if (ch.reserved) {
-				continue;
-			}
 			if (ch.sfx == -1 || ch.sfx == n) {
 				channel = c;
 			}
 		}
 
-		// Option 2. From the reserved ones, use it if it's not playing anything at the moment (this differs from the original P8 version.... delete?)
-		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
-			Channel ch = this->channels[c];
-			if (ch.reserved && ch.sfx == -1) {
-				channel = c;
-			}
-		}
-
-		// Option 3. Kick the first non-reserved channel to play yours
-		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
-			Channel ch = this->channels[c];
-			if (!ch.reserved) {
-				channel = c;
-			}
-		}
-
+		// Option 2. Kick the first channel to play yours
 		if (channel == -1) {
-			DEBUGLOG << "No channel available to play sfx. Skipping" << ENDL;
-			this->mtx.unlock();
-			return;
+			channel = 0;
 		}
 	}
 	this->channels[channel].sfx = n;
