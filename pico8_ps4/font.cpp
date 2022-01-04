@@ -76,6 +76,7 @@ void Font::print(std::string c, int x, int y, bool scroll)
 	
 	//we will need to update the cursor. This can change with modifiers such as \^w \n \^g \| \+
 	int y_offset = 6;
+	int x_original = x;
 
 	while (start < c.length()) {
 		int l = 1;
@@ -107,6 +108,13 @@ void Font::print(std::string c, int x, int y, bool scroll)
 
 			p8_memory[ADDR_DS_COLOR] = color;
 			start += 2;
+			continue;
+		}
+		else if (grapheme == "\n") {
+			x = x_original;
+			y += y_offset;
+			y_offset = 6;
+			start += l;
 			continue;
 		}
 

@@ -46,7 +46,6 @@ Cartridge *load_from_png(std::string path)
 
     std::vector<unsigned char> compressed_lua(p8_bytes.begin() + 0x4300, p8_bytes.begin() + 0x7FFF);
     std::string p8_lua = decompress_lua(compressed_lua);
-    // logger << p8_lua << ENDL;
 
     ret->lua = p8lua_to_std_lua(p8_lua);
 
@@ -219,6 +218,7 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
 }
 
 // TODO https://www.lexaloffle.com/bbs/?tid=3739
+#define SPECIAL_CHAR_OFFSET 0x7E
 std::string special_chars[] = {
     "~", "○", "█", "▒", "🐱", "⬇️", "░", "✽", "●", "♥", "☉", "웃", "⌂", "⬅️",
     "😐", "♪", "🅾️", "◆", "…", "➡️", "★", "⧗", "⬆️", "ˇ", "∧", "❎", "▤",
@@ -232,13 +232,70 @@ std::string special_chars[] = {
     "ル", "レ", "ロ", "ワ", "ヲ", "ン", "ッ", "ャ", "ュ", "ョ", "◜", "◝" 
 };
 
+char command_chars[] = {
+    '*', '#', '-', '|', '+', '^'
+};
+
 #include <algorithm>
+std::string replace_escape_chars(std::string& line) {
+    // Biggest conflict I can think of is print(200\103) prints 1 (integer division), print("200\103") prints 200G (escaped character)
+    // I'll *try* to solve this by tracking if we're inside a string or not.
+    // In fact, P8SCII only applies when we're inside a string! `asdf=123 \n print(200\asdf)` is also an integer division. `\a` is also a P8SCII control character, but because it's not inside a string it doesn't apply
+    // Hopefully keeping track of quote marks will be enough... TODO print("123\"456")
+    unsigned char string_char = 0;
+
+    for (int i = 0; i < line.size(); i++) {
+        if (line[i] == '"' || line[i] == '\'') {
+            if (string_char == line[i]) {
+                string_char = 0;
+                continue;
+            }
+            if (string_char == 0) {
+                string_char = line[i];
+                continue;
+            }
+        }
+
+        if (line[i] == '\\') {
+            if (string_char == 0) {
+                // Assume integer division
+                line.replace(i, 1, "//");
+            }
+            else if ('0' <= line[i + 1] && line[i + 1] <= '9') {
+                std::string num = "";
+                for (int j = 1; j <= 3 && '0' <= line[i + j] && line[i + j] <= '9' && i+j < line.size(); j++) {
+                    num += line[i + j];
+                }
+
+                unsigned char c = std::stoi(num);
+                if (c >= SPECIAL_CHAR_OFFSET) {
+                    line.replace(i, 1 + num.size(), "" + (char)c);
+                }
+            } else {
+                char next = line[i + 1];
+                if (next == '\\') {
+                    line.replace(i, 2, "\\\\/" + next);
+                } else {
+                    for (int j = 0; j < 6; j++) {
+                        if (command_chars[j] == next) {
+                            line.replace(i, 1, "\\\\");
+                            i += 2;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return line;
+}
+
 std::string replace_special_chars(std::string& line) {
     std::vector<std::pair<unsigned char, std::string>> replacements;
 
     for (int i=0; i<line.size(); i++) {
-        if ((unsigned char)line[i] >= 0x7E) {
-            replacements.push_back({ i, special_chars[(unsigned char)line[i] - 0x7E] });
+        if ((unsigned char)line[i] >= SPECIAL_CHAR_OFFSET) {
+            replacements.push_back({ i, special_chars[(unsigned char)line[i] - SPECIAL_CHAR_OFFSET] });
         }
     }
 
@@ -269,7 +326,8 @@ std::string p8lua_to_std_lua(std::string& s) {
     while (std::getline(in, line)) {
         int pos;
 
-        // special chars
+        line = replace_escape_chars(line);
+
         line = replace_special_chars(line);
 
         if (line.find("btn(") != std::string::npos || line.find("btnp(") != std::string::npos) {
@@ -301,23 +359,6 @@ std::string p8lua_to_std_lua(std::string& s) {
         pos = 0;
         while ((pos = line.find("!=", pos)) != std::string::npos) {
             line.replace(pos, 2, "~=");
-            pos += 2;
-        }
-
-        // \- => \\-
-        pos = 0;
-        while ((pos = line.find("\\-", pos)) != std::string::npos) {
-            line.replace(pos, 2, "\\\\-");
-            pos += 2;
-        }
-
-        // \ => // (integer division)
-        pos = 0;
-        while ((pos = line.find("\\", pos)) != std::string::npos) {
-            // Skip escaped characters
-            if (line[pos + 1] != '\\' && line[pos + 1] != 'f') {
-                line.replace(pos, 1, "//");
-            }
             pos += 2;
         }
 
