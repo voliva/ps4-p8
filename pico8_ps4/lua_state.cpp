@@ -509,13 +509,14 @@ void LuaState::run_update()
 int poke(lua_State* L) {
 	unsigned char addr = luaL_checkinteger(L, 1) & 0x0FF;
 	unsigned char value = luaL_optinteger(L, 2, 0) & 0x0FF;
-	DEBUGLOG << "Poked " << addr << ENDL;
+
+	audioManager->poke(addr, value);
 	p8_memory[addr] = value;
 
 	for (int i = 3; lua_isinteger(L, i); i++) {
 		value = lua_tointeger(L, 2) & 0x0FF;
 		addr++;
-		DEBUGLOG << "Poked " << addr << ENDL;
+		audioManager->poke(addr, value);
 		p8_memory[addr] = value;
 	}
 
@@ -977,14 +978,14 @@ int palt(lua_State* L) {
 }
 
 int camera(lua_State* L) {
-	int original_x = p8_memory[ADDR_DS_CAMERA_X];
-	int original_y = p8_memory[ADDR_DS_CAMERA_Y];
+	int original_x = memory_read_short(ADDR_DS_CAMERA_X);
+	int original_y = memory_read_short(ADDR_DS_CAMERA_Y);
 
 	int x = luaL_optinteger(L, 1, 0);
 	int y = luaL_optinteger(L, 2, 0);
 
-	p8_memory[ADDR_DS_CAMERA_X] = x;
-	p8_memory[ADDR_DS_CAMERA_Y] = y;
+	memory_write_short(ADDR_DS_CAMERA_X, x);
+	memory_write_short(ADDR_DS_CAMERA_Y, y);
 
 	lua_pushinteger(L, original_x);
 	lua_pushinteger(L, original_y);

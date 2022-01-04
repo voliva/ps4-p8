@@ -2,20 +2,31 @@
 
 #include <vector>;
 #include <SDL2/SDL_audio.h>
+#include <mutex>
 
 #define P8_SAMPLE_RATE 22050
-
 #define SFX_AMOUNT 64
+#define CHANNELS 4
+
+typedef struct {
+	SDL_AudioDeviceID deviceId;
+	SDL_AudioSpec* spec;
+	int sfx; // -1 = paused
+	unsigned int offset;
+} Channel;
+
 class AudioManager {
 public:
 	AudioManager();
 	~AudioManager();
 	void initialize();
 	void playSfx(int n, int channel, int offset, int length);
+	void poke(unsigned char addr, unsigned char value);
 
-private:
-	SDL_AudioDeviceID audio_device;
-	std::vector<int16_t>* buffers[SFX_AMOUNT];
+	std::vector<int16_t>* cache[SFX_AMOUNT];
+	Channel channels[4];
+
+	std::mutex mtx;
 };
 extern AudioManager* audioManager;
 

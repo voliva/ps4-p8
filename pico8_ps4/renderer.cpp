@@ -390,8 +390,8 @@ void Renderer::set_transform_pixel(int x, int y, unsigned char color, bool trans
 	}
 	mapped_color = mapped_color & 0x0F;
 
-	int screen_x = x + p8_memory[ADDR_DS_CAMERA_X];
-	int screen_y = y + p8_memory[ADDR_DS_CAMERA_X];
+	int screen_x = x - memory_read_short(ADDR_DS_CAMERA_X);
+	int screen_y = y - memory_read_short(ADDR_DS_CAMERA_Y);
 	unsigned char x0 = p8_memory[ADDR_DS_CLIP_RECT];
 	unsigned char y0 = p8_memory[ADDR_DS_CLIP_RECT+1];
 	unsigned char x1 = p8_memory[ADDR_DS_CLIP_RECT+2];

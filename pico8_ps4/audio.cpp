@@ -8,31 +8,42 @@
 #define DEBUGLOG Audio_DEBUGLOG
 Log DEBUGLOG = logger.log("audio");
 
+void audio_cb(void* userdata, Uint8* stream, int len);
+
 AudioManager::AudioManager()
 {
 	for (int i = 0; i < SFX_AMOUNT; i++) {
-		this->buffers[i] = NULL;
+		this->cache[i] = NULL;
 	}
 
-	SDL_AudioSpec* audio_spec = new SDL_AudioSpec;
-	// SDL_zero(audio_spec);
-	audio_spec->freq = P8_SAMPLE_RATE;
-	audio_spec->format = AUDIO_S16SYS;
-	audio_spec->channels = 1;
-	audio_spec->samples = 1024;
-	audio_spec->callback = NULL;
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_AudioSpec* audio_spec = new SDL_AudioSpec;
+		// SDL_zero(audio_spec);
+		audio_spec->freq = P8_SAMPLE_RATE;
+		audio_spec->format = AUDIO_S16LSB;
+		audio_spec->channels = 1; // mono/stereo/quad/5.1
+		audio_spec->samples = 1024;
+		audio_spec->callback = audio_cb;
+		audio_spec->userdata = &this->channels[i];
 
-	this->audio_device = SDL_OpenAudioDevice(NULL, 0, audio_spec, NULL, 0);
+		this->channels[i].spec = audio_spec;
+		this->channels[i].deviceId = SDL_OpenAudioDevice(NULL, 0, audio_spec, NULL, 0);
+		this->channels[i].sfx = -1;
+		this->channels[i].offset = 0;
+	}
 }
 AudioManager::~AudioManager()
 {
 	for (int i = 0; i < SFX_AMOUNT; i++) {
-		if (this->buffers[i] != NULL) {
-			delete this->buffers[i];
+		if (this->cache[i] != NULL) {
+			delete this->cache[i];
 		}
 	}
 
-	SDL_CloseAudioDevice(audio_device);
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_CloseAudioDevice(this->channels[i].deviceId);
+		delete this->channels[i].spec;
+	}
 }
 
 void AudioManager::initialize() {
@@ -40,22 +51,112 @@ void AudioManager::initialize() {
 	p8_memory[ADDR_HW_AUDIO_REBERB] = 0;
 	p8_memory[ADDR_HW_AUDIO_BITCRUSH] = 0;
 	p8_memory[ADDR_HW_AUDIO_DAMPEN] = 0;
+
+	this->mtx.lock();
+	for (int i = 0; i < SFX_AMOUNT; i++) {
+		if (this->cache[i] != NULL) {
+			delete this->cache[i];
+			this->cache[i] = NULL;
+		}
+	}
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_PauseAudioDevice(this->channels[i].deviceId, 1);
+		this->channels[i].sfx = -1;
+		this->channels[i].offset = 0;
+	}
+	this->mtx.unlock();
 }
 
-// TODO offset + length
+// TODO offset + length. Negative n (manage from lua), channel=-2 (manage from lua)
 std::vector<int16_t>* audio_buffer_from_sfx(int n);
 void AudioManager::playSfx(int n, int channel, int offset, int length)
 {
-	if (this->buffers[n] == NULL) {
-		this->buffers[n] = audio_buffer_from_sfx(n);
+	this->mtx.lock();
+
+	if (channel == -1) {
+		// Option 1. Out from the ones that are not reserved, pick the first that's free or is playing the same sfx.
+		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
+			Channel ch = this->channels[c];
+			if (ch.reserved) {
+				continue;
+			}
+			if (ch.sfx == -1 || ch.sfx == n) {
+				channel = c;
+			}
+		}
+
+		// Option 2. From the reserved ones, use it if it's not playing anything at the moment (this differs from the original P8 version.... delete?)
+		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
+			Channel ch = this->channels[c];
+			if (ch.reserved && ch.sfx == -1) {
+				channel = c;
+			}
+		}
+
+		// Option 3. Kick the first non-reserved channel to play yours
+		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
+			Channel ch = this->channels[c];
+			if (!ch.reserved) {
+				channel = c;
+			}
+		}
+
+		if (channel == -1) {
+			DEBUGLOG << "No channel available to play sfx. Skipping" << ENDL;
+			this->mtx.unlock();
+			return;
+		}
+	}
+	this->channels[channel].sfx = n;
+	this->channels[channel].offset = 0;
+	SDL_PauseAudioDevice(this->channels[channel].deviceId, 0);
+
+	this->mtx.unlock();
+}
+
+void audio_cb(void* userdata, Uint8* stream, int len) {
+	Channel* channel = (Channel*)userdata;
+	audioManager->mtx.lock();
+
+	if (channel->sfx == -1) {
+		memset(stream, 0, len);
+		SDL_PauseAudioDevice(channel->deviceId, 1);
+	}
+	else {
+		if (audioManager->cache[channel->sfx] == NULL) {
+			audioManager->cache[channel->sfx] = audio_buffer_from_sfx(channel->sfx);
+		}
+
+		std::vector<int16_t>* cached = audioManager->cache[channel->sfx];
+		if (channel->offset*2 + len > cached->size()*2) {
+			int copied_lenght = (cached->size() - channel->offset) * 2;
+			memcpy(stream, &(*cached)[channel->offset], copied_lenght);
+			memset(stream + copied_lenght, 0, len - copied_lenght);
+			channel->sfx = -1;
+			channel->offset = 0;
+		}
+		else {
+			memcpy(stream, &(*cached)[channel->offset], len);
+			channel->offset += len / 2;
+		}
 	}
 
-	std::vector<int16_t>* buf = this->buffers[n];
+	audioManager->mtx.unlock();
+}
 
-	const int element_size = sizeof(int16_t);
-	SDL_QueueAudio(audio_device, &(*buf)[0], buf->size() * element_size);
-
-	SDL_PauseAudioDevice(audio_device, 0);
+#define SFX_BYTE_LENGTH 68
+void AudioManager::poke(unsigned char addr, unsigned char value)
+{
+	if (addr >= ADDR_SFX && addr < ADDR_SFX + SFX_BYTE_LENGTH * SFX_AMOUNT) {
+		// Invalidate the buffer of that sfx
+		// I don't think it's important if it's being played: It's not a buffer, but a cache. The actual buffer is on the hardware.
+		int s = (addr - ADDR_SFX) / SFX_BYTE_LENGTH;
+		this->mtx.lock();
+		if (this->cache[s] != NULL) {
+			delete this->cache[s];
+		}
+		this->mtx.unlock();
+	}
 }
 
 float base_frequencies[] = {
@@ -94,7 +195,7 @@ void audio_generate_note(P8_Note& note, std::vector<float>& dest, unsigned int f
 std::vector<int16_t>* audio_buffer_from_sfx(int s) {
 	// Parse sfx
 	P8_SFX sfx;
-	int sfx_offset = ADDR_SFX + s * 68;
+	int sfx_offset = ADDR_SFX + s * SFX_BYTE_LENGTH;
 	for (int n = 0; n < NOTE_AMOUNT; n++) {
 		int note_offset = sfx_offset + n * 2;
 		sfx.notes[n].pitch = p8_memory[note_offset] & 0x3F;
@@ -137,7 +238,7 @@ std::vector<int16_t>* audio_buffer_from_sfx(int s) {
 	for (int n = 0; n < num_notes; n++) {
 		if (sfx.notes[n].volume > 0) {
 			for (int i = 0; i < speed * P8_TICKS_PER_T; i++) {
-				(*result)[n * speed * P8_TICKS_PER_T + i] = sfx.notes[n].volume * floats[n * speed * P8_TICKS_PER_T + i] * 2000;
+				(*result)[n * speed * P8_TICKS_PER_T + i] = sfx.notes[n].volume * floats[n * speed * P8_TICKS_PER_T + i] * 5000;
 			}
 		}
 	}
