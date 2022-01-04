@@ -52,26 +52,26 @@ void AudioManager::initialize() {
 	p8_memory[ADDR_HW_AUDIO_BITCRUSH] = 0;
 	p8_memory[ADDR_HW_AUDIO_DAMPEN] = 0;
 
-	this->mtx.lock();
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_PauseAudioDevice(this->channels[i].deviceId, 1);
+		this->channels[i].sfx = -1;
+		this->channels[i].offset = 0;
+	}
 	for (int i = 0; i < SFX_AMOUNT; i++) {
 		if (this->cache[i] != NULL) {
 			delete this->cache[i];
 			this->cache[i] = NULL;
 		}
 	}
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_PauseAudioDevice(this->channels[i].deviceId, 1);
-		this->channels[i].sfx = -1;
-		this->channels[i].offset = 0;
-	}
-	this->mtx.unlock();
 }
 
 // TODO offset + length. Negative n (manage from lua), channel=-2 (manage from lua)
 std::vector<int16_t>* audio_buffer_from_sfx(int n);
 void AudioManager::playSfx(int n, int channel, int offset, int length)
 {
-	this->mtx.lock();
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_LockAudioDevice(this->channels[i].deviceId);
+	}
 
 	if (channel == -1) {
 		// Option 1. Pick the first that's free or is playing the same sfx.
@@ -89,14 +89,15 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 	}
 	this->channels[channel].sfx = n;
 	this->channels[channel].offset = 0;
-	SDL_PauseAudioDevice(this->channels[channel].deviceId, 0);
 
-	this->mtx.unlock();
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_UnlockAudioDevice(this->channels[i].deviceId);
+	}
+	SDL_PauseAudioDevice(this->channels[channel].deviceId, 0);
 }
 
 void audio_cb(void* userdata, Uint8* stream, int len) {
 	Channel* channel = (Channel*)userdata;
-	audioManager->mtx.lock();
 
 	if (channel->sfx == -1) {
 		memset(stream, 0, len);
@@ -120,8 +121,6 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 			channel->offset += len / 2;
 		}
 	}
-
-	audioManager->mtx.unlock();
 }
 
 #define SFX_BYTE_LENGTH 68
@@ -131,11 +130,15 @@ void AudioManager::poke(unsigned char addr, unsigned char value)
 		// Invalidate the buffer of that sfx
 		// I don't think it's important if it's being played: It's not a buffer, but a cache. The actual buffer is on the hardware.
 		int s = (addr - ADDR_SFX) / SFX_BYTE_LENGTH;
-		this->mtx.lock();
+		for (int i = 0; i < CHANNELS; i++) {
+			SDL_LockAudioDevice(this->channels[i].deviceId);
+		}
 		if (this->cache[s] != NULL) {
 			delete this->cache[s];
 		}
-		this->mtx.unlock();
+		for (int i = 0; i < CHANNELS; i++) {
+			SDL_UnlockAudioDevice(this->channels[i].deviceId);
+		}
 	}
 }
 

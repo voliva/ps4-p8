@@ -25,8 +25,6 @@ public:
 
 	std::vector<int16_t>* cache[SFX_AMOUNT];
 	Channel channels[4];
-
-	std::mutex mtx;
 };
 extern AudioManager* audioManager;
 
