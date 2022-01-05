@@ -51,6 +51,8 @@ int sqrt(lua_State* L);
 int cos(lua_State* L);
 int sin(lua_State* L);
 int extcmd(lua_State* L);
+int fget(lua_State* L);
+int fset(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -137,6 +139,10 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "sin");
 	lua_pushcfunction(this->state, extcmd);
 	lua_setglobal(this->state, "extcmd");
+	lua_pushcfunction(this->state, fget);
+	lua_setglobal(this->state, "fget");
+	lua_pushcfunction(this->state, fset);
+	lua_setglobal(this->state, "fset");
 
 	std::string all =
 		"function all(t) \
@@ -290,10 +296,10 @@ int deli(lua_State* L) {
 }
 
 int line(lua_State* L) {
-	int x0 = luaL_checkinteger(L, 1);
-	int y0 = luaL_checkinteger(L, 2);
-	int x1 = luaL_checkinteger(L, 3);
-	int y1 = luaL_checkinteger(L, 4);
+	int x0 = luaL_checknumber(L, 1);
+	int y0 = luaL_checknumber(L, 2);
+	int x1 = luaL_checknumber(L, 3);
+	int y1 = luaL_checknumber(L, 4);
 	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
 
 	p8_memory[ADDR_DS_COLOR] = col;
@@ -303,10 +309,10 @@ int line(lua_State* L) {
 }
 
 int rectfill(lua_State* L) {
-	int x0 = luaL_checkinteger(L, 1);
-	int y0 = luaL_checkinteger(L, 2);
-	int x1 = luaL_checkinteger(L, 3);
-	int y1 = luaL_checkinteger(L, 4);
+	int x0 = luaL_checknumber(L, 1);
+	int y0 = luaL_checknumber(L, 2);
+	int x1 = luaL_checknumber(L, 3);
+	int y1 = luaL_checknumber(L, 4);
 	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
 
 	p8_memory[ADDR_DS_COLOR] = col;
@@ -316,10 +322,10 @@ int rectfill(lua_State* L) {
 }
 
 int rect(lua_State* L) {
-	int x0 = luaL_checkinteger(L, 1);
-	int y0 = luaL_checkinteger(L, 2);
-	int x1 = luaL_checkinteger(L, 3);
-	int y1 = luaL_checkinteger(L, 4);
+	int x0 = luaL_checknumber(L, 1);
+	int y0 = luaL_checknumber(L, 2);
+	int x1 = luaL_checknumber(L, 3);
+	int y1 = luaL_checknumber(L, 4);
 	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
 
 	p8_memory[ADDR_DS_COLOR] = col;
@@ -329,10 +335,10 @@ int rect(lua_State* L) {
 }
 
 int ovalfill(lua_State* L) {
-	int x0 = luaL_checkinteger(L, 1);
-	int y0 = luaL_checkinteger(L, 2);
-	int x1 = luaL_checkinteger(L, 3);
-	int y1 = luaL_checkinteger(L, 4);
+	int x0 = luaL_checknumber(L, 1);
+	int y0 = luaL_checknumber(L, 2);
+	int x1 = luaL_checknumber(L, 3);
+	int y1 = luaL_checknumber(L, 4);
 	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
 
 	p8_memory[ADDR_DS_COLOR] = col;
@@ -342,10 +348,10 @@ int ovalfill(lua_State* L) {
 }
 
 int oval(lua_State* L) {
-	int x0 = luaL_checkinteger(L, 1);
-	int y0 = luaL_checkinteger(L, 2);
-	int x1 = luaL_checkinteger(L, 3);
-	int y1 = luaL_checkinteger(L, 4);
+	int x0 = luaL_checknumber(L, 1);
+	int y0 = luaL_checknumber(L, 2);
+	int x1 = luaL_checknumber(L, 3);
+	int y1 = luaL_checknumber(L, 4);
 	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
 
 	p8_memory[ADDR_DS_COLOR] = col;
@@ -355,8 +361,8 @@ int oval(lua_State* L) {
 }
 
 int circfill(lua_State* L) {
-	int x = luaL_checkinteger(L, 1);
-	int y = luaL_checkinteger(L, 2);
+	int x = luaL_checknumber(L, 1);
+	int y = luaL_checknumber(L, 2);
 	int r = luaL_optnumber(L, 3, 4);
 	int col = luaL_optnumber(L, 4, p8_memory[ADDR_DS_COLOR]);
 
@@ -367,8 +373,8 @@ int circfill(lua_State* L) {
 }
 
 int circ(lua_State* L) {
-	int x = luaL_checkinteger(L, 1);
-	int y = luaL_checkinteger(L, 2);
+	int x = luaL_checknumber(L, 1);
+	int y = luaL_checknumber(L, 2);
 	int r = luaL_optnumber(L, 3, 4);
 	int col = luaL_optnumber(L, 4, p8_memory[ADDR_DS_COLOR]);
 
@@ -985,8 +991,8 @@ int camera(lua_State* L) {
 	int original_x = memory_read_short(ADDR_DS_CAMERA_X);
 	int original_y = memory_read_short(ADDR_DS_CAMERA_Y);
 
-	int x = luaL_optinteger(L, 1, 0);
-	int y = luaL_optinteger(L, 2, 0);
+	int x = luaL_optnumber(L, 1, 0);
+	int y = luaL_optnumber(L, 2, 0);
 
 	memory_write_short(ADDR_DS_CAMERA_X, x);
 	memory_write_short(ADDR_DS_CAMERA_Y, y);
@@ -1035,6 +1041,44 @@ int extcmd(lua_State* L) {
 	}
 	else {
 		DEBUGLOG << "extcmd: Unrecognized command " << cmd << ENDL;
+	}
+
+	return 0;
+}
+
+int fget(lua_State* L) {
+	unsigned char sprite = luaL_checkinteger(L, 1);
+	char flag = luaL_optinteger(L, 2, -1);
+
+	unsigned char flags = p8_memory[ADDR_SPRITE_FLAGS + sprite];
+	if (flag == -1) {
+		lua_pushinteger(L, flags);
+	}
+	else {
+		unsigned char bitmask = 1 << flag;
+		lua_pushboolean(L, (flags & bitmask) > 0);
+	}
+
+	return 1;
+}
+
+int fset(lua_State* L) {
+	unsigned char sprite = luaL_checkinteger(L, 1);
+
+	if (lua_gettop(L) == 3) {
+		unsigned char flag = luaL_checkinteger(L, 2);
+		bool checked = lua_toboolean(L, 3);
+
+		unsigned char bitmask = 1 << flag;
+		if (checked) {
+			p8_memory[ADDR_SPRITE_FLAGS + sprite] |= bitmask;
+		} else {
+			p8_memory[ADDR_SPRITE_FLAGS + sprite] &= ~bitmask;
+		}
+	}
+	else {
+		unsigned char value = luaL_checkinteger(L, 2);
+		p8_memory[ADDR_SPRITE_FLAGS + sprite] = value;
 	}
 
 	return 0;
