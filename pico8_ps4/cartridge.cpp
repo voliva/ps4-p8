@@ -347,25 +347,29 @@ std::string p8lua_to_std_lua(std::string& s) {
             pos += 2;
         }
 
-        if ((pos = line.find("-=")) != std::string::npos) {
+        pos = 0;
+        while ((pos = line.find("-=")) != std::string::npos) {
             int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
             int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
 
             line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "-" + line.substr(pos+2);
         }
-        if ((pos = line.find("+=")) != std::string::npos) {
+        pos = 0;
+        while ((pos = line.find("+=")) != std::string::npos) {
             int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
             int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
 
             line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "+" + line.substr(pos + 2);
         }
-        if ((pos = line.find("/=")) != std::string::npos) {
+        pos = 0;
+        while ((pos = line.find("/=")) != std::string::npos) {
             int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
             int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
 
             line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "/" + line.substr(pos + 2);
         }
-        if ((pos = line.find("*=")) != std::string::npos) {
+        pos = 0;
+        while ((pos = line.find("*=")) != std::string::npos) {
             int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
             int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
 
@@ -391,6 +395,13 @@ std::string p8lua_to_std_lua(std::string& s) {
             if (pos < line.length()) {
                 line = line.replace(pos, 0, " then ") + " end";
             }
+        }
+
+        // if something > 3then => if something > 3 then
+        // WTF?!?
+        if (((pos = line.find("then")) != std::string::npos) &&
+            line[pos-1] >= '0' && line[pos-1] <= '9') {
+            line = line.replace(pos, 0, " ");
         }
 
         out << line << ENDL;
