@@ -50,6 +50,7 @@ int camera(lua_State* L);
 int sqrt(lua_State* L);
 int cos(lua_State* L);
 int sin(lua_State* L);
+int atan2(lua_State* L);
 int extcmd(lua_State* L);
 int fget(lua_State* L);
 int fset(lua_State* L);
@@ -137,6 +138,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "cos");
 	lua_pushcfunction(this->state, sin);
 	lua_setglobal(this->state, "sin");
+	lua_pushcfunction(this->state, atan2);
+	lua_setglobal(this->state, "atan2");
 	lua_pushcfunction(this->state, extcmd);
 	lua_setglobal(this->state, "extcmd");
 	lua_pushcfunction(this->state, fget);
@@ -623,8 +626,8 @@ int sub(lua_State* L) {
 }
 
 int btnp(lua_State* L) {
-	if (lua_isinteger(L, 1)) {
-		int i = luaL_checkinteger(L, 1);
+	if (lua_gettop(L) >= 1) {
+		int i = lua_tointeger(L, 1);
 		int p = luaL_optinteger(L, 2, 0);
 
 		lua_pushboolean(L, machineState->wasButtonPressed(p, (P8_Key)i));
@@ -636,8 +639,8 @@ int btnp(lua_State* L) {
 }
 
 int btn(lua_State* L) {
-	if (lua_isinteger(L, 1)) {
-		int i = luaL_checkinteger(L, 1);
+	if (lua_gettop(L) >= 1) {
+		int i = lua_tointeger(L, 1);
 		int p = luaL_optinteger(L, 2, 0);
 
 		lua_pushboolean(L, machineState->isButtonPressed(p, (P8_Key)i));
@@ -1015,6 +1018,15 @@ int sin(lua_State* L) {
 	float f = luaL_checknumber(L, 1);
 
 	lua_pushnumber(L, sinf(f * 2 * M_PI));
+
+	return 1;
+}
+
+int atan2(lua_State* L) {
+	float dx = luaL_checknumber(L, 1);
+	float dy = luaL_checknumber(L, 2);
+
+	lua_pushnumber(L, atan2(dy, dx));
 
 	return 1;
 }
