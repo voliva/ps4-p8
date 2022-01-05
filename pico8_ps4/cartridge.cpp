@@ -217,35 +217,7 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
     return std::string(compressed_lua.begin(), compressed_lua.end());
 }
 
-// TODO https://www.lexaloffle.com/bbs/?tid=3739
 #define SPECIAL_CHAR_OFFSET 0x7E
-// Printable (with the font we have so far)
-std::string special_chars[] = {
-    "~", "○", "█", "▒", "🐱", "⬇️", "░", "✽", "●", "♥", "☉", "웃", "⌂", "⬅️",
-    "😐", "♪", "🅾️", "◆", "…", "➡️", "★", "⧗", "⬆️", "ˇ", "∧", "❎", "▤",
-    "▥", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
-    "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
-    "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
-    "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
-    "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
-    "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
-    "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
-    "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?" 
-};
-/* Complete version
-std::string special_chars[] = {
-    "~", "○", "█", "▒", "🐱", "⬇️", "░", "✽", "●", "♥", "☉", "웃", "⌂", "⬅️",
-    "😐", "♪", "🅾️", "◆", "…", "➡️", "★", "⧗", "⬆️", "ˇ", "∧", "❎", "▤",
-    "▥", "あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ", "さ", "し",
-    "す", "せ", "そ", "た", "ち", "つ", "て", "と", "な", "に", "ぬ", "ね", "の",
-    "は", "ひ", "ふ", "へ", "ほ", "ま", "み", "む", "め", "も", "や", "ゆ", "よ",
-    "ら", "り", "る", "れ", "ろ", "わ", "を", "ん", "っ", "ゃ", "ゅ", "ょ", "ア",
-    "イ", "ウ", "エ", "オ", "カ", "キ", "ク", "ケ", "コ", "サ", "シ", "ス", "セ",
-    "ソ", "タ", "チ", "ツ", "テ", "ト", "ナ", "ニ", "ヌ", "ネ", "ノ", "ハ", "ヒ",
-    "フ", "ヘ", "ホ", "マ", "ミ", "ム", "メ", "モ", "ヤ", "ユ", "ヨ", "ラ", "リ",
-    "ル", "レ", "ロ", "ワ", "ヲ", "ン", "ッ", "ャ", "ュ", "ョ", "◜", "◝" 
-};
-*/
 
 char command_chars[] = {
     '*', '#', '-', '|', '+', '^'
@@ -305,31 +277,13 @@ std::string replace_escape_chars(std::string& line) {
     return line;
 }
 
-std::string replace_special_chars(std::string& line) {
-    std::vector<std::pair<unsigned char, std::string>> replacements;
-
-    for (int i=0; i<line.size(); i++) {
-        if ((unsigned char)line[i] >= SPECIAL_CHAR_OFFSET) {
-            replacements.push_back({ i, special_chars[(unsigned char)line[i] - SPECIAL_CHAR_OFFSET] });
-        }
-    }
-
-    std::sort(replacements.begin(), replacements.end(), [](auto a, auto b) { return a.first > b.first; });
-    for (int i = 0; i < replacements.size(); i++) {
-        line.replace(replacements[i].first, 1, replacements[i].second);
-    }
-
-    return line;
-}
-
-
-std::map<std::string, P8_Key> button_to_key = {
-    {"⬅️", P8_Key::left},
-    {"➡️", P8_Key::right},
-    {"⬆️", P8_Key::up},
-    {"⬇️", P8_Key::down},
-    {"🅾️", P8_Key::circle},
-    {"❎", P8_Key::cross},
+std::map<unsigned char, P8_Key> button_to_key = {
+    {139, P8_Key::left},
+    {145, P8_Key::right},
+    {148, P8_Key::up},
+    {131, P8_Key::down},
+    {142, P8_Key::circle},
+    {151, P8_Key::cross},
 };
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -343,16 +297,14 @@ std::string p8lua_to_std_lua(std::string& s) {
 
         line = replace_escape_chars(line);
 
-        line = replace_special_chars(line);
-
         if (line.find("btn(") != std::string::npos || line.find("btnp(") != std::string::npos) {
             bool replaced = true;
             while (replaced) {
                 replaced = false;
                 for (const auto& myPair : button_to_key) {
-                    std::string key = myPair.first;
+                    unsigned char key = myPair.first;
                     if ((pos = line.find(key)) != std::string::npos) {
-                        line = line.replace(pos, key.length(), std::to_string((int)button_to_key[key]));
+                        line = line.replace(pos, 1, std::to_string((int)button_to_key[key]));
                         replaced = true;
                     }
                 }
