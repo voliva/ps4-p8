@@ -16,8 +16,8 @@
 #include "font.h"
 #include <stb/stb_image.h>
 #include <dirent.h>
-#include "runtime.h"
 #include "pause_menu.h"
+#include "running-cart.h"
 
 #ifdef __PS4__
 #define BUNDLED_FOLDER "/app0/assets/misc"
@@ -36,6 +36,7 @@ AudioManager* audioManager;
 Renderer* renderer;
 Font* font;
 PauseMenu* pauseMenu;
+RunningCart* runningCart;
 
 typedef struct {
 	SDL_Texture* surface;
@@ -58,6 +59,7 @@ int main(void)
 	machineState = new MachineState();
 	font = new Font();
 	pauseMenu = new PauseMenu();
+	runningCart = new RunningCart();
 
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)
@@ -136,7 +138,8 @@ int main(void)
 				break;
 			case Key::cross:
 				Cartridge* r = load_from_png(screens[currentScreen].cartridges[selectedCart].path);
-				run_cartridge(r);
+				runningCart->load(r);
+				runningCart->run();
 				delete r;
 				SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
 				SDL_RenderSetViewport(renderer->renderer, NULL);

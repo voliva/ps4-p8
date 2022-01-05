@@ -164,7 +164,7 @@
     <ClCompile Include="memory.cpp" />
     <ClCompile Include="pause_menu.cpp" />
     <ClCompile Include="renderer.cpp" />
-    <ClCompile Include="runtime.cpp" />
+    <ClCompile Include="running-cart.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
@@ -179,7 +179,7 @@
     <ClInclude Include="memory.h" />
     <ClInclude Include="pause_menu.h" />
     <ClInclude Include="renderer.h" />
-    <ClInclude Include="runtime.h" />
+    <ClInclude Include="running-cart.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\assets\misc\p8_font.txt" />

@@ -8,6 +8,7 @@
 #include "audio.h"
 #include "memory.h"
 #include "font.h"
+#include "running-cart.h"
 
 #define DEBUGLOG LuaState_DEBUGLOG
 Log DEBUGLOG = logger.log("LuaState");
@@ -49,6 +50,7 @@ int camera(lua_State* L);
 int sqrt(lua_State* L);
 int cos(lua_State* L);
 int sin(lua_State* L);
+int extcmd(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -133,6 +135,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "cos");
 	lua_pushcfunction(this->state, sin);
 	lua_setglobal(this->state, "sin");
+	lua_pushcfunction(this->state, extcmd);
+	lua_setglobal(this->state, "extcmd");
 
 	std::string all =
 		"function all(t) \
@@ -994,7 +998,7 @@ int camera(lua_State* L) {
 }
 
 int sqrt(lua_State* L) {
-	float f = luaL_checknumber(L, 0);
+	float f = luaL_checknumber(L, 1);
 
 	lua_pushnumber(L, sqrtf(f));
 
@@ -1002,7 +1006,7 @@ int sqrt(lua_State* L) {
 }
 
 int sin(lua_State* L) {
-	float f = luaL_checknumber(L, 0);
+	float f = luaL_checknumber(L, 1);
 
 	lua_pushnumber(L, sinf(f * 2 * M_PI));
 
@@ -1010,11 +1014,30 @@ int sin(lua_State* L) {
 }
 
 int cos(lua_State* L) {
-	float f = luaL_checknumber(L, 0);
+	float f = luaL_checknumber(L, 1);
 
 	lua_pushnumber(L, cosf(f * 2 * M_PI));
 
 	return 1;
+}
+
+int extcmd(lua_State* L) {
+	std::string cmd = luaL_checkstring(L, 1);
+
+	if (cmd == "reset") {
+		runningCart->restart();
+	}
+	else if (cmd == "pause") {
+		runningCart->pause();
+	}
+	else if (cmd == "shutdown") {
+		runningCart->stop();
+	}
+	else {
+		DEBUGLOG << "extcmd: Unrecognized command " << cmd << ENDL;
+	}
+
+	return 0;
 }
 
 int noop(lua_State* L) {

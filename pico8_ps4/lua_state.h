@@ -22,4 +22,4 @@ public:
 private:
 	lua_State* state;
 };
-
+extern LuaState* luaState;

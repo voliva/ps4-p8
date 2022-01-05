@@ -48,10 +48,10 @@
     <ClCompile Include="efla.e.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="runtime.cpp">
+    <ClCompile Include="pause_menu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pause_menu.cpp">
+    <ClCompile Include="running-cart.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -89,10 +89,10 @@
     <ClInclude Include="efla.e.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="runtime.h">
+    <ClInclude Include="pause_menu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="pause_menu.h">
+    <ClInclude Include="running-cart.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
