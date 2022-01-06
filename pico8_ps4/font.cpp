@@ -59,6 +59,10 @@ void Font::drawChar(unsigned char c, int x, int y)
 		return;
 	}
 
+	if (!renderer->will_be_drawn(x, y, charData.size, 5)) {
+		return;
+	}
+
 	std::vector<Renderer_Point> newCoords(charData.coords.size());
 	for (int i = 0; i < charData.coords.size(); i++) {
 		Renderer_Point original = charData.coords[i];

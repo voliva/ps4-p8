@@ -157,8 +157,8 @@ void Renderer::initialize()
 
 	p8_memory[ADDR_DS_CLIP_RECT] = 0;
 	p8_memory[ADDR_DS_CLIP_RECT + 1] = 0;
-	p8_memory[ADDR_DS_CLIP_RECT + 2] = 128;
-	p8_memory[ADDR_DS_CLIP_RECT + 3] = 128;
+	p8_memory[ADDR_DS_CLIP_RECT + 2] = 127;
+	p8_memory[ADDR_DS_CLIP_RECT + 3] = 127;
 
 	p8_memory[ADDR_DS_COLOR] = 6;
 
@@ -173,15 +173,16 @@ void Renderer::clear_screen(unsigned char color)
 	memset(&p8_memory[ADDR_SCREEN], color, 0x2000);
 }
 
+// Screen cooridantes (after camera transform!)
 bool is_y_drawable(int y) {
 	unsigned char y0 = p8_memory[ADDR_DS_CLIP_RECT + 1];
 	unsigned char y1 = p8_memory[ADDR_DS_CLIP_RECT + 3];
-	return y0 <= y && y < y1;
+	return y0 <= y && y <= y1;
 }
 bool is_x_drawable(int x) {
 	unsigned char x0 = p8_memory[ADDR_DS_CLIP_RECT];
 	unsigned char x1 = p8_memory[ADDR_DS_CLIP_RECT + 2];
-	return (x0 <= x && x < x1);
+	return (x0 <= x && x <= x1);
 }
 bool is_drawable(int x, int y) {
 	return is_x_drawable(x) && is_y_drawable(y);
@@ -203,6 +204,10 @@ void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned
 
 		for (int x = 0; x < cw; x++) {
 			int col = cx + x;
+			if (col > 128) {
+				continue;
+			}
+
 			int n = p8_memory[row_offset + col];
 			if (n == 0) {
 				continue;
@@ -226,9 +231,7 @@ void Renderer::draw_sprite(int n, int x, int y, int w, int h, bool flip_x, bool 
 
 void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh, bool flip_x, bool flip_y)
 {
-	int screen_x = dx - (short)memory_read_short(ADDR_DS_CAMERA_X);
-	int screen_y = dy - (short)memory_read_short(ADDR_DS_CAMERA_Y);
-	if (!is_drawable(screen_x, screen_y) && !is_drawable(screen_x + dw, screen_y + dh)) {
+	if (!this->will_be_drawn(dx, dy, dw, dh)) {
 		return;
 	}
 
@@ -322,23 +325,55 @@ void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 	unsigned char color = p8_memory[ADDR_DS_COLOR] & 0x0F;
 
 	// TODO pattern
-	// TODO optimize
+
+	int start_x = x0 - (short)memory_read_short(ADDR_DS_CAMERA_X);
+	int end_x = x1 - (short)memory_read_short(ADDR_DS_CAMERA_X);
+	int start_y = y0 - (short)memory_read_short(ADDR_DS_CAMERA_Y);
+	int end_y = y1 - (short)memory_read_short(ADDR_DS_CAMERA_Y);
 
 	if (fill) {
-		for (int x = x0; x <= x1; x++) {
-			for (int y = y0; y <= y1; y++) {
-				this->set_transform_pixel(x, y, color, false);
+		unsigned char mapped_color = p8_memory[ADDR_DS_DRAW_PAL + color] & 0x0F;
+		mapped_color = mapped_color | (mapped_color << 4);
+		int clipped_sx = std::max(start_x, (int)p8_memory[ADDR_DS_CLIP_RECT]);
+		int clipped_ex = std::min(end_x, (int)p8_memory[ADDR_DS_CLIP_RECT+2]);
+		int clipped_sy = std::max(start_y, (int)p8_memory[ADDR_DS_CLIP_RECT+1]);
+		int clipped_ey = std::min(end_y, (int)p8_memory[ADDR_DS_CLIP_RECT+3]);
+
+		if (clipped_sx % 2 == 1) {
+			for (int y = clipped_sy; y <= clipped_ey; y++) {
+				int addr = ADDR_SCREEN + y * LINE_JMP + clipped_sx / 2;
+				p8_memory[addr] = (p8_memory[addr] & 0x0F) | (mapped_color << 4);
+			}
+
+			clipped_sx++;
+		}
+		// clipped_sx is now even: we can just fill in pairs
+		for (int x = clipped_sx; x < clipped_ex; x+=2) { // Excluding last row: If it ends on a even position, we need to manuall fill in the last column (next for loop)
+			for (int y = clipped_sy; y <= clipped_ey; y++) {
+				int addr = ADDR_SCREEN + y * LINE_JMP + x / 2;
+				p8_memory[addr] = mapped_color;
+			}
+		}
+
+		if (clipped_ex % 2 == 0) {
+			for (int y = clipped_sy; y <= clipped_ey; y++) {
+				int addr = ADDR_SCREEN + y * LINE_JMP + clipped_ex / 2;
+				p8_memory[addr] = (p8_memory[addr] & 0xF0) | (mapped_color & 0x0F);
 			}
 		}
 	}
 	else {
-		for (int x = x0; x <= x1; x++) {
-			this->set_transform_pixel(x, y0, color, false);
-			this->set_transform_pixel(x, y1, color, false);
+		if (is_y_drawable(start_y) || is_y_drawable(end_y)) {
+			for (int x = x0; x <= x1; x++) {
+				this->set_transform_pixel(x, y0, color, false);
+				this->set_transform_pixel(x, y1, color, false);
+			}
 		}
-		for (int y = y0; y <= y1; y++) {
-			this->set_transform_pixel(x0, y, color, false);
-			this->set_transform_pixel(x1, y, color, false);
+		if (is_x_drawable(start_x) || is_x_drawable(start_y)) {
+			for (int y = y0; y <= y1; y++) {
+				this->set_transform_pixel(x0, y, color, false);
+				this->set_transform_pixel(x1, y, color, false);
+			}
 		}
 	}
 }
@@ -353,6 +388,15 @@ void Renderer::scroll(unsigned char lines)
 		memmove(&p8_memory[ADDR_SCREEN], &p8_memory[ADDR_SCREEN + lines * LINE_JMP], length);
 		memset(&p8_memory[ADDR_SCREEN + length], 0, 0x2000 - length);
 	}
+}
+
+// Canvas cooridantes (without camera transform)
+bool Renderer::will_be_drawn(int x, int y, int w, int h)
+{
+	int screen_x = x - (short)memory_read_short(ADDR_DS_CAMERA_X);
+	int screen_y = y - (short)memory_read_short(ADDR_DS_CAMERA_Y);
+
+	return is_drawable(screen_x, screen_y) || is_drawable(screen_x+w, screen_y) || is_drawable(screen_x, screen_y+h) ||is_drawable(screen_x+w, screen_y+h);
 }
 
 void Renderer::reset_draw_pal()

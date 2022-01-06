@@ -39,6 +39,7 @@ public:
 	void draw_oval(int x0, int y0, int x1, int y1, bool fill);
 	void draw_rectangle(int x0, int y0, int x1, int y1, bool fill);
 	void scroll(unsigned char lines);
+	bool will_be_drawn(int x, int y, int w, int h);
 
 	// Palette
 	void reset_draw_pal();
