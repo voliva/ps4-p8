@@ -5,6 +5,7 @@
 #include "machine_state.h"
 #include "font.h"
 #include "lua_state.h"
+#include "performance_monitor.h"
 
 #include <thread>
 #include "pause_menu.h"
@@ -128,12 +129,15 @@ void RunningCart::runOnce()
 	short ms_per_frame = millisecs_per_frame(luaState->is60FPS);
 
 	this->status = RunningStatus::Running;
+	int frame = 0;
 	while (this->status == RunningStatus::Running) {
+		frame++;
 		machineState->registerFrame();
 
 		// When dragging the window the app pauses, on that case, ignore frame_start
 		// https://stackoverflow.com/questions/29552658/how-do-you-fix-a-program-from-freezing-when-you-move-the-window-in-sdl2
 		// auto frame_start = std::chrono::high_resolution_clock::now();
+		performanceMonitor->registerStart("events");
 		while (SDL_PollEvent(&e) != 0)
 		{
 			// DEBUGLOG << e.type << ENDL;
@@ -157,6 +161,8 @@ void RunningCart::runOnce()
 
 			delete result;
 		}
+		performanceMonitor->registerEnd("events");
+
 		auto frame_start = std::chrono::high_resolution_clock::now();
 
 		if (this->status == RunningStatus::Running) {
@@ -164,16 +170,27 @@ void RunningCart::runOnce()
 				pauseMenu->draw();
 			}
 			else {
+			performanceMonitor->registerStart("run update");
 				luaState->run_update();
+			performanceMonitor->registerEnd("run update");
 
 				if (time_debt < ms_per_frame / 2) {
+				performanceMonitor->registerStart("run draw");
 					luaState->run_draw();
+				performanceMonitor->registerEnd("run draw");
+				performanceMonitor->registerStart("present");
 					renderer->present();
+				performanceMonitor->registerEnd("present");
 				}
 				else {
 					DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;
 				}
 			}
+		}
+
+		if (frame % (5 * 30) == 0) {
+			performanceMonitor->logStats();
+			performanceMonitor->reset();
 		}
 
 		auto frame_end = std::chrono::high_resolution_clock::now();

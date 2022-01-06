@@ -54,6 +54,9 @@
     <ClCompile Include="running-cart.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="performance_monitor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -93,6 +96,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="running-cart.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="performance_monitor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="concurrent_queue.h">

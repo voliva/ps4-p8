@@ -18,6 +18,7 @@
 #include <dirent.h>
 #include "pause_menu.h"
 #include "running-cart.h"
+#include "performance_monitor.h"
 
 #ifdef __PS4__
 #define BUNDLED_FOLDER "/app0/assets/misc"
@@ -37,6 +38,7 @@ Renderer* renderer;
 Font* font;
 PauseMenu* pauseMenu;
 RunningCart* runningCart;
+PerformanceMonitor* performanceMonitor;
 
 typedef struct {
 	SDL_Texture* surface;
@@ -60,6 +62,7 @@ int main(void)
 	font = new Font();
 	pauseMenu = new PauseMenu();
 	runningCart = new RunningCart();
+	performanceMonitor = new PerformanceMonitor();
 
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)
