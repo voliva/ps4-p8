@@ -151,7 +151,7 @@ void Font::print(std::string c, int x, int y, bool scroll)
 		}
 		else if (character == '\f') { // Foreground color
 			p8_memory[ADDR_DS_COLOR] = read_param(c[start + 1]);
-			start++;
+			start+=2;
 			continue;
 		}
 		else if (character == '\r') {
