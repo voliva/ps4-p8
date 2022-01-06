@@ -173,6 +173,20 @@ void Renderer::clear_screen(unsigned char color)
 	memset(&p8_memory[ADDR_SCREEN], color, 0x2000);
 }
 
+bool is_y_drawable(int y) {
+	unsigned char y0 = p8_memory[ADDR_DS_CLIP_RECT + 1];
+	unsigned char y1 = p8_memory[ADDR_DS_CLIP_RECT + 3];
+	return y0 <= y && y < y1;
+}
+bool is_x_drawable(int x) {
+	unsigned char x0 = p8_memory[ADDR_DS_CLIP_RECT];
+	unsigned char x1 = p8_memory[ADDR_DS_CLIP_RECT + 2];
+	return (x0 <= x && x < x1);
+}
+bool is_drawable(int x, int y) {
+	return is_x_drawable(x) && is_y_drawable(y);
+}
+
 void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned char layer)
 {
 	for (int y = 0; y < ch; y++) {
@@ -181,7 +195,11 @@ void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned
 		if (row >= 32) {
 			row_offset = ADDR_MAP_SHARED + (row-32) * 128;
 		}
-		int screen_y = sy + y * 8;
+		int y_pos = sy + y * 8;
+		int screen_y = y_pos - (short)memory_read_short(ADDR_DS_CAMERA_Y);
+		if (!is_y_drawable(screen_y) && !is_y_drawable(screen_y + 8)) {
+			continue;
+		}
 
 		for (int x = 0; x < cw; x++) {
 			int col = cx + x;
@@ -189,10 +207,10 @@ void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned
 			if (n == 0) {
 				continue;
 			}
-			int screen_x = sx + x * 8;
+			int x_pos = sx + x * 8;
 
 			// TODO layer filter
-			this->draw_sprite(n, screen_x, screen_y, 8, 8, false, false);
+			this->draw_sprite(n, x_pos, y_pos, 8, 8, false, false);
 		}
 	}
 }
@@ -208,7 +226,11 @@ void Renderer::draw_sprite(int n, int x, int y, int w, int h, bool flip_x, bool 
 
 void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh, bool flip_x, bool flip_y)
 {
-	// I can't use memcpy because this is all effected by the draw state (pal, palt, clip, camera, etc.)
+	int screen_x = dx - (short)memory_read_short(ADDR_DS_CAMERA_X);
+	int screen_y = dy - (short)memory_read_short(ADDR_DS_CAMERA_Y);
+	if (!is_drawable(screen_x, screen_y) && !is_drawable(screen_x + dw, screen_y + dh)) {
+		return;
+	}
 
 	int sprite_addr = ADDR_SPRITE_SHEET + sy * LINE_JMP + sx / 2;
 	for (int _y = 0; _y < dh; _y++) {
@@ -404,12 +426,7 @@ void Renderer::set_transform_pixel(int x, int y, unsigned char color, bool trans
 
 	int screen_x = x - (short)memory_read_short(ADDR_DS_CAMERA_X);
 	int screen_y = y - (short)memory_read_short(ADDR_DS_CAMERA_Y);
-	unsigned char x0 = p8_memory[ADDR_DS_CLIP_RECT];
-	unsigned char y0 = p8_memory[ADDR_DS_CLIP_RECT+1];
-	unsigned char x1 = p8_memory[ADDR_DS_CLIP_RECT+2];
-	unsigned char y1 = p8_memory[ADDR_DS_CLIP_RECT+3];
-	if (x0 <= screen_x && screen_x < x1 &&
-		y0 <= screen_y && screen_y < y1) {
+	if (is_drawable(screen_x, screen_y)) {
 		int addr = ADDR_SCREEN + screen_y * LINE_JMP + screen_x / 2;
 		if (screen_x % 2 == 0) {
 			p8_memory[addr] = (p8_memory[addr] & 0xF0) | mapped_color;
