@@ -15,6 +15,7 @@ Log DEBUGLOG = logger.log("LuaState");
 
 int rnd(lua_State* L);
 int flr(lua_State* L);
+int ceil(lua_State* L);
 int srand(lua_State* L);
 int tostr(lua_State* L);
 int sub(lua_State* L);
@@ -35,6 +36,7 @@ int deli(lua_State* L);
 int noop(lua_State* L);
 int time(lua_State* L);
 int type(lua_State* L);
+int pset(lua_State* L);
 int line(lua_State* L);
 int rect(lua_State* L);
 int rectfill(lua_State* L);
@@ -54,6 +56,9 @@ int atan2(lua_State* L);
 int extcmd(lua_State* L);
 int fget(lua_State* L);
 int fset(lua_State* L);
+int dget(lua_State* L);
+int shr(lua_State* L);
+int shl(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -66,6 +71,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "rnd");
 	lua_pushcfunction(this->state, flr);
 	lua_setglobal(this->state, "flr");
+	lua_pushcfunction(this->state, ceil);
+	lua_setglobal(this->state, "ceil");
 	lua_pushcfunction(this->state, srand);
 	lua_setglobal(this->state, "srand");
 	lua_pushcfunction(this->state, tostr);
@@ -108,6 +115,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "time");
 	lua_pushcfunction(this->state, type);
 	lua_setglobal(this->state, "type");
+	lua_pushcfunction(this->state, pset);
+	lua_setglobal(this->state, "pset");
 	lua_pushcfunction(this->state, line);
 	lua_setglobal(this->state, "line");
 	lua_pushcfunction(this->state, rect);
@@ -146,6 +155,16 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "fget");
 	lua_pushcfunction(this->state, fset);
 	lua_setglobal(this->state, "fset");
+	lua_pushcfunction(this->state, dget);
+	lua_setglobal(this->state, "dget");
+	lua_pushcfunction(this->state, noop);
+	lua_setglobal(this->state, "dset");
+	lua_pushcfunction(this->state, noop);
+	lua_setglobal(this->state, "cartdata");
+	lua_pushcfunction(this->state, shr);
+	lua_setglobal(this->state, "shr");
+	lua_pushcfunction(this->state, shl);
+	lua_setglobal(this->state, "shl");
 
 	std::string all =
 		"function all(t) \
@@ -247,6 +266,13 @@ LuaState::LuaState()
 	luaL_loadbuffer(this->state, del.c_str(), del.length(), "del");
 	lua_pcall(this->state, 0, 0, 0);
 
+	std::string sgn =
+		"function sgn(value) \
+			if value >= 0 then return 1 else return -1 end \
+		end";
+	luaL_loadbuffer(this->state, sgn.c_str(), sgn.length(), "sgn");
+	lua_pcall(this->state, 0, 0, 0);
+
 	// DEBUGLOG << program << ENDL;
 	/*std::string e = lua_tostring(this->state, -1);
 	DEBUGLOG << e << ENDL;*/
@@ -296,6 +322,17 @@ int deli(lua_State* L) {
 	lua_seti(L, 1, length);
 
 	return 1;
+}
+
+int pset(lua_State* L) {
+	int x = luaL_checknumber(L, 1);
+	int y = luaL_checknumber(L, 2);
+	int col = luaL_optnumber(L, 3, p8_memory[ADDR_DS_COLOR]);
+
+	p8_memory[ADDR_DS_COLOR] = col;
+	renderer->draw_point(x, y);
+
+	return 0;
 }
 
 int line(lua_State* L) {
@@ -502,7 +539,6 @@ void LuaState::run_update()
 			lua_pop(this->state, 1);
 			DEBUGLOG << e << ENDL;
 		}
-		lua_pop(this->state, 1);
 	}
 	else {
 		lua_getglobal(this->state, "_update");
@@ -561,6 +597,12 @@ int rnd(lua_State* L) {
 int flr(lua_State* L) {
 	double num = luaL_checknumber(L, 1);
 	lua_pushinteger(L, floor(num));
+	return 1;
+}
+
+int ceil(lua_State* L) {
+	double num = luaL_checknumber(L, 1);
+	lua_pushinteger(L, ceil(num));
 	return 1;
 }
 
@@ -661,40 +703,45 @@ int cls(lua_State* L) {
 	return 0;
 }
 
-// TODO flip
 int spr(lua_State* L) {
-	int n = luaL_checkinteger(L, 1);
+	int n = luaL_checknumber(L, 1);
 	int x = luaL_checknumber(L, 2);
 	int y = luaL_checknumber(L, 3);
 	int w = luaL_optnumber(L, 4, 1.0) * 8;
 	int h = luaL_optnumber(L, 5, 1.0) * 8;
+	int flip_x = lua_toboolean(L, 6);
+	int flip_y = lua_toboolean(L, 7);
 
-	renderer->draw_sprite(n, x, y, w, h);
+	renderer->draw_sprite(n, x, y, w, h, flip_x, flip_y);
 
 	return 0;
 }
 
 // TODO stretch+flip
 int sspr(lua_State* L) {
-	int sx = luaL_checkinteger(L, 1);
-	int sy = luaL_checkinteger(L, 2);
-	int sw = luaL_checkinteger(L, 3);
-	int sh = luaL_checkinteger(L, 4);
+	int sx = luaL_checknumber(L, 1);
+	int sy = luaL_checknumber(L, 2);
+	int sw = luaL_checknumber(L, 3);
+	int sh = luaL_checknumber(L, 4);
 	int dx = luaL_checknumber(L, 5);
 	int dy = luaL_checknumber(L, 6);
+	int dw = luaL_optnumber(L, 7, sw);
+	int dh = luaL_optnumber(L, 8, sh);
+	int flip_x = lua_toboolean(L, 9);
+	int flip_y = lua_toboolean(L, 10);
 
-	renderer->draw_from_spritesheet(sx, sy, sw, sh, dx, dy);
+	renderer->draw_from_spritesheet(sx, sy, sw, sh, dx, dy, dw, dh, flip_x, flip_y);
 
 	return 0;
 }
 
 int map(lua_State* L) {
-	int cellx = luaL_checkinteger(L, 1);
-	int celly = luaL_checkinteger(L, 2);
-	int sx = luaL_checkinteger(L, 3);
-	int sy = luaL_checkinteger(L, 4);
-	int cellw = luaL_checkinteger(L, 5);
-	int cellh = luaL_checkinteger(L, 6);
+	int cellx = luaL_checknumber(L, 1);
+	int celly = luaL_checknumber(L, 2);
+	int sx = luaL_checknumber(L, 3);
+	int sy = luaL_checknumber(L, 4);
+	int cellw = luaL_checknumber(L, 5);
+	int cellh = luaL_checknumber(L, 6);
 	int layer = luaL_optinteger(L, 7, 0);
 
 	renderer->draw_map(cellx, celly, sx, sy, cellw, cellh, layer);
@@ -703,8 +750,8 @@ int map(lua_State* L) {
 }
 
 int mget(lua_State* L) {
-	int cellx = luaL_optinteger(L, 1, 0);
-	int celly = luaL_optinteger(L, 2, 0);
+	int cellx = luaL_optnumber(L, 1, 0);
+	int celly = luaL_optnumber(L, 2, 0);
 
 	int row_offset = ADDR_MAP + celly * 128;
 	if (celly >= 32) {
@@ -718,8 +765,8 @@ int mget(lua_State* L) {
 }
 
 int mset(lua_State* L) {
-	int cellx = luaL_optinteger(L, 1, 0);
-	int celly = luaL_optinteger(L, 2, 0);
+	int cellx = luaL_optnumber(L, 1, 0);
+	int celly = luaL_optnumber(L, 2, 0);
 	int snum = luaL_optinteger(L, 3, 0);
 
 	int row_offset = ADDR_MAP + celly * 128;
@@ -1094,6 +1141,30 @@ int fset(lua_State* L) {
 	}
 
 	return 0;
+}
+
+int dget(lua_State* L) {
+	lua_pushinteger(L, 0);
+
+	return 1;
+}
+
+int shr(lua_State* L) {
+	int num = lua_tonumber(L, 1);
+	int bits = lua_tonumber(L, 2);
+
+	lua_pushinteger(L, num >> bits);
+
+	return 1;
+}
+
+int shl(lua_State* L) {
+	int num = lua_tonumber(L, 1);
+	int bits = lua_tonumber(L, 2);
+
+	lua_pushinteger(L, num << bits);
+
+	return 1;
 }
 
 int noop(lua_State* L) {

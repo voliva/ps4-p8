@@ -392,7 +392,7 @@ std::string p8lua_to_std_lua(std::string& s) {
                 }
                 pos++;
             }
-            if (pos < line.length()) {
+            if (pos < line.length() && line.find_first_not_of(" ", pos) != std::string::npos) {
                 line = line.replace(pos, 0, " then ") + " end";
             }
         }
