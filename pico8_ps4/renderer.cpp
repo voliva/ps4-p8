@@ -154,6 +154,7 @@ void Renderer::initialize()
 
 	this->reset_draw_pal();
 	this->reset_screen_pal();
+	memset(this->prev_screen, 0x00, SCREEN_MEMORY_SIZE);
 
 	p8_memory[ADDR_DS_CLIP_RECT] = 0;
 	p8_memory[ADDR_DS_CLIP_RECT + 1] = 0;
@@ -435,7 +436,11 @@ void Renderer::reset_transparency_pal()
 
 void Renderer::present()
 {
-	for (int i = 0; i < 0x2000; i++) {
+	for (int i = 0; i < SCREEN_MEMORY_SIZE; i++) {
+		if (p8_memory[ADDR_SCREEN + i] == this->prev_screen[i]) {
+			continue;
+		}
+
 		int x = (i%64)*2;
 		int y = i/64;
 		unsigned char pixels = p8_memory[ADDR_SCREEN + i];
@@ -457,6 +462,7 @@ void Renderer::present()
 		SDL_RenderDrawPoint(this->renderer, x+1, y);
 	}
 	SDL_UpdateWindowSurface(this->window);
+	memcpy(this->prev_screen, &p8_memory[ADDR_SCREEN], SCREEN_MEMORY_SIZE);
 }
 
 void Renderer::set_transform_pixel(int x, int y, unsigned char color, bool transparency)

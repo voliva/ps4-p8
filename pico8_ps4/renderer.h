@@ -19,6 +19,8 @@
 #define P8_WIDTH 128
 #define P8_HEIGHT 128
 
+#define SCREEN_MEMORY_SIZE P8_HEIGHT * P8_WIDTH / 2
+
 typedef struct {
 	int x;
 	int y;
@@ -54,5 +56,6 @@ public:
 
 private:
 	void set_transform_pixel(int x, int y, unsigned char color, bool transparency);
+	unsigned char prev_screen[SCREEN_MEMORY_SIZE];
 };
 extern Renderer *renderer;
