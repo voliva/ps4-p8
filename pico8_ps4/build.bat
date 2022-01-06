@@ -20,6 +20,7 @@ set outputPath=..\
 set outputElf=%intdir%\%targetname%.elf
 set outputOelf=%intdir%\%targetname%.oelf
 
+IF EXIST %intdir% RMDIR /S /Q %intdir%
 @mkdir %intdir%
 
 Rem Compile object files for all the source files
