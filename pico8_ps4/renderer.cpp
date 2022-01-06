@@ -186,32 +186,44 @@ void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned
 		for (int x = 0; x < cw; x++) {
 			int col = cx + x;
 			int n = p8_memory[row_offset + col];
+			if (n == 0) {
+				continue;
+			}
 			int screen_x = sx + x * 8;
 
 			// TODO layer filter
-			this->draw_sprite(n, screen_x, screen_y, 8, 8);
+			this->draw_sprite(n, screen_x, screen_y, 8, 8, false, false);
 		}
 	}
 }
 
 #define LINE_JMP 128 / 2
-void Renderer::draw_sprite(int n, int x, int y, int w, int h)
+void Renderer::draw_sprite(int n, int x, int y, int w, int h, bool flip_x, bool flip_y)
 {
 	int sprite_col = n % 16;
 	int sprite_row = n / 16;
 
-	this->draw_from_spritesheet(sprite_col * 8, sprite_row * 8, w, h, x, y);
+	this->draw_from_spritesheet(sprite_col * 8, sprite_row * 8, w, h, x, y, w, h, flip_x, flip_y);
 }
 
-void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int dy)
+void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh, bool flip_x, bool flip_y)
 {
 	// I can't use memcpy because this is all effected by the draw state (pal, palt, clip, camera, etc.)
 
 	int sprite_addr = ADDR_SPRITE_SHEET + sy * LINE_JMP + sx / 2;
-	for (int _y = 0; _y < sh; _y++) {
-		for (int _x = 0; _x < sw; _x++) {
-			unsigned char color = p8_memory[sprite_addr + _y * LINE_JMP + _x / 2];
-			if (_x % 2 == 0) {
+	for (int _y = 0; _y < dh; _y++) {
+		int sprite_y = _y * sh / dh;
+		if (flip_y) {
+			sprite_y = sh - sprite_y;
+		}
+		for (int _x = 0; _x < dw; _x++) {
+			int sprite_x = _x * sw / dw;
+			if (flip_x) {
+				sprite_x = sw - sprite_x - 1;
+			}
+
+			unsigned char color = p8_memory[sprite_addr + sprite_y * LINE_JMP + sprite_x / 2];
+			if (sprite_x % 2 == 0) {
 				color = color & 0x0F;
 			}
 			else {
@@ -390,8 +402,8 @@ void Renderer::set_transform_pixel(int x, int y, unsigned char color, bool trans
 	}
 	mapped_color = mapped_color & 0x0F;
 
-	int screen_x = x - memory_read_short(ADDR_DS_CAMERA_X);
-	int screen_y = y - memory_read_short(ADDR_DS_CAMERA_Y);
+	int screen_x = x - (short)memory_read_short(ADDR_DS_CAMERA_X);
+	int screen_y = y - (short)memory_read_short(ADDR_DS_CAMERA_Y);
 	unsigned char x0 = p8_memory[ADDR_DS_CLIP_RECT];
 	unsigned char y0 = p8_memory[ADDR_DS_CLIP_RECT+1];
 	unsigned char x1 = p8_memory[ADDR_DS_CLIP_RECT+2];
