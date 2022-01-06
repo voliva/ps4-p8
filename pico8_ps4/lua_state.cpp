@@ -1059,7 +1059,7 @@ int sqrt(lua_State* L) {
 int sin(lua_State* L) {
 	float f = luaL_checknumber(L, 1);
 
-	lua_pushnumber(L, sinf(f * 2 * M_PI));
+	lua_pushnumber(L, -sinf(f * 2 * M_PI));
 
 	return 1;
 }
@@ -1068,7 +1068,11 @@ int atan2(lua_State* L) {
 	float dx = luaL_checknumber(L, 1);
 	float dy = luaL_checknumber(L, 2);
 
-	lua_pushnumber(L, atan2(dy, dx));
+	float result = atan2(-dy, dx) / (2 * M_PI);
+	if (result < 0) {
+		result += 1;
+	}
+	lua_pushnumber(L, result);
 
 	return 1;
 }
