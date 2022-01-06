@@ -21,7 +21,7 @@ public:
 	~AudioManager();
 	void initialize();
 	void playSfx(int n, int channel, int offset, int length);
-	void poke(unsigned char addr, unsigned char value);
+	void poke(unsigned short addr, unsigned char value);
 
 	std::vector<int16_t>* cache[SFX_AMOUNT];
 	Channel channels[4];

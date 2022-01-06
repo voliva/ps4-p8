@@ -556,7 +556,7 @@ void LuaState::run_update()
 }
 
 int poke(lua_State* L) {
-	unsigned char addr = luaL_checkinteger(L, 1) & 0x0FF;
+	unsigned short addr = luaL_checkinteger(L, 1) & 0x0FFFF;
 	unsigned char value = luaL_optinteger(L, 2, 0) & 0x0FF;
 
 	audioManager->poke(addr, value);

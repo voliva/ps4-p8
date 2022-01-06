@@ -124,7 +124,7 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 }
 
 #define SFX_BYTE_LENGTH 68
-void AudioManager::poke(unsigned char addr, unsigned char value)
+void AudioManager::poke(unsigned short addr, unsigned char value)
 {
 	if (addr >= ADDR_SFX && addr < ADDR_SFX + SFX_BYTE_LENGTH * SFX_AMOUNT) {
 		// Invalidate the buffer of that sfx
