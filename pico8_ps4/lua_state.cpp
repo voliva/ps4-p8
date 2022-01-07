@@ -59,6 +59,7 @@ int fset(lua_State* L);
 int dget(lua_State* L);
 int shr(lua_State* L);
 int shl(lua_State* L);
+int printh(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -165,14 +166,20 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "shr");
 	lua_pushcfunction(this->state, shl);
 	lua_setglobal(this->state, "shl");
+	lua_pushcfunction(this->state, printh);
+	lua_setglobal(this->state, "printh");
 
+	// It needs to count from the end of the table in case the elements get removed in-between
 	std::string all =
 		"function all(t) \
-			local i = 0 \
 			local n = #t \
 			return function() \
-				i = i + 1 \
-				if i <= n then return t[i] end \
+				local v = nil \
+				while n >= 0 and v == nil do \
+					v = t[#t-n] \
+					n = n - 1 \
+				end \
+				return v \
 			end \
 		end";
 	luaL_loadbuffer(this->state, all.c_str(), all.length(), "all");
@@ -277,7 +284,9 @@ LuaState::LuaState()
 		"function count(table, value) \
 			local t=0 \
 			for i=1,#table do \n \
-				if table[i] == value then \n \
+				if value == nil and table[i] ~= nil then \
+					t = t + 1\
+				elseif table[i] == value then \n \
 					t = t + 1 \n \
 				end \
 			end \
@@ -1190,6 +1199,14 @@ int shl(lua_State* L) {
 	lua_pushinteger(L, num << bits);
 
 	return 1;
+}
+
+int printh(lua_State* L) {
+	std::string str = luaL_checkstring(L, 1);
+
+	DEBUGLOG << str << ENDL;
+
+	return 0;
 }
 
 int noop(lua_State* L) {
