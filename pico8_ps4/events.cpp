@@ -16,6 +16,10 @@ std::map<SDL_Scancode, KeyEvent> key_to_event = {
 std::map<Uint8, P8_Key> controller_to_key = {
 	{0, P8_Key::cross},
 	{1, P8_Key::circle},
+	{2, P8_Key::circle}, // square (So that both circle and cross can easily be pressed at the same time with the thumb)
+	{3, P8_Key::cross}, // triangle
+	{4, P8_Key::circle}, // L1
+	{5, P8_Key::cross}, // R1
 	{9, P8_Key::pause},
 	{13, P8_Key::up},
 	{14, P8_Key::down},
@@ -102,8 +106,6 @@ std::map<Uint8, Key> controller_to_sys_key = {
 	/*
 	* 2 square
 	* 3 triangle
-	* 4 L1
-	* 5 R1
 	* 11 L3
 	* 12 R3
 	* 17 Mid
@@ -126,6 +128,5 @@ Key getKeyDown(SDL_Event& e) {
 		}
 		break;
 	}
-
 	return Key::None;
 }
