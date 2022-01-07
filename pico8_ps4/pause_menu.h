@@ -6,7 +6,7 @@ class PauseMenu
 {
 public:
 	void initialize();
-	int manageEvent(KeyEvent &e);
+	void manageEvent(KeyEvent &e);
 	void draw();
 
 private:

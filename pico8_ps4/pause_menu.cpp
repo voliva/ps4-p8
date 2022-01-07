@@ -2,6 +2,9 @@
 #include "renderer.h"
 #include "memory.h"
 #include "font.h"
+#include "running-cart.h"
+
+#define DEFAULT_LINES 3
 
 void PauseMenu::initialize()
 {
@@ -9,38 +12,42 @@ void PauseMenu::initialize()
 	this->pressed = false;
 }
 
-int PauseMenu::manageEvent(KeyEvent& e)
+void PauseMenu::manageEvent(KeyEvent& e)
 {
 	if (!e.down) {
-		return 0;
+		return;
 	}
 
 	switch (e.key) {
 	case P8_Key::down:
-		this->active_index = (this->active_index + 1) % 2;
+		this->active_index = (this->active_index + 1) % DEFAULT_LINES;
 		break;
 	case P8_Key::up:
 		this->active_index--;
 		if (this->active_index == 0xFF) {
-			this->active_index = 1;
+			this->active_index = DEFAULT_LINES-1;
 		}
 		break;
 	case P8_Key::pause:
 		this->active_index = 0;
-		return 1;
+		runningCart->resume();
+		break;
 	case P8_Key::circle:
 	case P8_Key::cross:
 		switch (this->active_index) {
 		case 0: // continue
-			this->active_index = 0;
-			return 1;
+			runningCart->resume();
+			break;
 		case 1:
-			this->active_index = 0;
-			return 2;
+			runningCart->restart();
+			break;
+		case 2:
+			runningCart->stop();
+			break;
 		}
+		this->active_index = 0;
 		break;
 	}
-	return 0;
 }
 
 void PauseMenu::draw()
@@ -51,8 +58,7 @@ void PauseMenu::draw()
 	memory_write_short(ADDR_DS_CAMERA_X, 0);
 	memory_write_short(ADDR_DS_CAMERA_Y, 0);
 
-	int lines = 2;
-	int height = 5 + lines * 8 - 3 + 5;
+	int height = 5 + DEFAULT_LINES * 8 - 3 + 5;
 	int width = 2 * P8_WIDTH / 3;
 
 	int left = (P8_WIDTH - width) / 2;
@@ -65,7 +71,7 @@ void PauseMenu::draw()
 	p8_memory[ADDR_DS_COLOR] = 7;
 	renderer->draw_rectangle(left + 2, top + 2, right - 2, bottom - 2, false);
 
-	for (int l = 0; l < lines; l++) {
+	for (int l = 0; l < DEFAULT_LINES; l++) {
 		int text_top = top + 5 + l * 8;
 		int text_x = left + 9;
 		if (this->active_index == l) {
@@ -79,10 +85,10 @@ void PauseMenu::draw()
 		case 0:
 			font->print("continue", text_x, text_top, false);
 			break;
-		/*case 1:
-			font->print("reset", text_x, text_top, false);
-			break;*/
 		case 1:
+			font->print("reset cart", text_x, text_top, false);
+			break;
+		case 2:
 			font->print("quit", text_x, text_top, false);
 			break;
 		}

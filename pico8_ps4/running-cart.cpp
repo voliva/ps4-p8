@@ -142,14 +142,7 @@ void RunningCart::runOnce()
 
 			if (result != NULL) {
 				if (this->paused) {
-					switch (pauseMenu->manageEvent(*result)) {
-					case 1:
-						this->resume();
-						break;
-					case 2:
-						this->stop();
-						break;
-					}
+					pauseMenu->manageEvent(*result);
 				}
 				else if (result->down && result->key == P8_Key::pause) {
 					this->pause();
