@@ -163,18 +163,20 @@ void RunningCart::runOnce()
 		}
 		auto frame_start = std::chrono::high_resolution_clock::now();
 
-		if (this->paused) {
-			pauseMenu->draw();
-		}
-		else {
-			luaState->run_update();
-
-			if (time_debt < ms_per_frame / 2) {
-				luaState->run_draw();
-				renderer->present();
+		if (this->status == RunningStatus::Running) {
+			if (this->paused) {
+				pauseMenu->draw();
 			}
 			else {
-				DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;
+				luaState->run_update();
+
+				if (time_debt < ms_per_frame / 2) {
+					luaState->run_draw();
+					renderer->present();
+				}
+				else {
+					DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;
+				}
 			}
 		}
 

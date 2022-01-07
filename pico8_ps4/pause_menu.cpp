@@ -21,18 +21,21 @@ int PauseMenu::manageEvent(KeyEvent& e)
 		break;
 	case P8_Key::up:
 		this->active_index--;
-		if (this->active_index < 0) {
+		if (this->active_index == 0xFF) {
 			this->active_index = 1;
 		}
 		break;
 	case P8_Key::pause:
+		this->active_index = 0;
 		return 1;
 	case P8_Key::circle:
 	case P8_Key::cross:
 		switch (this->active_index) {
 		case 0: // continue
+			this->active_index = 0;
 			return 1;
 		case 1:
+			this->active_index = 0;
 			return 2;
 		}
 		break;
@@ -43,6 +46,10 @@ int PauseMenu::manageEvent(KeyEvent& e)
 void PauseMenu::draw()
 {
 	unsigned char original_color = p8_memory[ADDR_DS_COLOR];
+	unsigned short original_camera_x = memory_read_short(ADDR_DS_CAMERA_X);
+	unsigned short original_camera_y = memory_read_short(ADDR_DS_CAMERA_Y);
+	memory_write_short(ADDR_DS_CAMERA_X, 0);
+	memory_write_short(ADDR_DS_CAMERA_Y, 0);
 
 	int lines = 2;
 	int height = 5 + lines * 8 - 3 + 5;
@@ -83,5 +90,7 @@ void PauseMenu::draw()
 
 	renderer->present();
 	p8_memory[ADDR_DS_COLOR] = original_color;
+	memory_write_short(ADDR_DS_CAMERA_X, original_camera_x);
+	memory_write_short(ADDR_DS_CAMERA_Y, original_camera_y);
 }
 
