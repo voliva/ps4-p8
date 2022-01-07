@@ -215,8 +215,11 @@ void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned
 			}
 			int x_pos = sx + x * 8;
 
-			// TODO layer filter
-			this->draw_sprite(n, x_pos, y_pos, 8, 8, false, false);
+			unsigned char flags = p8_memory[ADDR_SPRITE_FLAGS + n];
+			bool passes_filter = (unsigned char)(~layer | flags) == 0xFF;
+			if (passes_filter) {
+				this->draw_sprite(n, x_pos, y_pos, 8, 8, false, false);
+			}
 		}
 	}
 }

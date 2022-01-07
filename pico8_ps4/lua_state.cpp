@@ -273,6 +273,19 @@ LuaState::LuaState()
 	luaL_loadbuffer(this->state, sgn.c_str(), sgn.length(), "sgn");
 	lua_pcall(this->state, 0, 0, 0);
 
+	std::string count =
+		"function count(table, value) \
+			local t=0 \
+			for i=1,#table do \n \
+				if table[i] == value then \n \
+					t = t + 1 \n \
+				end \
+			end \
+			return t \
+		end";
+	luaL_loadbuffer(this->state, count.c_str(), count.length(), "count");
+	lua_pcall(this->state, 0, 0, 0);
+
 	// DEBUGLOG << program << ENDL;
 	/*std::string e = lua_tostring(this->state, -1);
 	DEBUGLOG << e << ENDL;*/
