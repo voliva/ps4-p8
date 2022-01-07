@@ -91,6 +91,7 @@ void Font::print(std::string c, int x, int y, bool scroll)
 	int y_offset = 6;
 	int y_original = y;
 	int prev_width = 0; // Needed for backspace
+	int bg_color = -1;
 
 	while (start < c.length()) {
 		unsigned char character = c[start];
@@ -98,25 +99,18 @@ void Font::print(std::string c, int x, int y, bool scroll)
 		// Inline modifiers https://pico-8.fandom.com/wiki/P8SCII_Control_Codes
 		if (character == '\\') {
 			if (c[start + 1] == '-') {
-				char offset_c = c[start + 2];
-				int offset = 0;
-				if (offset_c <= '9') {
-					offset = (offset_c - '0') - 16;
-				}
-				else {
-					offset = 10 + (offset_c - 'a') - 16;
-				}
+				int offset = read_param(c[start+2]) - 16;
 				x += offset;
+				start += 3;
+				continue;
+			}
+			else if (c[start+1] == '#') {
+				bg_color = read_param(c[start + 2]);
 				start += 3;
 				continue;
 			}
 			//else if (grapheme == '\*') {
 			//	repeats = read_param(c[start + 1]);
-			//	start += 2;
-			//	continue;
-			//}
-			//else if (grapheme == '\#') {
-			//	// TODO Background color
 			//	start += 2;
 			//	continue;
 			//}
@@ -167,6 +161,12 @@ void Font::print(std::string c, int x, int y, bool scroll)
 		}
 
 		CharData c = this->charData[character];
+		if (bg_color >= 0) {
+			unsigned char original_color = p8_memory[ADDR_DS_COLOR];
+			p8_memory[ADDR_DS_COLOR] = bg_color;
+			renderer->draw_rectangle(x-1, y-1, x + 3, y + 5, true);
+			p8_memory[ADDR_DS_COLOR] = original_color;
+		}
 		this->drawChar(character, x, y);
 		prev_width = c.size + 1;
 		x += c.size + 1;
