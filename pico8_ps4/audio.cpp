@@ -65,7 +65,17 @@ void AudioManager::initialize() {
 	}
 }
 
-// TODO offset + length. Negative n (manage from lua), channel=-2 (manage from lua)
+#define SFX_BYTE_LENGTH 68
+int get_sfx_speed(int n) {
+	int sfx_offset = ADDR_SFX + n * SFX_BYTE_LENGTH;
+	int speed = p8_memory[sfx_offset + 64 + 1];
+	if (speed < 1) {
+		speed = 1;
+	}
+	return speed;
+}
+
+// Loops, n=-2 (manage from lua), channel=-2 (manage from lua)
 std::vector<int16_t>* audio_buffer_from_sfx(int n);
 void AudioManager::playSfx(int n, int channel, int offset, int length)
 {
@@ -88,12 +98,46 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 		}
 	}
 	this->channels[channel].sfx = n;
-	this->channels[channel].offset = 0;
+	int speed = get_sfx_speed(n);
+	this->channels[channel].offset = offset * speed * P8_TICKS_PER_T;
+	this->channels[channel].max = (offset+length) * speed * P8_TICKS_PER_T;
 
 	for (int i = 0; i < CHANNELS; i++) {
 		SDL_UnlockAudioDevice(this->channels[i].deviceId);
 	}
 	SDL_PauseAudioDevice(this->channels[channel].deviceId, 0);
+}
+
+void AudioManager::stopSfx(int n)
+{
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_LockAudioDevice(this->channels[i].deviceId);
+	}
+
+	for (int i = 0; i < CHANNELS; i++) {
+		if (this->channels[i].sfx == n) {
+			this->channels[i].sfx = -1;
+			this->channels[i].offset = 0;
+		}
+	}
+
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_UnlockAudioDevice(this->channels[i].deviceId);
+	}
+}
+
+void AudioManager::stopChannel(int channel)
+{
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_LockAudioDevice(this->channels[i].deviceId);
+	}
+
+	this->channels[channel].sfx = -1;
+	this->channels[channel].offset = 0;
+
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_UnlockAudioDevice(this->channels[i].deviceId);
+	}
 }
 
 void audio_cb(void* userdata, Uint8* stream, int len) {
@@ -109,8 +153,9 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 		}
 
 		std::vector<int16_t>* cached = audioManager->cache[channel->sfx];
-		if (channel->offset*2 + len > cached->size()*2) {
-			int copied_lenght = (cached->size() - channel->offset) * 2;
+		int top = std::min(cached->size(), (size_t)channel->max);
+		if (channel->offset*2 + len > top*2) {
+			int copied_lenght = (top - channel->offset) * 2;
 			memcpy(stream, &(*cached)[channel->offset], copied_lenght);
 			memset(stream + copied_lenght, 0, len - copied_lenght);
 			channel->sfx = -1;
@@ -123,7 +168,6 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 	}
 }
 
-#define SFX_BYTE_LENGTH 68
 void AudioManager::poke(unsigned short addr, unsigned char value)
 {
 	if (addr >= ADDR_SFX && addr < ADDR_SFX + SFX_BYTE_LENGTH * SFX_AMOUNT) {
@@ -195,7 +239,7 @@ std::vector<int16_t>* audio_buffer_from_sfx(int s) {
 	sfx.detune = flags / 8 % 3;
 	sfx.reverb = flags / 24 % 3;
 	sfx.dampen = flags / 72 % 3;
-	sfx.speed = p8_memory[sfx_offset + 64 + 1];
+	sfx.speed = get_sfx_speed(s);
 	sfx.loopStart = p8_memory[sfx_offset + 64 + 2];
 	sfx.loopEnd = p8_memory[sfx_offset + 64 + 3];
 
@@ -204,24 +248,20 @@ std::vector<int16_t>* audio_buffer_from_sfx(int s) {
 	while (num_notes > 0 && sfx.notes[num_notes - 1].volume == 0) {
 		num_notes--;
 	}
-	int speed = sfx.speed;
-	if (speed < 1) {
-		speed = 1;
-	}
 
-	int total_ticks = speed * P8_TICKS_PER_T * num_notes;
+	int total_ticks = sfx.speed * P8_TICKS_PER_T * num_notes;
 	std::vector<float> floats(total_ticks);
 	for (int i = 0; i < num_notes; i++) {
 		if (sfx.notes[i].volume > 0) {
-			audio_generate_note(sfx.notes[i], floats, speed * P8_TICKS_PER_T * i, speed * P8_TICKS_PER_T * (i + 1));
+			audio_generate_note(sfx.notes[i], floats, sfx.speed * P8_TICKS_PER_T * i, sfx.speed * P8_TICKS_PER_T * (i + 1));
 		}
 	}
 
 	std::vector<int16_t>* result = new std::vector<int16_t>(total_ticks);
 	for (int n = 0; n < num_notes; n++) {
 		if (sfx.notes[n].volume > 0) {
-			for (int i = 0; i < speed * P8_TICKS_PER_T; i++) {
-				(*result)[n * speed * P8_TICKS_PER_T + i] = sfx.notes[n].volume * floats[n * speed * P8_TICKS_PER_T + i] * 5000;
+			for (int i = 0; i < sfx.speed * P8_TICKS_PER_T; i++) {
+				(*result)[n * sfx.speed * P8_TICKS_PER_T + i] = sfx.notes[n].volume * floats[n * sfx.speed * P8_TICKS_PER_T + i] * 5000;
 			}
 		}
 	}

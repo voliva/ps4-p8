@@ -13,6 +13,7 @@ typedef struct {
 	SDL_AudioSpec* spec;
 	int sfx; // -1 = paused
 	unsigned int offset;
+	unsigned int max;
 } Channel;
 
 class AudioManager {
@@ -21,6 +22,8 @@ public:
 	~AudioManager();
 	void initialize();
 	void playSfx(int n, int channel, int offset, int length);
+	void stopSfx(int n);
+	void stopChannel(int channel);
 	void poke(unsigned short addr, unsigned char value);
 
 	std::vector<int16_t>* cache[SFX_AMOUNT];

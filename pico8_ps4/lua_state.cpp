@@ -284,6 +284,19 @@ int sfx(lua_State* L) {
 	int offset = luaL_optinteger(L, 3, 0);
 	int length = luaL_optinteger(L, 4, 31);
 
+	if (n == -1 && channel >= 0) {
+		audioManager->stopChannel(channel);
+		return 0;
+	}
+	else if (n < 0) {
+		return 0;
+	}
+
+	if (channel == -2) {
+		audioManager->stopSfx(n);
+		return 0;
+	}
+
 	audioManager->playSfx(n, channel, offset, length);
 
 	return 0;
