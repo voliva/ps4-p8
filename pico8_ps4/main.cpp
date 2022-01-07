@@ -56,6 +56,9 @@ int main(void)
 	DEBUGLOG << "Initializing audio..." << ENDL;
 	audioManager = new AudioManager();
 
+	SDL_Delay(4000);
+	return -1;
+
 	machineState = new MachineState();
 	font = new Font();
 	pauseMenu = new PauseMenu();
