@@ -312,6 +312,7 @@ int find_end_of_statement(std::string s) {
             if (parens > 0) {
                 return -1;
             }
+            pos++;
         }
         else {
             pos = s.find_first_of(WHITESPACE, pos);
@@ -319,13 +320,17 @@ int find_end_of_statement(std::string s) {
 
         pos = s.find_first_not_of(WHITESPACE, pos);
         if (pos == std::string::npos) {
-            return -1;
+            return s.length();
         }
         found_operator = false;
         for (int i = 0; i < AO_LENGTH; i++) {
             if (s[pos] == assignmentOperators[i][0]) {
                 found_operator = true;
             }
+        }
+        if (found_operator) {
+            // Advance to next token
+            pos = s.find_first_not_of(WHITESPACE, pos + 1);
         }
     } while (found_operator);
     return pos;
