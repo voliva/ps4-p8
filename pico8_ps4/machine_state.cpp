@@ -65,13 +65,24 @@ bool MachineState::wasButtonPressed(int p, P8_Key btn)
 	int cd = this->btn_countdown[p][(int)btn];
 	if (cd == 0) {
 		if (this->isButtonPressed(p, btn)) {
-			this->btn_countdown[p][(int)btn] = 16;
+			int delay = p8_memory[ADDR_HW_BTNP_DELAY];
+			if (delay == 0) {
+				delay = 16;
+			}
+			else if (delay == 0xFF) {
+				delay = -1;
+			}
+			this->btn_countdown[p][(int)btn] = delay;
 			return true;
 		}
 		return false;
 	}
 	else if (cd == 1) {
 		if (this->isButtonPressed(p, btn)) {
+			int delay = p8_memory[ADDR_HW_BTNP_INTERVAL];
+			if (delay == 0) {
+				delay = 5;
+			}
 			this->btn_countdown[p][(int)btn] = 5;
 			return true;
 		}
