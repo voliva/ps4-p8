@@ -131,6 +131,7 @@ void RunningCart::runOnce()
 		// When dragging the window the app pauses, on that case, ignore frame_start
 		// https://stackoverflow.com/questions/29552658/how-do-you-fix-a-program-from-freezing-when-you-move-the-window-in-sdl2
 		// auto frame_start = std::chrono::high_resolution_clock::now();
+		KeyEvent* result = NULL;
 		while (SDL_PollEvent(&e) != 0)
 		{
 			// DEBUGLOG << e.type << ENDL;
@@ -138,8 +139,7 @@ void RunningCart::runOnce()
 				this->stop();
 			}
 
-			KeyEvent* result = mapSdlEvent(e);
-
+			result = mapSdlEvent(e);
 			if (result != NULL) {
 				if (this->paused) {
 					pauseMenu->manageEvent(*result);
@@ -150,10 +150,15 @@ void RunningCart::runOnce()
 				else {
 					machineState->processKeyEvent(*result);
 				}
+				delete result;
 			}
+		}
 
+		while ((result = pollJoystick()) != NULL) {
+			machineState->processKeyEvent(*result);
 			delete result;
 		}
+
 		auto frame_start = std::chrono::high_resolution_clock::now();
 
 		if (this->status == RunningStatus::Running) {

@@ -1,4 +1,5 @@
 #include "events.h"
+#include "log.h"
 
 std::map<SDL_Scancode, KeyEvent> key_to_event = {
 	{SDL_SCANCODE_X, KeyEvent{ P8_Key::cross, 0 }},
@@ -129,4 +130,78 @@ Key getKeyDown(SDL_Event& e) {
 		break;
 	}
 	return Key::None;
+}
+
+#define ACTIVATION_POINT 0x7fff * 0.38
+#define POINT_THRESHOLD 500
+#define ANALOG_ACTIVATION_THRESHOLD (ACTIVATION_POINT + POINT_THRESHOLD)
+#define ANALOG_DEACTIVATION_THRESHOLD (ACTIVATION_POINT - POINT_THRESHOLD)
+
+int axis_status[] = { 0, 0 };
+P8_Key get_axis_key(int axis, int sign) {
+	if (axis == 0) {
+		if (sign > 0) {
+			return P8_Key::right;
+		}
+		return P8_Key::left;
+	}
+	if (sign > 0) {
+		return P8_Key::down;
+	}
+	return P8_Key::up;
+}
+KeyEvent* pollJoystick()
+{
+	if (joystick == NULL) {
+		return NULL;
+	}
+
+	for (int axis = 0; axis < 2; axis++) {
+		logger << "Polling JS " << axis << ENDL;
+		int value = SDL_JoystickGetAxis(joystick, axis);
+		logger << "result " << value << ENDL;
+
+		int absValue = abs(value);
+		int sign;
+		if (absValue == 0) {
+			sign = 0;
+		}
+		else {
+			sign = value / absValue;
+		}
+		if (absValue < ANALOG_DEACTIVATION_THRESHOLD) {
+			if (axis_status[axis] == 0) {
+				continue;
+			}
+			axis_status[axis] = 0;
+			return new KeyEvent{
+				get_axis_key(axis, sign),
+				0,
+				false
+			};
+		}
+		if (absValue > ANALOG_ACTIVATION_THRESHOLD) {
+			if (axis_status[axis] == sign) {
+				continue;
+			}
+			if (axis_status[axis] != 0) {
+				// We need to deactivate that button before activating the opposite one.
+				axis_status[axis] = 0;
+				return new KeyEvent{
+					get_axis_key(axis, sign),
+					0,
+					false
+				};
+			}
+
+			axis_status[axis] = sign;
+			return new KeyEvent{
+				get_axis_key(axis, sign),
+				0,
+				true
+			};
+		}
+	}
+
+	return NULL;
 }

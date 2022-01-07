@@ -37,6 +37,7 @@ Renderer* renderer;
 Font* font;
 PauseMenu* pauseMenu;
 RunningCart* runningCart;
+SDL_Joystick* joystick = NULL;
 
 typedef struct {
 	SDL_Texture* surface;
@@ -65,7 +66,7 @@ int main(void)
 	if (SDL_NumJoysticks() > 0)
 	{
 		DEBUGLOG << "Initialize joysticks" << ENDL;
-		SDL_JoystickOpen(0);
+		joystick = SDL_JoystickOpen(0);
 	}
 
 	SDL_Surface* screenSurface = SDL_GetWindowSurface(renderer->window);

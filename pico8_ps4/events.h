@@ -18,3 +18,6 @@ enum class Key {
 	None, left, right, up, down, circle, cross, pause, L2, R2
 };
 Key getKeyDown(SDL_Event& e);
+
+extern SDL_Joystick* joystick;
+KeyEvent* pollJoystick();
