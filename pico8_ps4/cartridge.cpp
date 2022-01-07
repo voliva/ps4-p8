@@ -287,11 +287,56 @@ std::map<unsigned char, P8_Key> button_to_key = {
 };
 
 const std::string WHITESPACE = " \n\r\t\f\v";
+#define AO_LENGTH 5
+const std::string assignmentOperators[] = { "-", "+", "/", "*", ".." };
+
+int find_end_of_statement(std::string s) {
+    int pos = s.find_first_not_of(WHITESPACE);
+    if (pos == std::string::npos) {
+        return -1;
+    }
+    bool found_operator;
+    do {
+        // Eat the first value
+        if (s[pos] == '(') {
+            int parens = 1;
+            while (parens > 0 || pos == s.length()) {
+                pos++;
+                if (s[pos] == '(') {
+                    parens++;
+                }
+                else if (s[pos] == ')') {
+                    parens--;
+                }
+            }
+            if (parens > 0) {
+                return -1;
+            }
+        }
+        else {
+            pos = s.find_first_of(WHITESPACE, pos);
+        }
+
+        pos = s.find_first_not_of(WHITESPACE, pos);
+        if (pos == std::string::npos) {
+            return -1;
+        }
+        found_operator = false;
+        for (int i = 0; i < AO_LENGTH; i++) {
+            if (s[pos] == assignmentOperators[i][0]) {
+                found_operator = true;
+            }
+        }
+    } while (found_operator);
+    return pos;
+}
+
 std::string p8lua_to_std_lua(std::string& s) {
     std::ostringstream out;
     std::istringstream in(s);
 
     std::string line;
+    int line_num = 1;
     while (std::getline(in, line)) {
         int pos;
 
@@ -347,33 +392,47 @@ std::string p8lua_to_std_lua(std::string& s) {
             pos += 2;
         }
 
-        pos = 0;
-        while ((pos = line.find("-=")) != std::string::npos) {
-            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
-            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+        for (int i = 0; i < AO_LENGTH; i++) {
+            std::string op = assignmentOperators[i];
+            std::string assignment = op + "=";
 
-            line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "-" + line.substr(pos+2);
-        }
-        pos = 0;
-        while ((pos = line.find("+=")) != std::string::npos) {
-            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
-            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+            /*
+            * We can't just unroll x -= k to x = x - k, because this case:
+            * value -= 3 + 2
+            * should become `value = value - (3 + 2)`
+            * But we can't put parenthesis on "the rest of the line", because this is valid:
+            * x -= 2     x -= 3
+            * x -= 2 + y x -= 3
+            * One idea I had is to break it down into many statements, adding in a temporary variable.
+            * So `value -= 3 + 2` becomes `_tmp0 = 3 + 2 value = value + _tmp0`.
+            * This would also work in multi-statement:
+            * `x -= 2     x -= 3` => `_tmp0 = 2 x -= 3 x = x - _tmp0` => `_tmp0 = 2 _tmp1 = 3 x = x - _tmp0 x = x - _tmp1`
+            * But this will break if the order of execution is important, and will break with things like `if something then x += 2 end`
+            * 
+            * So I'll do another idea: Put parenthesis as long as we don't find any other operator. Let's build a parser yay!
+            */
 
-            line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "+" + line.substr(pos + 2);
-        }
-        pos = 0;
-        while ((pos = line.find("/=")) != std::string::npos) {
-            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
-            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+            pos = 0;
+            while ((pos = line.find(assignment)) != std::string::npos) {
+                int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
+                int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
 
-            line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "/" + line.substr(pos + 2);
-        }
-        pos = 0;
-        while ((pos = line.find("*=")) != std::string::npos) {
-            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
-            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+                std::string code_before_assignment = line.substr(0, pos);
+                std::string variable_name = line.substr(last_word_start, pos - last_word_start);
+                std::string code_after_assignment = line.substr(pos + 2);
 
-            line = line.substr(0, pos) + "=" + line.substr(last_word_start, pos - last_word_start) + "*" + line.substr(pos + 2);
+                pos = find_end_of_statement(code_after_assignment);
+
+                if (pos == -1) { // Line ends before the statement finishes => I guess don't worry about it?
+                    line = code_before_assignment + "=" + variable_name + op + code_after_assignment;
+                }
+                else {
+                    std::string assignment_expression = code_after_assignment.substr(0, pos);
+                    std::string other_statements = code_after_assignment.substr(pos);
+
+                    line = code_before_assignment + "=" + variable_name + op + "(" + assignment_expression + ") " + other_statements;
+                }
+            }
         }
 
         // if (condition) something => if (condition) then something end
@@ -405,6 +464,7 @@ std::string p8lua_to_std_lua(std::string& s) {
         }
 
         out << line << ENDL;
+        line_num++;
     }
 
     return out.str();
