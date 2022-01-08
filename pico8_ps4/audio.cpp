@@ -1,5 +1,6 @@
 #include "audio.h"
-#include <math.h>
+// #include <math.h>
+#include <cmath>
 #include "log.h"
 #include "memory.h"
 
@@ -7,6 +8,160 @@
 
 #define DEBUGLOG Audio_DEBUGLOG
 Log DEBUGLOG = logger.log("audio");
+
+#define LOWEST_FREQ 10
+#define LONGEST_WAVELENGTH (P8_SAMPLE_RATE / LOWEST_FREQ)
+float wavelength_buffer[LONGEST_WAVELENGTH];
+
+/*
+Una altre idea es forçar que tot ha de començar a 0 i acabar a 0 => Potser es desincronitza a la llarga. Un wavelength son ~10ms d'audio. Fins a 12ms diuen que es imperceptible.
+*/
+
+int signOf(float f) {
+	if (f == 0) {
+		return 0;
+	}
+	if (f < 0) {
+		return -1;
+	}
+	return 1;
+}
+
+// It will try and return a phaseshift that matches sample, with the same slope as (sample-prevSample)
+#define ACCEPTABLE_STEP 0.01
+float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float from, float to) {
+	float inc = (to - from) / 8;
+	DEBUGLOG << "find_phaseshift " << sample << ", " << from << ", " << to << " " << inc << ENDL;
+	float bestDiffs[] = { 2.0, 2.0, 2.0 };
+	float bestFs[] = { -1.0, -1.0, -1.0 };
+	for (float f = from; f < to; f += inc) {
+		float v = wave_fn(f);
+		float diff = std::fabs(sample - v);
+		float nextV = wave_fn(std::nextafter(f, to));
+		int sign = signOf(nextV - v) + 1;
+		if (bestDiffs[sign] > diff) {
+			bestDiffs[sign] = diff;
+			bestFs[sign] = f;
+		}
+	}
+
+	float bestF = 0;
+	float bestDiff = 0;
+	// First try same sign, then neutral, then opposite sign
+	if (bestFs[sign] != -1) {
+		bestF = bestFs[sign];
+		bestDiff = bestDiffs[sign];
+	}
+	else {
+		// except if sign == neutral (1) => In that case just pick the closest one
+		if (sign == 1) {
+			if (bestDiffs[2] < bestDiffs[0]) {
+				bestF = bestFs[2];
+				bestDiff = bestDiffs[2];
+			}
+			else {
+				bestF = bestFs[0];
+				bestDiff = bestDiffs[0];
+			}
+		}
+		else {
+			if (bestFs[1] != -1) {
+				bestF = bestFs[1];
+				bestDiff = bestDiffs[1];
+			}
+			else {
+				bestF = bestFs[2 - sign];
+				bestDiff = bestDiffs[2 - sign];
+			}
+		}
+	}
+
+	DEBUGLOG << bestDiff << ENDL;
+	if (bestDiff < ACCEPTABLE_STEP) {
+		return bestF;
+	}
+	return find_phaseshift(wave_fn, sign, sample, std::fmax(bestF - inc, 0), std::fmin(bestF + inc, 1));
+}
+float find_phaseshift(float (*wave_fn)(float), float prevSample, float sample) {
+	float diff = sample - prevSample;
+	return find_phaseshift(wave_fn, signOf(diff)+1, sample, 0, 1);
+}
+
+typedef float(*WaveGenerator)(float);
+
+// float *(float) instruments[] = {};
+WaveGenerator instruments[] = { audio_triangle_wave, audio_tilted_wave, audio_sawtooth_wave, audio_square_wave, audio_pulse_wave, audio_organ_wave, audio_noise_wave, audio_phaser_wave };
+/*
+=> Què necesito?
+-> Tinc unitats que hauré d'acabar ajuntant
+-> Cada unitat té: Frequencia, Instrument, Volum, Efecte
+-> Per poder-lo ajuntar amb l'anterior, he de poder ajustar la fase per evitar el "click" lo maxim possible
+-> Potser també puc fer smooth de la linia d'alguna forma?
+-> Els efectes n'hi ha que son individiuals (vibrato, drop, fade in/fade out)
+-> I n'hi ha que son contextuals (slide, arp fast, arp slow)
+
+=> No puc generar tot el SFX d'una tungada. Un loop amb slide fa l'slide correctament quan fa el loop
+*/
+
+float lerp(float from, float to, float offset) {
+	return from + (to - from) * offset;
+}
+
+// LOL how to do arpeggios? => Another function /shrug
+void generate_next_samples(
+	float* dest, int length,
+	float prevSample, float sample, // Done
+	float freq, int instrument, int volume, int effect,
+	float prevFreq, float offset, float endOffset
+) {
+	WaveGenerator waveGenerator = instruments[instrument];
+	float phase_shift = 0;
+	if (instrument != 6) {
+		phase_shift = find_phaseshift(waveGenerator, prevSample, sample);
+	}
+	DEBUGLOG << "phase_shift " << phase_shift << ENDL;
+
+	float wl0 = P8_SAMPLE_RATE / freq;
+	float wlf = wl0;
+	bool vibrato = false;
+	if (effect == 1) { // Slide
+		wl0 = P8_SAMPLE_RATE / prevFreq;
+	} else if (effect == 2) { // Vibrato. Pitches love vibrato.
+		wlf = wlf / 1.059; // Bring up half step
+		vibrato = true;
+	} else if (effect == 3) { // Drop
+		wlf = 0x7FFFFFFF;
+	}
+
+	int v0 = volume;
+	int vf = volume;
+	if (effect == 4) { // Fade in
+		v0 = 0;
+	} else if (effect == 5) { // Fade out
+		vf = 0;
+	}
+
+	for (int i = 0; i < length; i++) {
+		DEBUGLOG << i << ENDL;
+		float inner_offset = lerp(offset, endOffset, (float)i / length);
+		float freq_offset = inner_offset;
+		if (vibrato) {
+			freq_offset = std::fmod(freq_offset * 4, 1);
+		}
+		float wavelength = lerp(wl0, wlf, freq_offset);
+		float v = lerp(v0, vf, inner_offset);
+
+		// TODO instrument 6
+		float wg_offset = std::fmod(phase_shift + std::fmod((float)i / length, wavelength), 1);
+		dest[i] = waveGenerator(wg_offset) * v / 7;
+	}
+}
+
+void generate_wavelength(float (*wave_fn)(float), unsigned int wavelength) {
+	for (unsigned int i = 0; i < wavelength; i++) {
+		wavelength_buffer[i] = wave_fn((float)i / wavelength);
+	}
+}
 
 void audio_cb(void* userdata, Uint8* stream, int len);
 
@@ -46,13 +201,17 @@ AudioManager::AudioManager()
 		this->channels[i].offset = 0;
 	}
 
+	/*float phase = find_phaseshift(audio_sin_wave, 0.31, 0.3);
+	DEBUGLOG << "phase shift: " << phase << ", v = " << audio_sin_wave(phase) << ", next = " << audio_sin_wave(phase+0.01) << ENDL;*/
+
 	int size = 50000;
 
 	std::vector<float> dest(size);
 	memset(&dest[0], 0.0, size * sizeof(float));
 
-	audio_generate_wave(audio_sin_wave, 220, dest, 0, 24860 + 110);
-	audio_generate_wave(audio_sin_wave, 220, dest, 24860 + 110 - CROSS_FADE, size);
+	generate_next_samples(&dest[0], size, 0, 0, 440, 0, 5, 0, 440, 0, 1);
+	/*audio_generate_wave(audio_sin_wave, 220, dest, 0, 24860 + 110);
+	audio_generate_wave(audio_sin_wave, 220, dest, 24860 + 110 - CROSS_FADE, size);*/
 
 	SDL_QueueAudio(this->channels[0].deviceId, &dest[0], size * sizeof(float));
 	SDL_PauseAudioDevice(this->channels[0].deviceId, 0);
@@ -307,35 +466,35 @@ float audio_sin_wave(float phase) {
 	return sinf(phase * 2 * M_PI);
 }
 float audio_triangle_wave(float phase) {
-	return fabs(phase - 0.5) * -4 + 1;
+	return (fabs(phase - 0.5) * -4 + 1) * 0.7;
 }
 
 #define TILTED_TIP 0.9
 float audio_tilted_wave(float phase) {
 	if (phase < TILTED_TIP) {
-		return (phase / TILTED_TIP) * 2 - 1;
+		return ((phase / TILTED_TIP) * 2 - 1) * 0.7;
 	}
 	else {
-		return (1 + 2 * TILTED_TIP / (1 - TILTED_TIP)) - (phase / (1 - TILTED_TIP)) * 2;
+		return ((1 + 2 * TILTED_TIP / (1 - TILTED_TIP)) - (phase / (1 - TILTED_TIP)) * 2) * 0.7;
 	}
 }
 float audio_sawtooth_wave(float phase) {
-	return phase * 2 - 1;
+	return (phase * 2 - 1) * 0.45;
 }
 float audio_square_wave(float phase) {
 	if (phase < 0.5) {
-		return 0;
+		return -1.0/3;
 	}
 	else {
-		return 1;
+		return 1.0/3;
 	}
 }
 float audio_pulse_wave(float phase) {
 	if (phase < 0.75) {
-		return 0;
+		return -1.0/3;
 	}
 	else {
-		return 1;
+		return 1.0/3;
 	}
 }
 float audio_organ_wave(float phase) {
@@ -343,6 +502,9 @@ float audio_organ_wave(float phase) {
 }
 float audio_noise_wave(float phase) {
 	return ((float)rand() / RAND_MAX * 2) - 1;
+}
+float audio_phaser_wave(float phase) {
+	return (audio_triangle_wave(phase) + audio_triangle_wave(fmod(phase * 0.99, 1))) / 2;
 }
 
 void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest) {

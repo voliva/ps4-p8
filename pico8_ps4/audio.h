@@ -64,6 +64,8 @@ float audio_sawtooth_wave(float phase);
 float audio_square_wave(float phase);
 float audio_pulse_wave(float phase);
 float audio_organ_wave(float phase);
+float audio_noise_wave(float phase);
+float audio_phaser_wave(float phase);
 
 // Wave generators
 void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest);
