@@ -118,7 +118,6 @@ void generate_next_samples(
 	if (instrument != 6) {
 		phase_shift = find_phaseshift(waveGenerator, prevSample, sample);
 	}
-	DEBUGLOG << "phase_shift " << phase_shift << ENDL;
 
 	float f0 = freq;
 	float ff = f0;
@@ -143,6 +142,7 @@ void generate_next_samples(
 
 	// Initial freq_offset
 	float phase = phase_shift;
+	float prev_sample = sample; // Needed for noise generator
 	for (int i = 0; i < length; i++) {
 		float inner_offset = lerp(offset, endOffset, (float)i / length);
 
@@ -154,11 +154,22 @@ void generate_next_samples(
 		if (vibrato) {
 			freq_offset = std::sinf(4 * inner_offset * 2 * M_PI - M_PI / 4) / 2;
 		}
-		float wavelength = audio_get_wavelength(lerp(f0, ff, freq_offset));
+		float current_freq = lerp(f0, ff, freq_offset);
 
-		// TODO instrument 6
-		dest[i] = waveGenerator(phase) * v / 7;
-		phase = std::fmod(phase + 1 / wavelength, 1);
+		if (instrument == 6) {
+			float max_diff = lerp(0, 1, current_freq/8000);
+			max_diff = max_diff * max_diff; // Scales better like this.
+			float scale = lerp(1, 0.4, current_freq/8000);
+			float next = audio_noise_wave(0) * scale;
+			float diff = std::fmax(std::fmin(next - prev_sample, max_diff), -max_diff);
+			dest[i] = prev_sample + diff;
+			prev_sample = dest[i];
+		}
+		else {
+			float wavelength = audio_get_wavelength(current_freq);
+			dest[i] = waveGenerator(phase) * v / 7;
+			phase = std::fmod(phase + 1 / wavelength, 1);
+		}
 	}
 }
 
@@ -169,19 +180,6 @@ void generate_wavelength(float (*wave_fn)(float), unsigned int wavelength) {
 }
 
 void audio_cb(void* userdata, Uint8* stream, int len);
-
-// You can hear a "heartbeat"
-//#define STEP 0.01
-//void smooth(std::vector<float>& f, int pos) {
-//	float prev = f[pos - 1];
-//	for (int i = pos; fabs(f[i] - prev) > 0.01; i++) {
-//		if (prev < f[i]) {
-//			f[i] = prev - STEP;
-//		} else {
-//			f[i] = prev + STEP;
-//		}
-//	}
-//}
 
 #define CROSS_FADE 2000
 AudioManager::AudioManager()
@@ -206,51 +204,58 @@ AudioManager::AudioManager()
 		this->channels[i].offset = 0;
 	}
 
-	/*float phase = find_phaseshift(audio_sin_wave, 0.31, 0.3);
-	DEBUGLOG << "phase shift: " << phase << ", v = " << audio_sin_wave(phase) << ", next = " << audio_sin_wave(phase+0.01) << ENDL;*/
-
-	int size = P8_SAMPLE_RATE*3;
+	int notes = 4;
+	int note_length = P8_SAMPLE_RATE / 1;
+	int size = notes * note_length;
 
 	std::vector<float> dest(size);
 	memset(&dest[0], 0.0, size * sizeof(float));
 
-	int effect = 1;
-	generate_next_samples(&dest[0], P8_SAMPLE_RATE,
+	int effect = 3;
+	generate_next_samples(&dest[0], note_length,
 		0, // prevSample
 		0, // sample
-		220, // freq
-		0, // instrument
+		8000, // freq
+		6, // instrument
 		5, // volume
 		effect, // effect
-		220, // prevFreq
+		0, // prevFreq
 		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
 		1 // endOffset => Within the note
 	);
-	generate_next_samples(&dest[P8_SAMPLE_RATE], P8_SAMPLE_RATE,
-		dest[P8_SAMPLE_RATE-2], // prevSample
-		dest[P8_SAMPLE_RATE-1], // sample
-		440, // freq
-		0, // instrument
-		5, // volume
-		effect, // effect
-		220, // prevFreq
-		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
-		1 // endOffset => Within the note
-	);
-	DEBUGLOG << dest[P8_SAMPLE_RATE - 2] << ", " << dest[P8_SAMPLE_RATE - 1] << ", "
-		<< dest[P8_SAMPLE_RATE] << ", " << dest[P8_SAMPLE_RATE + 1]
-		<< ENDL;
-	generate_next_samples(&dest[P8_SAMPLE_RATE*2], P8_SAMPLE_RATE,
-		dest[P8_SAMPLE_RATE*2 - 2], // prevSample
-		dest[P8_SAMPLE_RATE*2 - 1], // sample
-		220, // freq
-		0, // instrument
-		5, // volume
-		effect, // effect
-		440, // prevFreq
-		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
-		1 // endOffset => Within the note
-	);
+	//generate_next_samples(&dest[note_length], note_length,
+	//	dest[note_length -2], // prevSample
+	//	dest[note_length -1], // sample
+	//	440, // freq
+	//	0, // instrument
+	//	5, // volume
+	//	effect, // effect
+	//	220, // prevFreq
+	//	0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
+	//	1 // endOffset => Within the note
+	//);
+	//generate_next_samples(&dest[note_length *2], note_length,
+	//	dest[note_length *2 - 2], // prevSample
+	//	dest[note_length*2 - 1], // sample
+	//	220, // freq
+	//	0, // instrument
+	//	5, // volume
+	//	effect, // effect
+	//	440, // prevFreq
+	//	0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
+	//	1 // endOffset => Within the note
+	//);
+	//generate_next_samples(&dest[note_length * 3], note_length,
+	//	dest[note_length * 3 - 2], // prevSample
+	//	dest[note_length * 3 - 1], // sample
+	//	220, // freq
+	//	0, // instrument
+	//	5, // volume
+	//	effect, // effect
+	//	220, // prevFreq
+	//	0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
+	//	1 // endOffset => Within the note
+	//);
 
 	// audio_generate_wave(audio_triangle_wave, 220, dest, 1000, size);
 	// audio_generate_wave(audio_sin_wave, 220, dest, 24860 + 110 - CROSS_FADE, size);
@@ -501,7 +506,7 @@ std::vector<int16_t>* audio_buffer_from_sfx(int s) {
 /// Wave generator
 
 unsigned int audio_get_wavelength(float frequency) {
-	return P8_SAMPLE_RATE / frequency;
+	return P8_SAMPLE_RATE / std::fmax(frequency, 1);
 }
 unsigned int audio_get_points(float seconds) {
 	return P8_SAMPLE_RATE * seconds;
