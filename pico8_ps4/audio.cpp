@@ -49,8 +49,6 @@ float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float fro
 		return bestFs[1 - sign];
 	}
 
-	float bestF = 0;
-	float bestDiff = 0;
 	// First try same sign, then neutral, then opposite sign
 	if (bestDiffs[sign] < ACCEPTABLE_STEP) {
 		return bestFs[sign];
@@ -58,7 +56,7 @@ float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float fro
 
 	// Try to improve it
 	if (bestFs[sign] != -1) {
-		bestFs[sign] = find_phaseshift(wave_fn, sign, sample, std::fmax(bestFs[sign] - inc, 0), std::fmin(bestF + inc, 1));
+		bestFs[sign] = find_phaseshift(wave_fn, sign, sample, std::fmax(bestFs[sign] - inc, 0), std::fmin(bestFs[sign] + inc, 1));
 		bestDiffs[sign] = std::fabs(sample - wave_fn(bestFs[sign]));
 		if (bestDiffs[sign] < ACCEPTABLE_STEP) {
 			return bestFs[sign];
@@ -70,7 +68,7 @@ float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float fro
 		return bestFs[1 - sign];
 	}
 	if (bestFs[1-sign] != -1) {
-		bestFs[1-sign] = find_phaseshift(wave_fn, sign, sample, std::fmax(bestFs[1-sign] - inc, 0), std::fmin(bestF + inc, 1));
+		bestFs[1-sign] = find_phaseshift(wave_fn, sign, sample, std::fmax(bestFs[1-sign] - inc, 0), std::fmin(bestFs[1-sign] + inc, 1));
 		bestDiffs[1-sign] = std::fabs(sample - wave_fn(bestFs[1-sign]));
 		if (bestDiffs[1-sign] < ACCEPTABLE_STEP) {
 			return bestFs[1-sign];
@@ -122,17 +120,17 @@ void generate_next_samples(
 	}
 	DEBUGLOG << "phase_shift " << phase_shift << ENDL;
 
-	float wl0 = P8_SAMPLE_RATE / freq;
-	float wlf = wl0;
+	float f0 = freq;
+	float ff = f0;
 	bool vibrato = false;
 	if (effect == 1) { // Slide
-		wl0 = P8_SAMPLE_RATE / prevFreq;
+		f0 = prevFreq;
 	} else if (effect == 2) { // Vibrato. Pitches love vibrato.
-		// wlf = wlf / 1.059; // Bring up half step => Too much
-		wlf = wlf / 1.03;
+		// ff = ff * 1.059; // Bring up half step => Too much
+		ff = ff * 1.03;
 		vibrato = true;
 	} else if (effect == 3) { // Drop
-		wlf = audio_get_wavelength(20);
+		ff = 0;
 	}
 
 	int v0 = volume;
@@ -154,13 +152,13 @@ void generate_next_samples(
 		// Frequency
 		float freq_offset = inner_offset;
 		if (vibrato) {
-			freq_offset = std::sinf(20 * inner_offset * 2 * M_PI - M_PI / 4) / 2;
+			freq_offset = std::sinf(4 * inner_offset * 2 * M_PI - M_PI / 4) / 2;
 		}
-		float wavelength = lerp(wl0, wlf, freq_offset);
+		float wavelength = audio_get_wavelength(lerp(f0, ff, freq_offset));
 
 		// TODO instrument 6
-		phase = std::fmod(phase + 1 / wavelength, 1);
 		dest[i] = waveGenerator(phase) * v / 7;
+		phase = std::fmod(phase + 1 / wavelength, 1);
 	}
 }
 
@@ -211,18 +209,19 @@ AudioManager::AudioManager()
 	/*float phase = find_phaseshift(audio_sin_wave, 0.31, 0.3);
 	DEBUGLOG << "phase shift: " << phase << ", v = " << audio_sin_wave(phase) << ", next = " << audio_sin_wave(phase+0.01) << ENDL;*/
 
-	int size = P8_SAMPLE_RATE*2;
+	int size = P8_SAMPLE_RATE*3;
 
 	std::vector<float> dest(size);
 	memset(&dest[0], 0.0, size * sizeof(float));
 
+	int effect = 1;
 	generate_next_samples(&dest[0], P8_SAMPLE_RATE,
 		0, // prevSample
 		0, // sample
 		220, // freq
 		0, // instrument
 		5, // volume
-		3, // effect // 3 doesn't work
+		effect, // effect
 		220, // prevFreq
 		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
 		1 // endOffset => Within the note
@@ -230,11 +229,25 @@ AudioManager::AudioManager()
 	generate_next_samples(&dest[P8_SAMPLE_RATE], P8_SAMPLE_RATE,
 		dest[P8_SAMPLE_RATE-2], // prevSample
 		dest[P8_SAMPLE_RATE-1], // sample
+		440, // freq
+		0, // instrument
+		5, // volume
+		effect, // effect
+		220, // prevFreq
+		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
+		1 // endOffset => Within the note
+	);
+	DEBUGLOG << dest[P8_SAMPLE_RATE - 2] << ", " << dest[P8_SAMPLE_RATE - 1] << ", "
+		<< dest[P8_SAMPLE_RATE] << ", " << dest[P8_SAMPLE_RATE + 1]
+		<< ENDL;
+	generate_next_samples(&dest[P8_SAMPLE_RATE*2], P8_SAMPLE_RATE,
+		dest[P8_SAMPLE_RATE*2 - 2], // prevSample
+		dest[P8_SAMPLE_RATE*2 - 1], // sample
 		220, // freq
 		0, // instrument
 		5, // volume
-		3, // effect // 3 doesn't work
-		220, // prevFreq
+		effect, // effect
+		440, // prevFreq
 		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
 		1 // endOffset => Within the note
 	);
