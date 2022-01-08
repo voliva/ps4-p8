@@ -128,10 +128,11 @@ void generate_next_samples(
 	if (effect == 1) { // Slide
 		wl0 = P8_SAMPLE_RATE / prevFreq;
 	} else if (effect == 2) { // Vibrato. Pitches love vibrato.
-		wlf = wlf / 1.059; // Bring up half step
+		// wlf = wlf / 1.059; // Bring up half step => Too much
+		wlf = wlf / 1.03;
 		vibrato = true;
 	} else if (effect == 3) { // Drop
-		wlf = 0x7FFFFFFF;
+		wlf = audio_get_wavelength(20);
 	}
 
 	int v0 = volume;
@@ -142,23 +143,24 @@ void generate_next_samples(
 		vf = 0;
 	}
 
-	DEBUGLOG << wl0 << ", " << wlf << ENDL;
-
+	// Initial freq_offset
+	float phase = phase_shift;
 	for (int i = 0; i < length; i++) {
 		float inner_offset = lerp(offset, endOffset, (float)i / length);
+
+		// Volume
+		float v = lerp(v0, vf, inner_offset);
+
+		// Frequency
 		float freq_offset = inner_offset;
 		if (vibrato) {
-			freq_offset = std::sinf(inner_offset * 10 * 2 * M_PI) / 2 + 0.5;
+			freq_offset = std::sinf(20 * inner_offset * 2 * M_PI - M_PI / 4) / 2;
 		}
 		float wavelength = lerp(wl0, wlf, freq_offset);
-		float v = lerp(v0, vf, inner_offset); 
 
 		// TODO instrument 6
-		float wg_offset = std::fmod(phase_shift + i / wavelength, 1); // = (phase_shift + (i % wavelength) / wavelength) % 1
-		if (wavelength > 97 && wavelength < 97.1) {
-			DEBUGLOG << i << ": " << wavelength << ", " << wg_offset << ENDL;
-		}
-		dest[i] = waveGenerator(wg_offset) * v / 7;
+		phase = std::fmod(phase + 1 / wavelength, 1);
+		dest[i] = waveGenerator(phase) * v / 7;
 	}
 }
 
@@ -209,18 +211,29 @@ AudioManager::AudioManager()
 	/*float phase = find_phaseshift(audio_sin_wave, 0.31, 0.3);
 	DEBUGLOG << "phase shift: " << phase << ", v = " << audio_sin_wave(phase) << ", next = " << audio_sin_wave(phase+0.01) << ENDL;*/
 
-	int size = 50000;
+	int size = P8_SAMPLE_RATE*2;
 
 	std::vector<float> dest(size);
 	memset(&dest[0], 0.0, size * sizeof(float));
 
-	generate_next_samples(&dest[0], size,
+	generate_next_samples(&dest[0], P8_SAMPLE_RATE,
 		0, // prevSample
 		0, // sample
 		220, // freq
 		0, // instrument
 		5, // volume
-		2, // effect // 2, 3 doesn't work
+		3, // effect // 3 doesn't work
+		220, // prevFreq
+		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
+		1 // endOffset => Within the note
+	);
+	generate_next_samples(&dest[P8_SAMPLE_RATE], P8_SAMPLE_RATE,
+		dest[P8_SAMPLE_RATE-2], // prevSample
+		dest[P8_SAMPLE_RATE-1], // sample
+		220, // freq
+		0, // instrument
+		5, // volume
+		3, // effect // 3 doesn't work
 		220, // prevFreq
 		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
 		1 // endOffset => Within the note
