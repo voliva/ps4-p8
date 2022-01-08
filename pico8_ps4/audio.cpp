@@ -17,12 +17,9 @@ float wavelength_buffer[LONGEST_WAVELENGTH];
 Una altre idea es forçar que tot ha de començar a 0 i acabar a 0 => Potser es desincronitza a la llarga. Un wavelength son ~10ms d'audio. Fins a 12ms diuen que es imperceptible.
 */
 
-int signOf(float f) {
-	if (f == 0) {
-		return 0;
-	}
+int signIndex(float f) {
 	if (f < 0) {
-		return -1;
+		return 0;
 	}
 	return 1;
 }
@@ -32,59 +29,63 @@ int signOf(float f) {
 float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float from, float to) {
 	float inc = (to - from) / 8;
 	DEBUGLOG << "find_phaseshift " << sample << ", " << from << ", " << to << " " << inc << ENDL;
-	float bestDiffs[] = { 2.0, 2.0, 2.0 };
-	float bestFs[] = { -1.0, -1.0, -1.0 };
+	float bestDiffs[] = { 2.0, 2.0 };
+	float bestFs[] = { -1.0, -1.0 };
 	for (float f = from; f < to; f += inc) {
 		float v = wave_fn(f);
 		float diff = std::fabs(sample - v);
 		float nextV = wave_fn(std::nextafter(f, to));
-		int sign = signOf(nextV - v) + 1;
+		int sign = signIndex(nextV - v);
 		if (bestDiffs[sign] > diff) {
 			bestDiffs[sign] = diff;
 			bestFs[sign] = f;
 		}
 	}
 
+	if (inc < 0.0001) {
+		if (bestFs[sign] >= 0) {
+			return bestFs[sign];
+		}
+		return bestFs[1 - sign];
+	}
+
 	float bestF = 0;
 	float bestDiff = 0;
 	// First try same sign, then neutral, then opposite sign
-	if (bestFs[sign] != -1) {
-		bestF = bestFs[sign];
-		bestDiff = bestDiffs[sign];
+	if (bestDiffs[sign] < ACCEPTABLE_STEP) {
+		return bestFs[sign];
 	}
-	else {
-		// except if sign == neutral (1) => In that case just pick the closest one
-		if (sign == 1) {
-			if (bestDiffs[2] < bestDiffs[0]) {
-				bestF = bestFs[2];
-				bestDiff = bestDiffs[2];
-			}
-			else {
-				bestF = bestFs[0];
-				bestDiff = bestDiffs[0];
-			}
-		}
-		else {
-			if (bestFs[1] != -1) {
-				bestF = bestFs[1];
-				bestDiff = bestDiffs[1];
-			}
-			else {
-				bestF = bestFs[2 - sign];
-				bestDiff = bestDiffs[2 - sign];
-			}
+
+	// Try to improve it
+	if (bestFs[sign] != -1) {
+		bestFs[sign] = find_phaseshift(wave_fn, sign, sample, std::fmax(bestFs[sign] - inc, 0), std::fmin(bestF + inc, 1));
+		bestDiffs[sign] = std::fabs(sample - wave_fn(bestFs[sign]));
+		if (bestDiffs[sign] < ACCEPTABLE_STEP) {
+			return bestFs[sign];
 		}
 	}
 
-	DEBUGLOG << bestDiff << ENDL;
-	if (bestDiff < ACCEPTABLE_STEP) {
-		return bestF;
+	// Same now for opposite sign
+	if (bestDiffs[1 - sign] < ACCEPTABLE_STEP) {
+		return bestFs[1 - sign];
 	}
-	return find_phaseshift(wave_fn, sign, sample, std::fmax(bestF - inc, 0), std::fmin(bestF + inc, 1));
+	if (bestFs[1-sign] != -1) {
+		bestFs[1-sign] = find_phaseshift(wave_fn, sign, sample, std::fmax(bestFs[1-sign] - inc, 0), std::fmin(bestF + inc, 1));
+		bestDiffs[1-sign] = std::fabs(sample - wave_fn(bestFs[1-sign]));
+		if (bestDiffs[1-sign] < ACCEPTABLE_STEP) {
+			return bestFs[1-sign];
+		}
+	}
+
+	// Otherwise just return the closest match
+	if (bestDiffs[sign] < bestDiffs[1 - sign]) {
+		return bestFs[sign];
+	}
+	return bestFs[1 - sign];
 }
 float find_phaseshift(float (*wave_fn)(float), float prevSample, float sample) {
 	float diff = sample - prevSample;
-	return find_phaseshift(wave_fn, signOf(diff)+1, sample, 0, 1);
+	return find_phaseshift(wave_fn, signIndex(diff), sample, 0, 1);
 }
 
 typedef float(*WaveGenerator)(float);
@@ -141,18 +142,22 @@ void generate_next_samples(
 		vf = 0;
 	}
 
+	DEBUGLOG << wl0 << ", " << wlf << ENDL;
+
 	for (int i = 0; i < length; i++) {
-		DEBUGLOG << i << ENDL;
 		float inner_offset = lerp(offset, endOffset, (float)i / length);
 		float freq_offset = inner_offset;
 		if (vibrato) {
-			freq_offset = std::fmod(freq_offset * 4, 1);
+			freq_offset = std::sinf(inner_offset * 10 * 2 * M_PI) / 2 + 0.5;
 		}
 		float wavelength = lerp(wl0, wlf, freq_offset);
-		float v = lerp(v0, vf, inner_offset);
+		float v = lerp(v0, vf, inner_offset); 
 
 		// TODO instrument 6
-		float wg_offset = std::fmod(phase_shift + std::fmod((float)i / length, wavelength), 1);
+		float wg_offset = std::fmod(phase_shift + i / wavelength, 1); // = (phase_shift + (i % wavelength) / wavelength) % 1
+		if (wavelength > 97 && wavelength < 97.1) {
+			DEBUGLOG << i << ": " << wavelength << ", " << wg_offset << ENDL;
+		}
 		dest[i] = waveGenerator(wg_offset) * v / 7;
 	}
 }
@@ -209,9 +214,23 @@ AudioManager::AudioManager()
 	std::vector<float> dest(size);
 	memset(&dest[0], 0.0, size * sizeof(float));
 
-	generate_next_samples(&dest[0], size, 0, 0, 440, 0, 5, 0, 440, 0, 1);
-	/*audio_generate_wave(audio_sin_wave, 220, dest, 0, 24860 + 110);
-	audio_generate_wave(audio_sin_wave, 220, dest, 24860 + 110 - CROSS_FADE, size);*/
+	generate_next_samples(&dest[0], size,
+		0, // prevSample
+		0, // sample
+		220, // freq
+		0, // instrument
+		5, // volume
+		2, // effect // 2, 3 doesn't work
+		220, // prevFreq
+		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
+		1 // endOffset => Within the note
+	);
+
+	// audio_generate_wave(audio_triangle_wave, 220, dest, 1000, size);
+	// audio_generate_wave(audio_sin_wave, 220, dest, 24860 + 110 - CROSS_FADE, size);
+	//for (int i = 0; i < 1000; i++) {
+	//	DEBUGLOG << i << ": " << dest[i] << ENDL;
+	//}
 
 	SDL_QueueAudio(this->channels[0].deviceId, &dest[0], size * sizeof(float));
 	SDL_PauseAudioDevice(this->channels[0].deviceId, 0);
