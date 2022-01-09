@@ -672,9 +672,11 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 				has_more = sfx.notes[i].volume > 0;
 			}
 
-			if (!has_more) {
-				channel->sfx = -1;
-				channel->offset = 0;
+			if (!has_more && sfx.loopEnd < NOTE_AMOUNT) {
+				if (channel->music_timing < 0) {
+					channel->sfx = -1;
+					channel->offset = 0;
+				}
 			}
 			else if(length < data_points) {
 				// Try to fill in as much as posible from the next note
