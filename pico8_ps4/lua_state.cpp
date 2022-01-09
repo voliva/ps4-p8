@@ -45,6 +45,7 @@ int circfill(lua_State* L);
 int oval(lua_State* L);
 int ovalfill(lua_State* L);
 int sfx(lua_State* L);
+int music(lua_State* L);
 int poke(lua_State* L);
 int pal(lua_State* L);
 int palt(lua_State* L);
@@ -112,6 +113,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "menuitem");
 	lua_pushcfunction(this->state, sfx);
 	lua_setglobal(this->state, "sfx");
+	lua_pushcfunction(this->state, music);
+	lua_setglobal(this->state, "music");
 	lua_pushcfunction(this->state, time);
 	lua_setglobal(this->state, "time");
 	lua_pushcfunction(this->state, type);
@@ -134,8 +137,6 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "ovalfill");
 	lua_pushcfunction(this->state, poke);
 	lua_setglobal(this->state, "poke");
-	lua_pushcfunction(this->state, noop);
-	lua_setglobal(this->state, "music");
 	lua_pushcfunction(this->state, pal);
 	lua_setglobal(this->state, "pal");
 	lua_pushcfunction(this->state, palt);
@@ -320,6 +321,21 @@ int sfx(lua_State* L) {
 	}
 
 	audioManager->playSfx(n, channel, offset, length);
+
+	return 0;
+}
+
+int music(lua_State* L) {
+	int n = luaL_checkinteger(L, 1);
+	int fade = luaL_optinteger(L, 2, 0);
+	int channelmask = luaL_optinteger(L, 3, 0);
+
+	if (n == -1) {
+		audioManager->stopMusic();
+	}
+	else {
+		audioManager->playMusic(n, channelmask);
+	}
 
 	return 0;
 }

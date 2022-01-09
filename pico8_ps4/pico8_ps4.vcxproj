@@ -170,6 +170,7 @@
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
     <ClInclude Include="audio.h" />
     <ClInclude Include="cartridge.h" />
+    <ClInclude Include="concurrent_queue.h" />
     <ClInclude Include="efla.e.h" />
     <ClInclude Include="events.h" />
     <ClInclude Include="font.h" />

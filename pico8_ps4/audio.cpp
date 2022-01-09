@@ -150,7 +150,7 @@ void generate_next_samples(
 			float next = audio_noise_wave(0);
 			float diff = std::fmax(std::fmin(next - prev_sample, max_diff), -max_diff);
 			prev_sample = std::fmax(-1, std::fmin(1, prev_sample + diff * scale));
-			dest[i] = prev_sample * v;
+			dest[i] = prev_sample * v / 7;
 		}
 		else {
 			float wavelength = audio_get_wavelength(current_freq);
@@ -178,14 +178,16 @@ AudioManager::AudioManager()
 		this->channels[i].deviceId = SDL_OpenAudioDevice(NULL, 0, audio_spec, NULL, 0);
 		this->channels[i].sfx = -1;
 		this->channels[i].offset = 0;
+		this->channels[i].max = 0;
+		this->channels[i].previousSample = 0;
+		this->channels[i].previousSample2 = 0;
+		this->channels[i].music_timing = -1;
+		this->channels[i].reserved = false;
+		this->channels[i].isMusic = false;
 	}
 
-	int notes = 4;
-	int note_length = P8_SAMPLE_RATE / 1;
-	int size = notes * note_length;
-
-	std::vector<float> dest(size);
-	memset(&dest[0], 0.0, size * sizeof(float));
+	this->music_thread = std::thread(&AudioManager::music_loop, this);
+	this->pattern = -1;
 }
 AudioManager::~AudioManager()
 {
@@ -226,17 +228,36 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 	}
 
 	if (channel == -1) {
-		// Option 1. Pick the first that's free or is playing the same sfx.
+		// Option 1. Out from the ones that are not reserved, pick the first that's free or is playing the same sfx.
 		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
 			Channel ch = this->channels[c];
+			if (ch.reserved) {
+				continue;
+			}
 			if (ch.sfx == -1 || ch.sfx == n) {
 				channel = c;
 			}
 		}
 
-		// Option 2. Kick the first channel to play yours
+		// Option 2. From the reserved ones, use it if it's not playing anything at the moment (music will override it if needed)
+		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
+			Channel ch = this->channels[c];
+			if (ch.reserved && ch.sfx == -1) {
+				channel = c;
+			}
+		}
+
+		// Option 3. Kick the first non-reserved channel to play yours
+		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
+			Channel ch = this->channels[c];
+			if (!ch.reserved) {
+				channel = c;
+			}
+		}
+
 		if (channel == -1) {
-			channel = 0;
+			DEBUGLOG << "No channel available to play sfx. Skipping" << ENDL;
+			return;
 		}
 	}
 	this->channels[channel].sfx = n;
@@ -250,6 +271,215 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 		SDL_UnlockAudioDevice(this->channels[i].deviceId);
 	}
 	SDL_PauseAudioDevice(this->channels[channel].deviceId, 0);
+}
+
+void AudioManager::playMusic(int n, unsigned char channelmask)
+{
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_LockAudioDevice(this->channels[i].deviceId);
+	}
+
+	for (int i = 0; i < CHANNELS; i++) {
+		int bit = 0x01 << i;
+		this->channels[i].reserved = (channelmask & bit) > 0;
+	}
+	this->playPattern(n);
+
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_UnlockAudioDevice(this->channels[i].deviceId);
+	}
+}
+
+void AudioManager::stopMusic()
+{
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_LockAudioDevice(this->channels[i].deviceId);
+	}
+
+	this->stopPattern();
+
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_UnlockAudioDevice(this->channels[i].deviceId);
+	}
+}
+
+void AudioManager::playNextPattern()
+{
+	int addr = ADDR_MUSIC + this->pattern * 4;
+	bool endLoop = p8_memory[addr + 1] & 0x80;
+	bool stopAtEnd = p8_memory[addr + 2] & 0x80;
+
+	if (stopAtEnd) {
+		return this->stopPattern();
+	}
+	if (endLoop) {
+		// Find closest beginLoop
+		// If it reaches 0 we just start from there
+		int p = this->pattern;
+		for (; p > 0; p--) {
+			bool beginLoop = p8_memory[ADDR_MUSIC + p * 4] & 0x80;
+			if (beginLoop) {
+				break;
+			}
+		}
+		return this->playPattern(p);
+	}
+
+	if (this->pattern == 63) {
+		return this->stopPattern();
+	}
+
+	// Try next one
+	int next_addr = addr + 4;
+	bool has_data = (
+		(p8_memory[addr] & 0x40) |
+		(p8_memory[addr + 1] & 0x40) |
+		(p8_memory[addr + 2] & 0x40) |
+		(p8_memory[addr + 3] & 0x40)
+		) > 0;
+	if (has_data) {
+		this->playPattern(this->pattern + 1);
+	}
+	else {
+		this->stopPattern();
+	}
+}
+
+typedef struct {
+	int n;
+	int speed;
+	int len;
+	bool loops;
+} PatternSfx;
+
+void AudioManager::playPattern(int n)
+{
+	DEBUGLOG << "play pattern " << n << ENDL;
+	int addr = ADDR_MUSIC + n * 4;
+
+	std::vector<PatternSfx> sfxs;
+	for (int i = 0; i < 4; i++) {
+		unsigned char data = p8_memory[addr + i];
+		bool enabled = (data & 0x40) == 0;
+
+		if (enabled) {
+			int n = data & 0x3F;
+			int speed = get_sfx_speed(n);
+			unsigned char loopStart = p8_memory[ADDR_SFX + n * SFX_BYTE_LENGTH + 64 + 2];
+			unsigned char loopEnd = p8_memory[ADDR_SFX + n * SFX_BYTE_LENGTH + 64 + 3];
+			bool loops = loopEnd > 0;
+			int len = 32;
+			if (loopEnd == 0 && loopStart > 0) {
+				len = loopStart;
+			}
+			sfxs.push_back(PatternSfx{
+				n,
+				speed,
+				len,
+				loops
+			});
+		}
+	}
+	if (sfxs.size() == 0) {
+		DEBUGLOG << "Pattern disabled, can't play it: " << n << ENDL;
+		return;
+	}
+
+	bool same_tempo = true;
+	bool all_loop = sfxs[0].loops;
+	int i_slowest = 0;
+	int slowest_speed = sfxs[0].speed;
+	int i_first_no_loop = -1;
+	if (!sfxs[0].loops) {
+		i_first_no_loop = 0;
+	}
+	for (int i = 1; i < sfxs.size(); i++) {
+		same_tempo = same_tempo && (sfxs[0].speed == sfxs[i].speed);
+		all_loop = all_loop && sfxs[i].loops;
+		if (sfxs[i].speed > slowest_speed) { // Note that a higher speed value means more slow
+			slowest_speed = sfxs[i].speed;
+			i_slowest = i;
+		}
+		if (i_first_no_loop == -1 && !sfxs[i].loops) {
+			i_first_no_loop = i;
+		}
+	}
+
+	// All same tempo => first
+	// else, All loop => slowest
+	// else, First that doesn't loop
+	int i_music_timing;
+	if (same_tempo) {
+		i_music_timing = 0;
+	}
+	else if (all_loop) {
+		i_music_timing = i_slowest;
+	}
+	else {
+		i_music_timing = i_first_no_loop;
+	}
+
+	this->playPatternSfx(sfxs[i_music_timing].n, sfxs[i_music_timing].len);
+	for (int i = 0; i < sfxs.size(); i++) {
+		if (i == i_music_timing) continue;
+
+		this->playPatternSfx(sfxs[i].n, -1);
+	}
+
+	this->pattern = n;
+}
+
+void AudioManager::playPatternSfx(int n, int timing_length)
+{
+	DEBUGLOG << "play pattern sfx " << n << ENDL;
+	int channel = -1;
+
+	// Option 1. Grab a free one from the reserved ones.
+	for (int c = 0; channel == -1 && c < CHANNELS; c++) {
+		Channel ch = this->channels[c];
+		if (!ch.reserved) {
+			continue;
+		}
+		if (ch.sfx == -1) {
+			channel = c;
+		}
+	}
+
+	// Option 2. Grab anyone that's free
+	for (int c = 0; channel == -1 && c < CHANNELS; c++) {
+		Channel ch = this->channels[c];
+		if (ch.sfx == -1) {
+			channel = c;
+		}
+	}
+
+	if (channel == -1) {
+		DEBUGLOG << "Pattern skipped, no channels available" << n << ENDL;
+		return;
+	}
+
+	this->channels[channel].sfx = n;
+	this->channels[channel].offset = 0;
+	this->channels[channel].isMusic = true;
+	this->channels[channel].music_timing = timing_length;
+	SDL_PauseAudioDevice(this->channels[channel].deviceId, 0);
+}
+
+void AudioManager::stopPattern()
+{
+	for (int i = 0; i < CHANNELS; i++) {
+		// Free all channels
+		this->channels[i].reserved = false;
+		this->channels[i].music_timing = -1;
+
+		// Stop music channels
+		if (this->channels[i].isMusic) {
+			this->channels[i].isMusic = false;
+			this->channels[i].offset = 0;
+			this->channels[i].sfx = -1;
+		}
+	}
+	this->pattern = -1;
 }
 
 void AudioManager::stopSfx(int n)
@@ -319,6 +549,30 @@ void AudioManager::poke(unsigned short addr, unsigned char value)
 		for (int i = 0; i < CHANNELS; i++) {
 			SDL_LockAudioDevice(this->channels[i].deviceId);
 		}
+		for (int i = 0; i < CHANNELS; i++) {
+			SDL_UnlockAudioDevice(this->channels[i].deviceId);
+		}
+	}
+}
+
+void AudioManager::music_loop()
+{
+	bool dummy;
+	while (this->music_notifier.wpop(dummy)) {
+		DEBUGLOG << "Notified" << ENDL;
+		for (int i = 0; i < CHANNELS; i++) {
+			SDL_LockAudioDevice(this->channels[i].deviceId);
+		}
+
+		for (int i = 0; i < CHANNELS; i++) {
+			// Stop all music looping channels, otherwise they will be marked as not available.
+			if (this->channels[i].isMusic) {
+				this->channels[i].sfx = -1;
+				this->channels[i].offset = 0;
+			}
+		}
+		this->playNextPattern();
+
 		for (int i = 0; i < CHANNELS; i++) {
 			SDL_UnlockAudioDevice(this->channels[i].deviceId);
 		}
@@ -397,6 +651,12 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 
 		if (channel->offset == end_of_note) {
 			int next_note = current_index + 1;
+			if (channel->music_timing > 0) {
+				channel->music_timing--;
+				if (channel->music_timing == 0) {
+					audioManager->music_notifier.push(true);
+				}
+			}
 
 			// Look for loop
 			if (sfx.loopEnd == next_note) {

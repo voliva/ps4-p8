@@ -2,7 +2,8 @@
 
 #include <vector>;
 #include <SDL2/SDL_audio.h>
-#include <mutex>
+#include <thread>
+#include "concurrent_queue.h"
 
 #define P8_SAMPLE_RATE 22050
 #define SFX_AMOUNT 64
@@ -18,6 +19,11 @@ typedef struct {
 	// stuff played earlier
 	float previousSample;
 	float previousSample2;
+
+	// Whether this channel sets the point where the next pattern must start
+	int music_timing;
+	bool reserved;
+	bool isMusic; // Is currently playing music
 } Channel;
 
 class AudioManager {
@@ -27,10 +33,25 @@ public:
 	void initialize();
 	void playSfx(int n, int channel, int offset, int length);
 	void stopSfx(int n);
+	void playMusic(int n, unsigned char channelmask);
+	void stopMusic();
 	void stopChannel(int channel);
 	void poke(unsigned short addr, unsigned char value);
 
 	Channel channels[4];
+
+	ConcurrentQueue<bool> music_notifier;
+
+private:
+	// We need a function outside the audio thread to lock all the channels and switch them to the next pattern
+	std::thread music_thread;
+	void music_loop();
+
+	int pattern; // -1 = not active
+	void playNextPattern();
+	void playPattern(int n);
+	void playPatternSfx(int n, int timing_length);
+	void stopPattern();
 };
 extern AudioManager* audioManager;
 
