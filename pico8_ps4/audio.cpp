@@ -9,14 +9,6 @@
 #define DEBUGLOG Audio_DEBUGLOG
 Log DEBUGLOG = logger.log("audio");
 
-#define LOWEST_FREQ 10
-#define LONGEST_WAVELENGTH (P8_SAMPLE_RATE / LOWEST_FREQ)
-float wavelength_buffer[LONGEST_WAVELENGTH];
-
-/*
-Una altre idea es forçar que tot ha de començar a 0 i acabar a 0 => Potser es desincronitza a la llarga. Un wavelength son ~10ms d'audio. Fins a 12ms diuen que es imperceptible.
-*/
-
 int signIndex(float f) {
 	if (f < 0) {
 		return 0;
@@ -90,26 +82,15 @@ typedef float(*WaveGenerator)(float);
 
 // float *(float) instruments[] = {};
 WaveGenerator instruments[] = { audio_triangle_wave, audio_tilted_wave, audio_sawtooth_wave, audio_square_wave, audio_pulse_wave, audio_organ_wave, audio_noise_wave, audio_phaser_wave };
-/*
-=> Què necesito?
--> Tinc unitats que hauré d'acabar ajuntant
--> Cada unitat té: Frequencia, Instrument, Volum, Efecte
--> Per poder-lo ajuntar amb l'anterior, he de poder ajustar la fase per evitar el "click" lo maxim possible
--> Potser també puc fer smooth de la linia d'alguna forma?
--> Els efectes n'hi ha que son individiuals (vibrato, drop, fade in/fade out)
--> I n'hi ha que son contextuals (slide, arp fast, arp slow)
-
-=> No puc generar tot el SFX d'una tungada. Un loop amb slide fa l'slide correctament quan fa el loop
-*/
 
 float lerp(float from, float to, float offset) {
 	return from + (to - from) * offset;
 }
 
-// LOL how to do arpeggios? => Another function /shrug
+// How to do arpeggios? => Another function /shrug
 void generate_next_samples(
 	float* dest, int length,
-	float prevSample, float sample, // Done
+	float prevSample, float sample,
 	float freq, int instrument, int volume, int effect,
 	float prevFreq, float offset, float endOffset
 ) {
@@ -173,21 +154,10 @@ void generate_next_samples(
 	}
 }
 
-void generate_wavelength(float (*wave_fn)(float), unsigned int wavelength) {
-	for (unsigned int i = 0; i < wavelength; i++) {
-		wavelength_buffer[i] = wave_fn((float)i / wavelength);
-	}
-}
-
 void audio_cb(void* userdata, Uint8* stream, int len);
 
-#define CROSS_FADE 2000
 AudioManager::AudioManager()
 {
-	for (int i = 0; i < SFX_AMOUNT; i++) {
-		this->cache[i] = NULL;
-	}
-
 	for (int i = 0; i < CHANNELS; i++) {
 		SDL_AudioSpec* audio_spec = new SDL_AudioSpec;
 		// SDL_zero(audio_spec);
@@ -195,7 +165,7 @@ AudioManager::AudioManager()
 		audio_spec->format = AUDIO_F32LSB;
 		audio_spec->channels = 1; // mono/stereo/quad/5.1
 		audio_spec->samples = 1024;
-		audio_spec->callback = NULL;
+		audio_spec->callback = audio_cb;
 		audio_spec->userdata = &this->channels[i];
 
 		this->channels[i].spec = audio_spec;
@@ -210,70 +180,9 @@ AudioManager::AudioManager()
 
 	std::vector<float> dest(size);
 	memset(&dest[0], 0.0, size * sizeof(float));
-
-	int effect = 3;
-	generate_next_samples(&dest[0], note_length,
-		0, // prevSample
-		0, // sample
-		8000, // freq
-		6, // instrument
-		5, // volume
-		effect, // effect
-		0, // prevFreq
-		0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
-		1 // endOffset => Within the note
-	);
-	//generate_next_samples(&dest[note_length], note_length,
-	//	dest[note_length -2], // prevSample
-	//	dest[note_length -1], // sample
-	//	440, // freq
-	//	0, // instrument
-	//	5, // volume
-	//	effect, // effect
-	//	220, // prevFreq
-	//	0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
-	//	1 // endOffset => Within the note
-	//);
-	//generate_next_samples(&dest[note_length *2], note_length,
-	//	dest[note_length *2 - 2], // prevSample
-	//	dest[note_length*2 - 1], // sample
-	//	220, // freq
-	//	0, // instrument
-	//	5, // volume
-	//	effect, // effect
-	//	440, // prevFreq
-	//	0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
-	//	1 // endOffset => Within the note
-	//);
-	//generate_next_samples(&dest[note_length * 3], note_length,
-	//	dest[note_length * 3 - 2], // prevSample
-	//	dest[note_length * 3 - 1], // sample
-	//	220, // freq
-	//	0, // instrument
-	//	5, // volume
-	//	effect, // effect
-	//	220, // prevFreq
-	//	0, // offset => Within the note. Needed to know how farther are we from fade in/out + drop effects
-	//	1 // endOffset => Within the note
-	//);
-
-	// audio_generate_wave(audio_triangle_wave, 220, dest, 1000, size);
-	// audio_generate_wave(audio_sin_wave, 220, dest, 24860 + 110 - CROSS_FADE, size);
-	//for (int i = 0; i < 1000; i++) {
-	//	DEBUGLOG << i << ": " << dest[i] << ENDL;
-	//}
-
-	SDL_QueueAudio(this->channels[0].deviceId, &dest[0], size * sizeof(float));
-	SDL_PauseAudioDevice(this->channels[0].deviceId, 0);
 }
 AudioManager::~AudioManager()
 {
-	for (int i = 0; i < SFX_AMOUNT; i++) {
-		if (this->cache[i] != NULL) {
-			delete this->cache[i];
-		}
-	}
-
 	for (int i = 0; i < CHANNELS; i++) {
 		SDL_CloseAudioDevice(this->channels[i].deviceId);
 		delete this->channels[i].spec;
@@ -291,12 +200,6 @@ void AudioManager::initialize() {
 		this->channels[i].sfx = -1;
 		this->channels[i].offset = 0;
 	}
-	for (int i = 0; i < SFX_AMOUNT; i++) {
-		if (this->cache[i] != NULL) {
-			delete this->cache[i];
-			this->cache[i] = NULL;
-		}
-	}
 }
 
 #define SFX_BYTE_LENGTH 68
@@ -310,7 +213,6 @@ int get_sfx_speed(int n) {
 }
 
 // Loops, n=-2 (manage from lua), channel=-2 (manage from lua)
-std::vector<int16_t>* audio_buffer_from_sfx(int n);
 void AudioManager::playSfx(int n, int channel, int offset, int length)
 {
 	for (int i = 0; i < CHANNELS; i++) {
@@ -335,6 +237,8 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 	int speed = get_sfx_speed(n);
 	this->channels[channel].offset = offset * speed * P8_TICKS_PER_T;
 	this->channels[channel].max = (offset+length) * speed * P8_TICKS_PER_T;
+	this->channels[channel].previousSample = 0;
+	this->channels[channel].previousSample2 = 0;
 
 	for (int i = 0; i < CHANNELS; i++) {
 		SDL_UnlockAudioDevice(this->channels[i].deviceId);
@@ -374,87 +278,7 @@ void AudioManager::stopChannel(int channel)
 	}
 }
 
-void audio_cb(void* userdata, Uint8* stream, int len) {
-	Channel* channel = (Channel*)userdata;
-
-	if (channel->sfx == -1) {
-		memset(stream, 0, len);
-		SDL_PauseAudioDevice(channel->deviceId, 1);
-	}
-	else {
-		if (audioManager->cache[channel->sfx] == NULL) {
-			audioManager->cache[channel->sfx] = audio_buffer_from_sfx(channel->sfx);
-		}
-
-		std::vector<int16_t>* cached = audioManager->cache[channel->sfx];
-		int top = std::min(cached->size(), (size_t)channel->max);
-		if (channel->offset*2 + len > top*2) {
-			int copied_lenght = (top - channel->offset) * 2;
-			memcpy(stream, &(*cached)[channel->offset], copied_lenght);
-			memset(stream + copied_lenght, 0, len - copied_lenght);
-			channel->sfx = -1;
-			channel->offset = 0;
-		}
-		else {
-			memcpy(stream, &(*cached)[channel->offset], len);
-			channel->offset += len / 2;
-		}
-	}
-}
-
-void AudioManager::poke(unsigned short addr, unsigned char value)
-{
-	if (addr >= ADDR_SFX && addr < ADDR_SFX + SFX_BYTE_LENGTH * SFX_AMOUNT) {
-		// Invalidate the buffer of that sfx
-		// I don't think it's important if it's being played: It's not a buffer, but a cache. The actual buffer is on the hardware.
-		int s = (addr - ADDR_SFX) / SFX_BYTE_LENGTH;
-		for (int i = 0; i < CHANNELS; i++) {
-			SDL_LockAudioDevice(this->channels[i].deviceId);
-		}
-		if (this->cache[s] != NULL) {
-			delete this->cache[s];
-		}
-		for (int i = 0; i < CHANNELS; i++) {
-			SDL_UnlockAudioDevice(this->channels[i].deviceId);
-		}
-	}
-}
-
-float base_frequencies[] = {
-	65.40625, 69.295625, 73.41625, 77.781875, 82.406875, 87.3071875, 92.49875, 97.99875, 103.82625, 110, 116.5409375, 123.4709375
-};
-int multipliers[] = { 1, 2, 4, 8, 16, 32 };
-float pitch_to_freq(unsigned char pitch) {
-	int mul = pitch / 12;
-	int base = pitch % 12;
-	return base_frequencies[base] * multipliers[mul];
-}
-
-void audio_generate_note(P8_Note& note, std::vector<float>& dest, unsigned int from, unsigned int to) {
-	float freq = pitch_to_freq(note.pitch);
-	unsigned int wavelength = audio_get_wavelength(freq);
-	switch (note.instrument) {
-	case 0:
-		return audio_generate_wave(audio_triangle_wave, wavelength, dest, from, to);
-	case 1:
-		return audio_generate_wave(audio_tilted_wave, wavelength, dest, from, to);
-	case 2:
-		return audio_generate_wave(audio_sawtooth_wave, wavelength, dest, from, to);
-	case 3:
-		return audio_generate_wave(audio_square_wave, wavelength, dest, from, to);
-	case 4:
-		return audio_generate_wave(audio_pulse_wave, wavelength, dest, from, to);
-	case 5:
-		return audio_generate_wave(audio_organ_wave, wavelength, dest, from, to);
-	case 6:
-		return audio_generate_noise(wavelength, dest, from, to);
-	case 7:
-		return audio_generate_phaser_wave(wavelength, dest, from, to);
-	}
-}
-
-std::vector<int16_t>* audio_buffer_from_sfx(int s) {
-	// Parse sfx
+P8_SFX get_sfx(int s) {
 	P8_SFX sfx;
 	int sfx_offset = ADDR_SFX + s * SFX_BYTE_LENGTH;
 	for (int n = 0; n < NOTE_AMOUNT; n++) {
@@ -477,30 +301,70 @@ std::vector<int16_t>* audio_buffer_from_sfx(int s) {
 	sfx.loopStart = p8_memory[sfx_offset + 64 + 2];
 	sfx.loopEnd = p8_memory[sfx_offset + 64 + 3];
 
-	// Build sfx buffer
-	int num_notes = NOTE_AMOUNT;
-	while (num_notes > 0 && sfx.notes[num_notes - 1].volume == 0) {
-		num_notes--;
-	}
+	return sfx;
+}
 
-	int total_ticks = sfx.speed * P8_TICKS_PER_T * num_notes;
-	std::vector<float> floats(total_ticks);
-	for (int i = 0; i < num_notes; i++) {
-		if (sfx.notes[i].volume > 0) {
-			audio_generate_note(sfx.notes[i], floats, sfx.speed * P8_TICKS_PER_T * i, sfx.speed * P8_TICKS_PER_T * (i + 1));
+void AudioManager::poke(unsigned short addr, unsigned char value)
+{
+	if (addr >= ADDR_SFX && addr < ADDR_SFX + SFX_BYTE_LENGTH * SFX_AMOUNT) {
+		// Invalidate the buffer of that sfx
+		// I don't think it's important if it's being played: It's not a buffer, but a cache. The actual buffer is on the hardware.
+		int s = (addr - ADDR_SFX) / SFX_BYTE_LENGTH;
+		for (int i = 0; i < CHANNELS; i++) {
+			SDL_LockAudioDevice(this->channels[i].deviceId);
+		}
+		for (int i = 0; i < CHANNELS; i++) {
+			SDL_UnlockAudioDevice(this->channels[i].deviceId);
 		}
 	}
+}
 
-	std::vector<int16_t>* result = new std::vector<int16_t>(total_ticks);
-	for (int n = 0; n < num_notes; n++) {
-		if (sfx.notes[n].volume > 0) {
-			for (int i = 0; i < sfx.speed * P8_TICKS_PER_T; i++) {
-				(*result)[n * sfx.speed * P8_TICKS_PER_T + i] = sfx.notes[n].volume * floats[n * sfx.speed * P8_TICKS_PER_T + i] * 5000;
-			}
+float base_frequencies[] = {
+	65.40625, 69.295625, 73.41625, 77.781875, 82.406875, 87.3071875, 92.49875, 97.99875, 103.82625, 110, 116.5409375, 123.4709375
+};
+int multipliers[] = { 1, 2, 4, 8, 16, 32 };
+float pitch_to_freq(unsigned char pitch) {
+	int mul = pitch / 12;
+	int base = pitch % 12;
+	return base_frequencies[base] * multipliers[mul];
+}
+
+void audio_cb(void* userdata, Uint8* stream, int len) {
+	Channel* channel = (Channel*)userdata;
+	int data_points = len / sizeof(float);
+
+	if (channel->sfx == -1) {
+		memset(stream, 0, len);
+		SDL_PauseAudioDevice(channel->deviceId, 1);
+	}
+	else {
+		P8_SFX sfx = get_sfx(channel->sfx);
+		int current_index = NOTE_AMOUNT * channel->offset / (sfx.speed * P8_TICKS_PER_T);
+		P8_Note currentNote = sfx.notes[current_index];
+		float freq = pitch_to_freq(currentNote.pitch);
+		float prevFreq = freq;
+		if (current_index > 0) {
+			// TODO Assumption will break when loops => Move to Channel?
+			prevFreq = pitch_to_freq(sfx.notes[current_index - 1].pitch);
+		}
+		float offset = (float)(channel->offset % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T);
+		float endOffset = (float)((channel->offset + data_points) % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T); // TODO when note finishes before filling len this will be >1
+
+		generate_next_samples(
+			(float*)stream, data_points,
+			channel->previousSample2, channel->previousSample,
+			freq, currentNote.instrument, currentNote.volume, currentNote.effect,
+			prevFreq, offset, endOffset
+		);
+
+		if (endOffset > 1) {
+			channel->sfx = -1;
+			channel->offset = 0;
+		}
+		else {
+			channel->offset += data_points;
 		}
 	}
-
-	return result;
 }
 
 /// Wave generator
@@ -555,93 +419,4 @@ float audio_noise_wave(float phase) {
 }
 float audio_phaser_wave(float phase) {
 	return (audio_triangle_wave(phase) + audio_triangle_wave(fmod(phase * 0.99, 1))) / 2;
-}
-
-void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest) {
-	audio_generate_wave(wave_fn, wavelength, dest, 0, dest.size());
-}
-
-void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
-	// Generate the reference wave
-	for (unsigned int i = 0; i < wavelength; i++) {
-		dest[from + CROSS_FADE + i] = wave_fn((float)i / wavelength);
-	}
-
-	// Generate the fade in
-	int fadein_offset = wavelength - (CROSS_FADE % wavelength);
-	for (unsigned int i = 0; i < CROSS_FADE; i++) {
-		dest[from + i] += dest[from + CROSS_FADE + ((i+fadein_offset) % wavelength)] * i / CROSS_FADE;
-	}
-
-	// Copy it until we reach the end
-	unsigned int len = to - from;
-	// memmove(&dest[from + CROSS_FADE], &dest[from + CROSS_FADE + wavelength], sizeof(float) * (len - 2 * CROSS_FADE));
-	for (unsigned int i = CROSS_FADE + wavelength; i < len - CROSS_FADE; i++) {
-		dest[from + i] = dest[from + CROSS_FADE + ((i - CROSS_FADE) % wavelength)];
-	}
-
-	// Fade out
-	int fadeout_offset = (len - 2*CROSS_FADE) % wavelength;
-	for (unsigned int i = 0; i < CROSS_FADE; i++) {
-		dest[to - CROSS_FADE + i] += dest[from + CROSS_FADE + ((i + fadeout_offset) % wavelength)] * (CROSS_FADE - i - 1) / CROSS_FADE;
-	}
-}
-
-// TODO
-void audio_generate_noise(unsigned int wavelength, std::vector<float>& dest) {
-	audio_generate_noise(wavelength, dest, 0, dest.size());
-}
-void audio_generate_noise(unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
-	unsigned int len = to - from;
-
-	for (int i = 0; i < len; i++) {
-		dest[from + i] = 2.0 * rand() / RAND_MAX - 1.0;
-	}
-
-	/*int step = 10;
-	float prev = 0;
-	for (int s = 0; s <= len / step; s++) {
-		float target = 2.0 * rand() / RAND_MAX - 1.0;
-		for (int i = 0; i < step && (s*step + i) < len; i++) {
-			dest[from + s * step + i] = prev + (i+1) * (target - prev) / step;
-		}
-		prev = target;
-	}*/
-
-	/*
-	float f = 1;
-	for (int i = 0; i < len; i++) {
-		dest[from+i] = 2.0 * rand() / RAND_MAX - 1.0;
-		if (i > 0) {
-			dest[from + i] = (dest[from + i - 1] + f * (dest[from + i] - dest[from + i - 1])) / f;
-		}
-	}*/
-}
-
-// TODO
-void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest) {
-	audio_generate_phaser_wave(wavelength, dest, 0, dest.size());
-}
-void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to) {
-	audio_generate_wave(audio_triangle_wave, wavelength, dest, from, to);
-	/*audio_generate_wave(audio_triangle_wave, wavelength, dest, from, to);
-
-	unsigned int len = to - from;
-	for (unsigned int i = 0; i < len; i++) {
-		float a_m = (cos(2 * M_PI * i / (90 * wavelength)) + 1) / 4 + 0.5;
-		dest[from + i] = dest[from + i] * a_m;
-	}*/
-}
-
-void audio_amplify(std::vector<float>& src, std::vector<int16_t>& dest, unsigned int volume) {
-	audio_amplify(src, dest, volume, 0);
-}
-void audio_amplify(std::vector<float>& src, std::vector<int16_t>& dest, unsigned int volume, unsigned int from) {
-	int max = dest.size() - from;
-	if (max > src.size()) {
-		max = src.size();
-	}
-	for (int i = 0; i < max; i++) {
-		dest[i + from] = volume * src[i];
-	}
 }
