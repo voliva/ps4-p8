@@ -22,11 +22,13 @@ float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float fro
 	float inc = (to - from) / 8;
 	float bestDiffs[] = { 2.0, 2.0 };
 	float bestFs[] = { -1.0, -1.0 };
-	for (float f = from; f < to; f += inc) {
+	// We need to skip the first and the last: They have the same value that crosses the origin, and their range will be explored on the recursive call anyway.
+	for (float f = from + inc; f < to; f += inc) {
 		float v = wave_fn(f);
 		float diff = std::fabs(sample - v);
 		float nextV = wave_fn(std::nextafter(f, to));
 		int sign = signIndex(nextV - v);
+
 		if (bestDiffs[sign] > diff) {
 			bestDiffs[sign] = diff;
 			bestFs[sign] = f;
@@ -80,7 +82,7 @@ float find_phaseshift(float (*wave_fn)(float), float prevSample, float sample) {
 typedef float(*WaveGenerator)(float);
 
 // float *(float) instruments[] = {};
-WaveGenerator instruments[] = { audio_triangle_wave, audio_tilted_wave, audio_sawtooth_wave, audio_square_wave, audio_pulse_wave, audio_organ_wave, audio_noise_wave, audio_phaser_wave };
+WaveGenerator instruments[] = { audio_sin_wave, audio_tilted_wave, audio_sawtooth_wave, audio_square_wave, audio_pulse_wave, audio_organ_wave, audio_noise_wave, audio_phaser_wave };
 
 float lerp(float from, float to, float offset) {
 	return from + (to - from) * offset;
@@ -93,17 +95,20 @@ void generate_next_samples(
 	float freq, int instrument, int volume, int effect,
 	float prevFreq, float offset, float endOffset
 ) {
+	instrument = 0;
 	if (instrument >= 8) {
 		// TODO custom instruments
 		instrument = 0;
 	}
 	WaveGenerator waveGenerator = instruments[instrument];
-	float phase_shift = 0;
-	if (instrument != 6) {
-		phase_shift = find_phaseshift(waveGenerator, prevSample, sample);
+	float wavelength = audio_get_wavelength(523);
+	float p = find_phaseshift(waveGenerator, prevSample, sample);
+	for (int i = 0; i < length; i++) {
+		dest[i] = waveGenerator(std::fmod(p + (i+1) / wavelength, 1));
 	}
+	return;
 
-	float f0 = freq;
+	float f0 = 523; // freq;
 	float ff = f0;
 	bool vibrato = false;
 	if (effect == 1) { // Slide
@@ -116,12 +121,23 @@ void generate_next_samples(
 		ff = 0;
 	}
 
-	int v0 = volume;
-	int vf = volume;
+	int v0 = 5; //  volume;
+	int vf = 5; // volume;
 	if (effect == 4) { // Fade in
 		v0 = 0;
 	} else if (effect == 5) { // Fade out
-		vf = 0;
+		// vf = 0;
+	}
+
+	float phase_shift = 0;
+	if (instrument != 6) {
+		float v = lerp(v0, vf, offset);
+
+		if (sample * 7 / v > 1) {
+			DEBUGLOG << "impossible? " << sample << ", " << v << " ==> " << (sample * 7 / v) << ENDL
+		}
+		phase_shift = find_phaseshift(waveGenerator, prevSample * 7 / v, sample * 7 / v);
+		// DEBUGLOG << phase_shift << ": " << (waveGenerator(phase_shift) * v / 7) << " == " << sample << ENDL;
 	}
 
 	// Initial freq_offset
@@ -151,6 +167,9 @@ void generate_next_samples(
 		else {
 			float wavelength = audio_get_wavelength(current_freq);
 			dest[i] = waveGenerator(phase) * v / 7;
+			if (i == 0 && std::fabs(sample - dest[i]) > 0.1) {
+				DEBUGLOG << phase << ": " << dest[i] << ", diff=" << std::fabs(sample - dest[i]) << ENDL;
+			}
 			phase = std::fmod(phase + 1 / wavelength, 1);
 		}
 	}
@@ -336,12 +355,14 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 	Channel* channel = (Channel*)userdata;
 	int data_points = len / sizeof(float);
 
+	memset(stream, 0, len);
 	if (channel->sfx == -1) {
 		memset(stream, 0, len);
 		SDL_PauseAudioDevice(channel->deviceId, 1);
 	}
 	else {
 		P8_SFX sfx = get_sfx(channel->sfx);
+		sfx.speed = 127;
 		int current_index = channel->offset / (sfx.speed * P8_TICKS_PER_T);
 		P8_Note currentNote = sfx.notes[current_index];
 		float freq = pitch_to_freq(currentNote.pitch);
@@ -369,13 +390,15 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 			freq, currentNote.instrument, currentNote.volume, currentNote.effect,
 			prevFreq, offset, endOffset
 		);
+		channel->previousSample2 = ((float*)stream)[length - 2];
+		channel->previousSample = ((float*)stream)[length - 1];
 
 		if (channel->offset == end_of_note) {
 			int next_note = current_index + 1;
 			// If we don't have more notes to play, finish here
 			bool has_more = false;
 			for (int i = current_index + 1; i < NOTE_AMOUNT && !has_more; i++) {
-				has_more = sfx.notes[i].volume > 0;
+				// has_more = sfx.notes[i].volume > 0;
 			}
 
 			if (!has_more) {
