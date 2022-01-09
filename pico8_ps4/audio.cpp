@@ -20,7 +20,6 @@ int signIndex(float f) {
 #define ACCEPTABLE_STEP 0.01
 float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float from, float to) {
 	float inc = (to - from) / 8;
-	DEBUGLOG << "find_phaseshift " << sample << ", " << from << ", " << to << " " << inc << ENDL;
 	float bestDiffs[] = { 2.0, 2.0 };
 	float bestFs[] = { -1.0, -1.0 };
 	for (float f = from; f < to; f += inc) {
@@ -94,6 +93,10 @@ void generate_next_samples(
 	float freq, int instrument, int volume, int effect,
 	float prevFreq, float offset, float endOffset
 ) {
+	if (instrument >= 8) {
+		// TODO custom instruments
+		instrument = 0;
+	}
 	WaveGenerator waveGenerator = instruments[instrument];
 	float phase_shift = 0;
 	if (instrument != 6) {
@@ -138,13 +141,12 @@ void generate_next_samples(
 		float current_freq = lerp(f0, ff, freq_offset);
 
 		if (instrument == 6) {
-			float max_diff = lerp(0, 1, current_freq/8000);
-			max_diff = max_diff * max_diff; // Scales better like this.
-			float scale = lerp(1, 0.4, current_freq/8000);
-			float next = audio_noise_wave(0) * scale;
+			float max_diff = lerp(0, 1, current_freq / 5000);
+			float scale = lerp(3, 0.4, current_freq / 8000); //  ~95 => 2 380 => 1.5
+			float next = audio_noise_wave(0);
 			float diff = std::fmax(std::fmin(next - prev_sample, max_diff), -max_diff);
-			dest[i] = prev_sample + diff;
-			prev_sample = dest[i];
+			prev_sample = std::fmax(-1, std::fmin(1, prev_sample + diff * scale));
+			dest[i] = prev_sample * v;
 		}
 		else {
 			float wavelength = audio_get_wavelength(current_freq);
@@ -329,6 +331,7 @@ float pitch_to_freq(unsigned char pitch) {
 	return base_frequencies[base] * multipliers[mul];
 }
 
+
 void audio_cb(void* userdata, Uint8* stream, int len) {
 	Channel* channel = (Channel*)userdata;
 	int data_points = len / sizeof(float);
@@ -339,30 +342,45 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 	}
 	else {
 		P8_SFX sfx = get_sfx(channel->sfx);
-		int current_index = NOTE_AMOUNT * channel->offset / (sfx.speed * P8_TICKS_PER_T);
+		int current_index = channel->offset / (sfx.speed * P8_TICKS_PER_T);
 		P8_Note currentNote = sfx.notes[current_index];
 		float freq = pitch_to_freq(currentNote.pitch);
+		if (channel->sfx == 1) {
+			// sfx.speed = 12;
+			// freq = 440;
+		}
+
 		float prevFreq = freq;
 		if (current_index > 0) {
 			// TODO Assumption will break when loops => Move to Channel?
 			prevFreq = pitch_to_freq(sfx.notes[current_index - 1].pitch);
 		}
 		float offset = (float)(channel->offset % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T);
-		float endOffset = (float)((channel->offset + data_points) % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T); // TODO when note finishes before filling len this will be >1
+
+		// Fill until end of note
+		int end_of_note = (current_index + 1) * sfx.speed * P8_TICKS_PER_T;
+		int length = std::min(data_points, end_of_note - (int)channel->offset);
+		channel->offset += length;
+ 		float endOffset = (float)(channel->offset % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T);
 
 		generate_next_samples(
-			(float*)stream, data_points,
+			(float*)stream, length,
 			channel->previousSample2, channel->previousSample,
 			freq, currentNote.instrument, currentNote.volume, currentNote.effect,
 			prevFreq, offset, endOffset
 		);
 
-		if (endOffset > 1) {
-			channel->sfx = -1;
-			channel->offset = 0;
-		}
-		else {
-			channel->offset += data_points;
+		if (channel->offset == end_of_note) {
+			int next_note = current_index + 1;
+			// If we don't have more notes to play, finish here
+			if (next_note >= NOTE_AMOUNT) {
+				channel->sfx = -1;
+				channel->offset = 0;
+			}
+			else if(length < data_points) {
+				// Try to fill in as much as posible from the next note
+				audio_cb(userdata, &stream[length * sizeof(float)], (data_points - length) * sizeof(float));
+			}
 		}
 	}
 }
