@@ -161,7 +161,7 @@ void generate_next_samples(
 		}
 		else {
 			float wavelength = audio_get_wavelength(current_freq);
-			phase = std::fmod(phase + 1 / wavelength, 1);
+			phase = std::fmod(phase + 1 / wavelength, 1); // TODO 1/wavelength = current_freq / SAMPLE_RATE
 			dest[i] = waveGenerator(phase) * v / 7;
 		}
 	}
@@ -354,8 +354,29 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 	}
 	else {
 		P8_SFX sfx = get_sfx(channel->sfx);
-		// sfx.speed = 127;
 		int current_index = channel->offset / (sfx.speed * P8_TICKS_PER_T);
+		
+		if (current_index >= NOTE_AMOUNT) {
+			// We're just waiting for loop to come back (it can be grater than NOTE_AMOUNT)
+			memset(stream, 0, len);
+			if (sfx.loopEnd < current_index) {
+				DEBUGLOG << "SFX out of range. This should not happen" << ENDL;
+				channel->sfx = -1;
+				channel->offset = 0;
+				return;
+			}
+
+			int ticks_until_loop = sfx.loopEnd * sfx.speed * P8_TICKS_PER_T - channel->offset;
+			if (ticks_until_loop < data_points) {
+				channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
+				audio_cb(userdata, &stream[ticks_until_loop * sizeof(float)], len - ticks_until_loop * sizeof(float));
+			}
+			else {
+				channel->offset += data_points;
+			}
+			return;
+		}
+
 		P8_Note currentNote = sfx.notes[current_index];
 		float freq = pitch_to_freq(currentNote.pitch);
 
@@ -383,6 +404,15 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 
 		if (channel->offset == end_of_note) {
 			int next_note = current_index + 1;
+
+			// Look for loop
+			if (sfx.loopEnd == next_note) {
+				channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
+				// Try to fill in as much as posible from the next note
+				audio_cb(userdata, &stream[length * sizeof(float)], (data_points - length) * sizeof(float));
+				return;
+			}
+
 			// If we don't have more notes to play, finish here
 			bool has_more = false;
 			for (int i = current_index + 1; i < NOTE_AMOUNT && !has_more; i++) {
