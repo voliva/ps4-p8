@@ -95,10 +95,6 @@ void generate_next_samples(
 	float freq, int instrument, int volume, int effect,
 	float prevFreq, float offset, float endOffset
 ) {
-	// instrument = 0;
-	// volume = 5;
-	// effect = 0;
-
 	if (instrument >= 8) {
 		// TODO custom instruments
 		instrument = 0;
@@ -111,8 +107,7 @@ void generate_next_samples(
 	if (effect == 1) { // Slide
 		f0 = prevFreq;
 	} else if (effect == 2) { // Vibrato. Pitches love vibrato.
-		// ff = ff * 1.059; // Bring up half step => Too much
-		ff = ff * 1.03;
+		ff = ff * 1.0293; // A quater step
 		vibrato = true;
 	} else if (effect == 3) { // Drop
 		ff = 0;
@@ -130,9 +125,7 @@ void generate_next_samples(
 	if (instrument != 6) {
 		float v = lerp(v0, vf, offset);
 
-		// phase_shift = find_phaseshift(waveGenerator, prevSample, sample);
 		phase_shift = find_phaseshift(waveGenerator, prevSample * 7 / v, sample * 7 / v);
-		// DEBUGLOG << phase_shift << ": " << (waveGenerator(phase_shift) * v / 7) << " == " << sample << ENDL;
 	}
 
 	// Initial freq_offset
@@ -225,7 +218,7 @@ int get_sfx_speed(int n) {
 	return speed;
 }
 
-// Loops, n=-2 (manage from lua), channel=-2 (manage from lua)
+// N=-2 (manage from lua), channel=-2 (manage from lua)
 void AudioManager::playSfx(int n, int channel, int offset, int length)
 {
 	for (int i = 0; i < CHANNELS; i++) {
