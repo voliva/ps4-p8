@@ -373,7 +373,12 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 		if (channel->offset == end_of_note) {
 			int next_note = current_index + 1;
 			// If we don't have more notes to play, finish here
-			if (next_note >= NOTE_AMOUNT) {
+			bool has_more = false;
+			for (int i = current_index + 1; i < NOTE_AMOUNT && !has_more; i++) {
+				has_more = sfx.notes[i].volume > 0;
+			}
+
+			if (!has_more) {
 				channel->sfx = -1;
 				channel->offset = 0;
 			}
