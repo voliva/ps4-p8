@@ -17,9 +17,13 @@ private:
     /// Conditional variable used to fire event
     std::condition_variable m_cv;
     /// Atomic variable used to terminate immediately wpop and wtpop functions
-    std::atomic<bool> m_forceExit = false;
+    std::atomic<bool> m_forceExit;
 
 public:
+    ConcurrentQueue() {
+        this->m_forceExit = false;
+    }
+
     /// <summary> Add a new element in the queue. </summary>
     /// <param name="data"> New element. </param>
     void push(dataType const& data)
