@@ -354,7 +354,6 @@ typedef struct {
 
 void AudioManager::playPattern(int n)
 {
-	DEBUGLOG << "play pattern " << n << ENDL;
 	int addr = ADDR_MUSIC + n * 4;
 
 	std::vector<PatternSfx> sfxs;
@@ -431,7 +430,6 @@ void AudioManager::playPattern(int n)
 
 void AudioManager::playPatternSfx(int n, int timing_length)
 {
-	DEBUGLOG << "play pattern sfx " << n << ENDL;
 	int channel = -1;
 
 	// Option 1. Grab a free one from the reserved ones.
@@ -559,7 +557,6 @@ void AudioManager::music_loop()
 {
 	bool dummy;
 	while (this->music_notifier.wpop(dummy)) {
-		DEBUGLOG << "Notified" << ENDL;
 		for (int i = 0; i < CHANNELS; i++) {
 			SDL_LockAudioDevice(this->channels[i].deviceId);
 		}
@@ -639,6 +636,9 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 		int length = std::min(data_points, end_of_note - (int)channel->offset);
 		channel->offset += length;
  		float endOffset = (float)(channel->offset % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T);
+		if (endOffset == 0) {
+			endOffset = 1;
+		}
 
 		generate_next_samples(
 			(float*)stream, length,
