@@ -10,8 +10,6 @@
 #define CHANNELS 4
 
 typedef struct {
-	SDL_AudioDeviceID deviceId;
-	SDL_AudioSpec* spec;
 	int sfx; // -1 = paused
 	unsigned int offset;
 	unsigned int max;
@@ -45,6 +43,9 @@ public:
 	ConcurrentQueue<bool> music_notifier;
 
 private:
+	SDL_AudioDeviceID deviceId;
+	SDL_AudioSpec* spec;
+
 	// We need a function outside the audio thread to lock all the channels and switch them to the next pattern
 	std::thread music_thread;
 	void music_loop();
