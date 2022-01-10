@@ -18,11 +18,11 @@ More .p8.png cartridges can be bundled with the .pkg file by adding them into `/
 
 - `print`: It prints text on the screen, but it's missing some P8SCII control codes, non-ascii characters.
 - Sprites: It draws sprites without stretching.
-- Sfx: Plays sound effects on one channel, a bit buggy if you try to play more than one.
+- Sfx: Mostly complete - Instrument 7 (phaser) does triangle wave, the noise channel needs some tuning.
+- Music: Mostly done.
 - Menu: WIP.
 - Memory manipulation: Almost complete.
 - Maps: WIP.
-- Music: not implemented yet.
 
 When this is finished, one future idea is to have a cartridge explorer where you can just play any cartridge published on the internet.
 
@@ -59,6 +59,7 @@ Run `./build.bat` - First of `${SolutionDir}/lua` project, then `${SolutionDir}/
 - [dirent](https://github.com/tronkko/dirent) MIT
 - [SDL2](https://www.libsdl.org/) ZLib
 - [Pico-8 Font + Palette](https://www.lexaloffle.com/pico-8.php?page=faq) CC-0
+- [ConcurrentQueue](https://stackoverflow.com/a/26491017/1026619)
 
 ### PS4-P8
 
