@@ -2,7 +2,8 @@
 
 #include <vector>;
 #include <SDL2/SDL_audio.h>
-#include <mutex>
+#include <thread>
+#include "concurrent_queue.h"
 
 #define P8_SAMPLE_RATE 22050
 #define SFX_AMOUNT 64
@@ -14,6 +15,15 @@ typedef struct {
 	int sfx; // -1 = paused
 	unsigned int offset;
 	unsigned int max;
+
+	// stuff played earlier
+	float previousSample;
+	float previousSample2;
+
+	// Whether this channel sets the point where the next pattern must start
+	int music_timing;
+	bool reserved;
+	bool isMusic; // Is currently playing music
 } Channel;
 
 class AudioManager {
@@ -23,11 +33,27 @@ public:
 	void initialize();
 	void playSfx(int n, int channel, int offset, int length);
 	void stopSfx(int n);
+	void playMusic(int n, unsigned char channelmask);
+	void stopMusic();
+	void pause();
+	void resume();
 	void stopChannel(int channel);
 	void poke(unsigned short addr, unsigned char value);
 
-	std::vector<int16_t>* cache[SFX_AMOUNT];
 	Channel channels[4];
+
+	ConcurrentQueue<bool> music_notifier;
+
+private:
+	// We need a function outside the audio thread to lock all the channels and switch them to the next pattern
+	std::thread music_thread;
+	void music_loop();
+
+	int pattern; // -1 = not active
+	void playNextPattern();
+	void playPattern(int n);
+	void playPatternSfx(int n, int timing_length);
+	void stopPattern();
 };
 extern AudioManager* audioManager;
 
@@ -64,25 +90,5 @@ float audio_sawtooth_wave(float phase);
 float audio_square_wave(float phase);
 float audio_pulse_wave(float phase);
 float audio_organ_wave(float phase);
-
-// Wave generators
-void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest);
-void audio_generate_wave(float (*wave_fn)(float), unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to);
-void audio_generate_noise(unsigned int wavelength, std::vector<float>& dest);
-void audio_generate_noise(unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to);
-void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest);
-void audio_generate_phaser_wave(unsigned int wavelength, std::vector<float>& dest, unsigned int from, unsigned int to);
-void audio_amplify(std::vector<float>& src, std::vector<int16_t>& dest, unsigned int volume);
-void audio_amplify(std::vector<float>& src, std::vector<int16_t>& dest, unsigned int volume, unsigned int from);
-
-// Effects
-// void audio_effect_fadein(std::vector<float>& wave);
-// void audio_effect_fadeout(std::vector<float>& wave);
-
-// Filters => How to do them? I don't want to do FFT :'D
-// Plus these
-//void audio_effect_slide(std::vector<float>& wave);
-//void audio_eaffect_vibrato(std::vector<float>& wave);
-//void audio_effect_drop(std::vector<float>& wave);
-
-std::vector<int16_t> *audio_buffer_from_sfx(P8_SFX &sfx);
+float audio_noise_wave(float phase);
+float audio_phaser_wave(float phase);
