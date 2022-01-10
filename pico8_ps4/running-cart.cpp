@@ -85,6 +85,7 @@ void RunningCart::run()
 void RunningCart::stop()
 {
     this->status = RunningStatus::Stopping;
+	audioManager->pause();
 }
 
 void RunningCart::restart()
@@ -95,11 +96,13 @@ void RunningCart::restart()
 void RunningCart::pause()
 {
 	this->paused = true;
+	audioManager->pause();
 }
 
 void RunningCart::resume()
 {
 	this->paused = false;
+	audioManager->resume();
 }
 
 int millisecs_per_frame(bool is60Fps) {

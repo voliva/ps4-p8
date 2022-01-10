@@ -35,6 +35,8 @@ public:
 	void stopSfx(int n);
 	void playMusic(int n, unsigned char channelmask);
 	void stopMusic();
+	void pause();
+	void resume();
 	void stopChannel(int channel);
 	void poke(unsigned short addr, unsigned char value);
 

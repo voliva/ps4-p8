@@ -303,6 +303,38 @@ void AudioManager::stopMusic()
 	}
 }
 
+void AudioManager::pause()
+{
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_LockAudioDevice(this->channels[i].deviceId);
+	}
+
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_PauseAudioDevice(this->channels[i].deviceId, 1);
+	}
+
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_UnlockAudioDevice(this->channels[i].deviceId);
+	}
+}
+
+void AudioManager::resume()
+{
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_LockAudioDevice(this->channels[i].deviceId);
+	}
+
+	for (int i = 0; i < CHANNELS; i++) {
+		if (this->channels[i].sfx != -1) {
+			SDL_PauseAudioDevice(this->channels[i].deviceId, 0);
+		}
+	}
+
+	for (int i = 0; i < CHANNELS; i++) {
+		SDL_UnlockAudioDevice(this->channels[i].deviceId);
+	}
+}
+
 void AudioManager::playNextPattern()
 {
 	int addr = ADDR_MUSIC + this->pattern * 4;
