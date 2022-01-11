@@ -614,14 +614,16 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 		endOffset = 1;
 	}
 
+	float prevValue2 = stream[length - 2];
+	float prevValue = stream[length - 1];
 	generate_next_samples(
-		(float*)stream, length,
+		stream, length,
 		channel->previousSample2, channel->previousSample,
 		freq, currentNote.instrument, currentNote.volume, currentNote.effect,
 		prevFreq, offset, endOffset
 	);
-	channel->previousSample2 = ((float*)stream)[length - 2];
-	channel->previousSample = ((float*)stream)[length - 1];
+	channel->previousSample2 = stream[length - 2] - prevValue2;
+	channel->previousSample = stream[length - 1] - prevValue;
 
 	if (channel->offset == end_of_note) {
 		int next_note = current_index + 1;
