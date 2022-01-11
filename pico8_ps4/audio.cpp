@@ -250,10 +250,10 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 			}
 		}
 
-		// Option 3. Kick the first non-reserved channel to play yours
-		for (int c = 0; channel == -1 && c < CHANNELS; c++) {
+		// Option 3. Kick the first non-reserved channel to play yours, beginning from the end
+		for (int c = CHANNELS-1; channel == -1 && c >= 0; c--) {
 			Channel ch = this->channels[c];
-			if (!ch.reserved) {
+			if (!ch.reserved && ch.music_timing < 0) {
 				channel = c;
 			}
 		}
@@ -334,12 +334,12 @@ void AudioManager::playNextPattern()
 
 	// Try next one
 	int next_addr = addr + 4;
-	bool has_data = (
-		(p8_memory[addr] & 0x40) |
-		(p8_memory[addr + 1] & 0x40) |
-		(p8_memory[addr + 2] & 0x40) |
-		(p8_memory[addr + 3] & 0x40)
-		) > 0;
+	bool has_data = ( // If anyone of them is 0, then we have data, because a 1 means the channel is disabled
+		(p8_memory[next_addr] & 0x20) &
+		(p8_memory[next_addr + 1] & 0x20) &
+		(p8_memory[next_addr + 2] & 0x20) &
+		(p8_memory[next_addr + 3] & 0x20)
+		) == 0;
 	if (has_data) {
 		this->playPattern(this->pattern + 1);
 	}
