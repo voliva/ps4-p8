@@ -150,12 +150,12 @@ void generate_next_samples(
 			float next = audio_noise_wave(0);
 			float diff = std::fmax(std::fmin(next - prev_sample, max_diff), -max_diff);
 			prev_sample = std::fmax(-1, std::fmin(1, prev_sample + diff * scale));
-			dest[i] = prev_sample * v / 7;
+			dest[i] += prev_sample * v / 7;
 		}
 		else {
 			float wavelength = audio_get_wavelength(current_freq);
 			phase = std::fmod(phase + 1 / wavelength, 1); // TODO 1/wavelength = current_freq / SAMPLE_RATE
-			dest[i] = waveGenerator(phase) * v / 7;
+			dest[i] += waveGenerator(phase) * v / 7;
 		}
 	}
 }
@@ -165,17 +165,6 @@ void audio_cb(void* userdata, Uint8* stream, int len);
 AudioManager::AudioManager()
 {
 	for (int i = 0; i < CHANNELS; i++) {
-		SDL_AudioSpec* audio_spec = new SDL_AudioSpec;
-		// SDL_zero(audio_spec);
-		audio_spec->freq = P8_SAMPLE_RATE;
-		audio_spec->format = AUDIO_F32LSB;
-		audio_spec->channels = 1; // mono/stereo/quad/5.1
-		audio_spec->samples = 1024;
-		audio_spec->callback = audio_cb;
-		audio_spec->userdata = &this->channels[i];
-
-		this->channels[i].spec = audio_spec;
-		this->channels[i].deviceId = SDL_OpenAudioDevice(NULL, 0, audio_spec, NULL, 0);
 		this->channels[i].sfx = -1;
 		this->channels[i].offset = 0;
 		this->channels[i].max = 0;
@@ -186,15 +175,25 @@ AudioManager::AudioManager()
 		this->channels[i].isMusic = false;
 	}
 
+	SDL_AudioSpec* audio_spec = new SDL_AudioSpec;
+	// SDL_zero(audio_spec);
+	audio_spec->freq = P8_SAMPLE_RATE;
+	audio_spec->format = AUDIO_F32LSB;
+	audio_spec->channels = 1; // mono/stereo/quad/5.1
+	audio_spec->samples = 1024;
+	audio_spec->callback = audio_cb;
+	audio_spec->userdata = &this->channels;
+
+	this->spec = audio_spec;
+	this->deviceId = SDL_OpenAudioDevice(NULL, 0, audio_spec, NULL, 0);
+
 	this->music_thread = std::thread(&AudioManager::music_loop, this);
 	this->pattern = -1;
 }
 AudioManager::~AudioManager()
 {
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_CloseAudioDevice(this->channels[i].deviceId);
-		delete this->channels[i].spec;
-	}
+	SDL_CloseAudioDevice(this->deviceId);
+	delete this->spec;
 }
 
 void AudioManager::initialize() {
@@ -204,10 +203,16 @@ void AudioManager::initialize() {
 	p8_memory[ADDR_HW_AUDIO_DAMPEN] = 0;
 
 	for (int i = 0; i < CHANNELS; i++) {
-		SDL_PauseAudioDevice(this->channels[i].deviceId, 1);
 		this->channels[i].sfx = -1;
 		this->channels[i].offset = 0;
+		this->channels[i].max = 0;
+		this->channels[i].previousSample = 0;
+		this->channels[i].previousSample2 = 0;
+		this->channels[i].music_timing = -1;
+		this->channels[i].reserved = false;
+		this->channels[i].isMusic = false;
 	}
+	SDL_PauseAudioDevice(this->deviceId, 1);
 }
 
 #define SFX_BYTE_LENGTH 68
@@ -223,9 +228,7 @@ int get_sfx_speed(int n) {
 // N=-2 (manage from lua), channel=-2 (manage from lua)
 void AudioManager::playSfx(int n, int channel, int offset, int length)
 {
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_LockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_LockAudioDevice(this->deviceId);
 
 	if (channel == -1) {
 		// Option 1. Out from the ones that are not reserved, pick the first that's free or is playing the same sfx.
@@ -267,17 +270,13 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 	this->channels[channel].previousSample = 0;
 	this->channels[channel].previousSample2 = 0;
 
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_UnlockAudioDevice(this->channels[i].deviceId);
-	}
-	SDL_PauseAudioDevice(this->channels[channel].deviceId, 0);
+	SDL_UnlockAudioDevice(this->deviceId);
+	SDL_PauseAudioDevice(this->deviceId, 0);
 }
 
 void AudioManager::playMusic(int n, unsigned char channelmask)
 {
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_LockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_LockAudioDevice(this->deviceId);
 
 	for (int i = 0; i < CHANNELS; i++) {
 		int bit = 0x01 << i;
@@ -285,54 +284,26 @@ void AudioManager::playMusic(int n, unsigned char channelmask)
 	}
 	this->playPattern(n);
 
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_UnlockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_UnlockAudioDevice(this->deviceId);
 }
 
 void AudioManager::stopMusic()
 {
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_LockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_LockAudioDevice(this->deviceId);
 
 	this->stopPattern();
 
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_UnlockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_UnlockAudioDevice(this->deviceId);
 }
 
 void AudioManager::pause()
 {
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_LockAudioDevice(this->channels[i].deviceId);
-	}
-
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_PauseAudioDevice(this->channels[i].deviceId, 1);
-	}
-
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_UnlockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_PauseAudioDevice(this->deviceId, 1);
 }
 
 void AudioManager::resume()
 {
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_LockAudioDevice(this->channels[i].deviceId);
-	}
-
-	for (int i = 0; i < CHANNELS; i++) {
-		if (this->channels[i].sfx != -1) {
-			SDL_PauseAudioDevice(this->channels[i].deviceId, 0);
-		}
-	}
-
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_UnlockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_PauseAudioDevice(this->deviceId, 0);
 }
 
 void AudioManager::playNextPattern()
@@ -492,7 +463,7 @@ void AudioManager::playPatternSfx(int n, int timing_length)
 	this->channels[channel].offset = 0;
 	this->channels[channel].isMusic = true;
 	this->channels[channel].music_timing = timing_length;
-	SDL_PauseAudioDevice(this->channels[channel].deviceId, 0);
+	SDL_PauseAudioDevice(this->deviceId, 0);
 }
 
 void AudioManager::stopPattern()
@@ -514,9 +485,7 @@ void AudioManager::stopPattern()
 
 void AudioManager::stopSfx(int n)
 {
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_LockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_LockAudioDevice(this->deviceId);
 
 	for (int i = 0; i < CHANNELS; i++) {
 		if (this->channels[i].sfx == n) {
@@ -525,23 +494,17 @@ void AudioManager::stopSfx(int n)
 		}
 	}
 
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_UnlockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_UnlockAudioDevice(this->deviceId);
 }
 
 void AudioManager::stopChannel(int channel)
 {
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_LockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_LockAudioDevice(this->deviceId);
 
 	this->channels[channel].sfx = -1;
 	this->channels[channel].offset = 0;
 
-	for (int i = 0; i < CHANNELS; i++) {
-		SDL_UnlockAudioDevice(this->channels[i].deviceId);
-	}
+	SDL_UnlockAudioDevice(this->deviceId);
 }
 
 P8_SFX get_sfx(int s) {
@@ -572,26 +535,14 @@ P8_SFX get_sfx(int s) {
 
 void AudioManager::poke(unsigned short addr, unsigned char value)
 {
-	if (addr >= ADDR_SFX && addr < ADDR_SFX + SFX_BYTE_LENGTH * SFX_AMOUNT) {
-		// Invalidate the buffer of that sfx
-		// I don't think it's important if it's being played: It's not a buffer, but a cache. The actual buffer is on the hardware.
-		int s = (addr - ADDR_SFX) / SFX_BYTE_LENGTH;
-		for (int i = 0; i < CHANNELS; i++) {
-			SDL_LockAudioDevice(this->channels[i].deviceId);
-		}
-		for (int i = 0; i < CHANNELS; i++) {
-			SDL_UnlockAudioDevice(this->channels[i].deviceId);
-		}
-	}
+	// Does nothing
 }
 
 void AudioManager::music_loop()
 {
 	bool dummy;
 	while (this->music_notifier.wpop(dummy)) {
-		for (int i = 0; i < CHANNELS; i++) {
-			SDL_LockAudioDevice(this->channels[i].deviceId);
-		}
+		SDL_LockAudioDevice(this->deviceId);
 
 		for (int i = 0; i < CHANNELS; i++) {
 			// Stop all music looping channels, otherwise they will be marked as not available.
@@ -602,9 +553,7 @@ void AudioManager::music_loop()
 		}
 		this->playNextPattern();
 
-		for (int i = 0; i < CHANNELS; i++) {
-			SDL_UnlockAudioDevice(this->channels[i].deviceId);
-		}
+		SDL_UnlockAudioDevice(this->deviceId);
 	}
 }
 
@@ -618,103 +567,130 @@ float pitch_to_freq(unsigned char pitch) {
 	return base_frequencies[base] * multipliers[mul];
 }
 
-
-void audio_cb(void* userdata, Uint8* stream, int len) {
-	Channel* channel = (Channel*)userdata;
-	int data_points = len / sizeof(float);
-
-	memset(stream, 0, len);
+int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 	if (channel->sfx == -1) {
-		memset(stream, 0, len);
-		SDL_PauseAudioDevice(channel->deviceId, 1);
+		return 0;
 	}
-	else {
-		P8_SFX sfx = get_sfx(channel->sfx);
-		int current_index = channel->offset / (sfx.speed * P8_TICKS_PER_T);
+
+	P8_SFX sfx = get_sfx(channel->sfx);
+	int current_index = channel->offset / (sfx.speed * P8_TICKS_PER_T);
 		
-		if (current_index >= NOTE_AMOUNT) {
-			// We're just waiting for loop to come back (it can be grater than NOTE_AMOUNT)
-			memset(stream, 0, len);
-			if (sfx.loopEnd < current_index) {
-				DEBUGLOG << "SFX out of range. This should not happen" << ENDL;
+	if (current_index >= NOTE_AMOUNT) {
+		// We're just waiting for loop to come back (it can be grater than NOTE_AMOUNT)
+		if (sfx.loopEnd < current_index) {
+			DEBUGLOG << "SFX out of range. This should not happen" << ENDL;
+			channel->sfx = -1;
+			channel->offset = 0;
+			return 0;
+		}
+
+		int ticks_until_loop = sfx.loopEnd * sfx.speed * P8_TICKS_PER_T - channel->offset;
+		if (ticks_until_loop < data_points) {
+			channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
+			return -audio_cb_channel(channel, &stream[ticks_until_loop], data_points - ticks_until_loop);
+		}
+		else {
+			channel->offset += data_points;
+		}
+		return 0;
+	}
+
+	P8_Note currentNote = sfx.notes[current_index];
+	float freq = pitch_to_freq(currentNote.pitch);
+
+	float prevFreq = freq;
+	if (current_index > 0) {
+		// TODO Assumption will break when loops => Move to Channel?
+		prevFreq = pitch_to_freq(sfx.notes[current_index - 1].pitch);
+	}
+	float offset = (float)(channel->offset % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T);
+
+	// Fill until end of note
+	int end_of_note = (current_index + 1) * sfx.speed * P8_TICKS_PER_T;
+	int length = std::min(data_points, end_of_note - (int)channel->offset);
+	channel->offset += length;
+ 	float endOffset = (float)(channel->offset % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T);
+	if (endOffset == 0) {
+		endOffset = 1;
+	}
+
+	float prevValue2 = stream[length - 2];
+	float prevValue = stream[length - 1];
+	generate_next_samples(
+		stream, length,
+		channel->previousSample2, channel->previousSample,
+		freq, currentNote.instrument, currentNote.volume, currentNote.effect,
+		prevFreq, offset, endOffset
+	);
+	channel->previousSample2 = stream[length - 2] - prevValue2;
+	channel->previousSample = stream[length - 1] - prevValue;
+
+	if (channel->offset == end_of_note) {
+		int next_note = current_index + 1;
+		if (channel->music_timing > 0) {
+			channel->music_timing--;
+			if (channel->music_timing == 0) {
+				audioManager->music_notifier.push(true);
+			}
+		}
+
+		// Look for loop so we can start putting data from the next loop beginning.
+		if (sfx.loopEnd == next_note) {
+			channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
+			int t = audio_cb_channel(channel, &stream[length], data_points - length);
+			return length + t;
+		}
+
+		// If we don't have more notes to play, finish here
+		bool has_more = false;
+		for (int i = current_index + 1; i < NOTE_AMOUNT && !has_more; i++) {
+			has_more = sfx.notes[i].volume > 0;
+		}
+
+		if (!has_more && sfx.loopEnd < NOTE_AMOUNT) {
+			if (channel->music_timing < 0) {
 				channel->sfx = -1;
 				channel->offset = 0;
-				return;
-			}
-
-			int ticks_until_loop = sfx.loopEnd * sfx.speed * P8_TICKS_PER_T - channel->offset;
-			if (ticks_until_loop < data_points) {
-				channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
-				audio_cb(userdata, &stream[ticks_until_loop * sizeof(float)], len - ticks_until_loop * sizeof(float));
-			}
-			else {
-				channel->offset += data_points;
-			}
-			return;
-		}
-
-		P8_Note currentNote = sfx.notes[current_index];
-		float freq = pitch_to_freq(currentNote.pitch);
-
-		float prevFreq = freq;
-		if (current_index > 0) {
-			// TODO Assumption will break when loops => Move to Channel?
-			prevFreq = pitch_to_freq(sfx.notes[current_index - 1].pitch);
-		}
-		float offset = (float)(channel->offset % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T);
-
-		// Fill until end of note
-		int end_of_note = (current_index + 1) * sfx.speed * P8_TICKS_PER_T;
-		int length = std::min(data_points, end_of_note - (int)channel->offset);
-		channel->offset += length;
- 		float endOffset = (float)(channel->offset % (sfx.speed * P8_TICKS_PER_T)) / (sfx.speed * P8_TICKS_PER_T);
-		if (endOffset == 0) {
-			endOffset = 1;
-		}
-
-		generate_next_samples(
-			(float*)stream, length,
-			channel->previousSample2, channel->previousSample,
-			freq, currentNote.instrument, currentNote.volume, currentNote.effect,
-			prevFreq, offset, endOffset
-		);
-		channel->previousSample2 = ((float*)stream)[length - 2];
-		channel->previousSample = ((float*)stream)[length - 1];
-
-		if (channel->offset == end_of_note) {
-			int next_note = current_index + 1;
-			if (channel->music_timing > 0) {
-				channel->music_timing--;
-				if (channel->music_timing == 0) {
-					audioManager->music_notifier.push(true);
-				}
-			}
-
-			// Look for loop
-			if (sfx.loopEnd == next_note) {
-				channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
-				// Try to fill in as much as posible from the next note
-				audio_cb(userdata, &stream[length * sizeof(float)], (data_points - length) * sizeof(float));
-				return;
-			}
-
-			// If we don't have more notes to play, finish here
-			bool has_more = false;
-			for (int i = current_index + 1; i < NOTE_AMOUNT && !has_more; i++) {
-				has_more = sfx.notes[i].volume > 0;
-			}
-
-			if (!has_more && sfx.loopEnd < NOTE_AMOUNT) {
-				if (channel->music_timing < 0) {
-					channel->sfx = -1;
-					channel->offset = 0;
-				}
-			}
-			else if(length < data_points) {
-				// Try to fill in as much as posible from the next note
-				audio_cb(userdata, &stream[length * sizeof(float)], (data_points - length) * sizeof(float));
 			}
 		}
+		else if(length < data_points) {
+			// Try to fill in as much as posible from the next note
+			int t = audio_cb_channel(channel, &stream[length], data_points - length);
+			return length + t;
+		}
+	}
+	return length;
+}
+
+int get_overlaps(int (&lengths)[CHANNELS], int len, int offset) {
+	int t = 0;
+	for (int i = 0; i < CHANNELS; i++) {
+		if (lengths[i] >= 0 && offset < lengths[i]) {
+			t++;
+		}
+		if (lengths[i] < 0 && offset >= len + lengths[i]) {
+			t++;
+		}
+	}
+	if (t == 0) {
+		return 1;
+	}
+	return t;
+}
+void audio_cb(void* userdata, Uint8* stream, int len) {
+	Channel (*channels)[CHANNELS] = (Channel(*)[CHANNELS])userdata;
+	int data_points = len / sizeof(float);
+	float* buffer = (float*)stream;
+
+	memset(stream, 0, len);
+	int lengths[CHANNELS] = { 0,0,0,0 };
+
+	for (int i = 0; i < CHANNELS; i++) {
+		lengths[i] = audio_cb_channel(&(*channels)[i], buffer, data_points);
+	}
+
+	for (int i = 0; i < data_points; i++) {
+		buffer[i] /= get_overlaps(lengths, data_points, i);
 	}
 }
 
