@@ -73,7 +73,7 @@ typedef struct {
 	char detune;
 	char reverb;
 	char dampen;
-	char speed;
+	unsigned char speed;
 	char loopStart;
 	char loopEnd;
 	P8_Note notes[NOTE_AMOUNT];
