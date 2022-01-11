@@ -662,35 +662,15 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 	return length;
 }
 
-int get_overlaps(int (&lengths)[CHANNELS], int len, int offset) {
-	int t = 0;
-	for (int i = 0; i < CHANNELS; i++) {
-		if (lengths[i] >= 0 && offset < lengths[i]) {
-			t++;
-		}
-		if (lengths[i] < 0 && offset >= len + lengths[i]) {
-			t++;
-		}
-	}
-	if (t == 0) {
-		return 1;
-	}
-	return t;
-}
 void audio_cb(void* userdata, Uint8* stream, int len) {
 	Channel (*channels)[CHANNELS] = (Channel(*)[CHANNELS])userdata;
 	int data_points = len / sizeof(float);
 	float* buffer = (float*)stream;
 
 	memset(stream, 0, len);
-	int lengths[CHANNELS] = { 0,0,0,0 };
 
 	for (int i = 0; i < CHANNELS; i++) {
-		lengths[i] = audio_cb_channel(&(*channels)[i], buffer, data_points);
-	}
-
-	for (int i = 0; i < data_points; i++) {
-		buffer[i] /= get_overlaps(lengths, data_points, i);
+		audio_cb_channel(&(*channels)[i], buffer, data_points);
 	}
 }
 
