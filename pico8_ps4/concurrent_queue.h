@@ -36,7 +36,7 @@ public:
     }
     /// <summary> Check queue empty. </summary>
     /// <returns> True if the queue is empty. </returns>
-    bool isEmpty() const
+    bool isEmpty()
     {
         std::unique_lock<std::mutex> lk(m_mutex);
         return m_queue.empty();
