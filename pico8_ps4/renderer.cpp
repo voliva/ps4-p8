@@ -437,33 +437,43 @@ void Renderer::reset_transparency_pal()
 	}
 }
 
+#include <map>
 void Renderer::present()
 {
+	std::vector<SDL_Point> points[16];
 	for (int i = 0; i < SCREEN_MEMORY_SIZE; i++) {
-		if (p8_memory[ADDR_SCREEN + i] == this->prev_screen[i]) {
+		unsigned char pixels = p8_memory[ADDR_SCREEN + i];
+		unsigned char previous = this->prev_screen[i];
+		if (pixels == previous) {
 			continue;
 		}
 
-		int x = (i%64)*2;
-		int y = i/64;
-		unsigned char pixels = p8_memory[ADDR_SCREEN + i];
+		int x = (i % 64) * 2;
+		int y = i / 64;
 
-		unsigned char left = p8_memory[ADDR_DS_SCREEN_PAL + (pixels & 0x0F)];
-		SDL_Color leftColor = DEFAULT_PALETTE[left & 0x0F];
-		if (left >= 0x10) {
-			leftColor = EXTENDED_PALETTE[left & 0x0F];
+		if ((pixels & 0x0F) != (previous & 0x0F)) {
+			points[pixels & 0x0F].push_back(SDL_Point{ x,y });
 		}
-		SDL_SetRenderDrawColor(this->renderer, leftColor.r, leftColor.g, leftColor.b, 0xFF);
-		SDL_RenderDrawPoint(this->renderer, x, y);
-
-		unsigned char right = p8_memory[ADDR_DS_SCREEN_PAL + (pixels >> 4)];
-		SDL_Color rightColor = DEFAULT_PALETTE[right & 0x0F];
-		if (right >= 0x10) {
-			rightColor = EXTENDED_PALETTE[right & 0x0F];
+		if ((pixels & 0xF0) != (previous & 0xF0)) {
+			points[pixels >> 4].push_back(SDL_Point{ x+1,y });
 		}
-		SDL_SetRenderDrawColor(this->renderer, rightColor.r, rightColor.g, rightColor.b, 0xFF);
-		SDL_RenderDrawPoint(this->renderer, x+1, y);
 	}
+
+	for (int i = 0; i < 16; i++) {
+		int size = points[i].size();
+		if (size == 0) {
+			continue;
+		}
+
+		unsigned char paletteColor = p8_memory[ADDR_DS_SCREEN_PAL + i];
+		SDL_Color color = DEFAULT_PALETTE[paletteColor & 0x0F];
+		if (paletteColor >= 0x10) {
+			color = EXTENDED_PALETTE[paletteColor & 0x0F];
+		}
+		SDL_SetRenderDrawColor(this->renderer, color.r, color.g, color.b, 0xFF);
+		SDL_RenderDrawPoints(this->renderer, &points[i][0], size);
+	}
+
 	SDL_UpdateWindowSurface(this->window);
 	memcpy(this->prev_screen, &p8_memory[ADDR_SCREEN], SCREEN_MEMORY_SIZE);
 }
