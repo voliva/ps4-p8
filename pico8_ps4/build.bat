@@ -8,7 +8,7 @@ set PKG_TITLE_ID="BREW34965"
 set PKG_CONTENT_ID="IV0000-BREW34965_00-OLIPS4PICO800000"
 
 Rem Libraries to link in
-set libraries=-lc -lkernel -lc++ -lSceUserService -lSceVideoOut -lSceAudioOut -lScePad -lSceSysmodule -lSceFreeType -lSDL2 -lSDL2_image
+set libraries=-lc -lkernel -lc++ -lSceUserService -lSceVideoOut -lSceAudioOut -lScePad -lSceSysmodule -lSceFreeType -lSDL2 -lSDL2_image -lSceNet -lSceHttp -lSceSsl
 
 set extra_flags=-I"..\\lua" -D__PS4__
 

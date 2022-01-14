@@ -52,6 +52,7 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory);
 #include "http.h"
 int main(void)
 {
+	http_init();
 	DEBUGLOG << "Making request" << ENDL;
 	DEBUGLOG << http_get_string("https://www.lexaloffle.com/bbs/?cat=7&carts_tab=1#mode=carts&sub=2") << ENDL;
 
