@@ -124,7 +124,7 @@ void RunningCart::runOnce()
 
 	SDL_Event e;
 
-	unsigned char time_debt = 0;
+	int time_debt = 0;
 	short ms_per_frame = millisecs_per_frame(luaState->is60FPS);
 
 	this->status = RunningStatus::Running;
@@ -178,28 +178,39 @@ void RunningCart::runOnce()
 			}
 		}
 
+		// Get a temptative estimation of how much timeDebt we would have
 		auto timediff = getMillisecondsDiff(getTimestamp(), frame_start);
 		int remainingTime = ms_per_frame - timediff;
+		int tmpTimeDebt = time_debt;
 		if (remainingTime > 0) {
-			if (remainingTime > time_debt) {
-				time_debt = 0;
-			}
-			else {
-				time_debt -= remainingTime;
-			}
+			tmpTimeDebt -= remainingTime;
 		}
 		else {
-			if ((int)time_debt + -remainingTime >= 255) {
-				time_debt = 255;
-			}
-			else {
-				time_debt += -remainingTime;
-			}
+			tmpTimeDebt += -remainingTime;
 		}
 
-		if (remainingTime > 1) {
-			// DEBUGLOG << "sleep for " << remainingTime << ENDL;
-			std::this_thread::sleep_for(std::chrono::milliseconds(remainingTime));
+		// If it's negative it means that we completed early, wait for that amount of time
+		if (tmpTimeDebt < 0) {
+			// DEBUGLOG << "Sleep for " << -tmpTimeDebt << ENDL;
+			std::this_thread::sleep_for(std::chrono::milliseconds(-tmpTimeDebt));
+		}
+
+		// Now update time_debt with the actual difference.
+		timediff = getMillisecondsDiff(getTimestamp(), frame_start);
+		remainingTime = ms_per_frame - timediff;
+		if (remainingTime > 0) {
+			time_debt -= remainingTime;
+		}
+		else {
+			time_debt += -remainingTime;
+		}
+
+		// Clamp to 2 frames
+		if (time_debt > ms_per_frame * 2) {
+			time_debt = ms_per_frame * 2;
+		}
+		else if (time_debt < -ms_per_frame * 2) {
+			time_debt = -(ms_per_frame * 2);
 		}
 	}
 }
