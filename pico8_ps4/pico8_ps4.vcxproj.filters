@@ -60,6 +60,9 @@
     <ClCompile Include="chrono.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="http.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -108,6 +111,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="chrono.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="http.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

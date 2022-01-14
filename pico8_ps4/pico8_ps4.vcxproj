@@ -158,6 +158,7 @@
     <ClCompile Include="efla.e.cpp" />
     <ClCompile Include="events.cpp" />
     <ClCompile Include="font.cpp" />
+    <ClCompile Include="http.cpp" />
     <ClCompile Include="log.cpp" />
     <ClCompile Include="lua_state.cpp" />
     <ClCompile Include="machine_state.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="efla.e.h" />
     <ClInclude Include="events.h" />
     <ClInclude Include="font.h" />
+    <ClInclude Include="http.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="lua_state.h" />
     <ClInclude Include="machine_state.h" />
