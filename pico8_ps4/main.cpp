@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 
+#include "chrono.h"
 #include "log.h"
 #include "cartridge.h"
 #include "renderer.h"
@@ -94,7 +95,7 @@ int main(void)
 	SDL_Event e;
 	bool quit = false;
 
-	auto frame_start = std::chrono::high_resolution_clock::now();
+	auto frame_start = getTimestamp();
 	while (!quit) {
 		int prevScreen = currentScreen - 1;
 		while (prevScreen >= 0 && screens[prevScreen].cartridges.size() == 0) {
@@ -147,8 +148,8 @@ int main(void)
 			}
 		}
 
-		auto now = std::chrono::high_resolution_clock::now();
-		auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - frame_start).count();
+		auto now = getTimestamp();
+		auto delta = getMillisecondsDiff(now, frame_start);
 		frame_start = now;
 
 		double target_diff = selectedCart - renderingTargetCart;

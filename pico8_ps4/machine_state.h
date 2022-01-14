@@ -2,7 +2,7 @@
 
 #include <SDL2/SDL.h>
 #include <string>
-#include <chrono>
+#include "chrono.h"
 #include "events.h"
 
 class MachineState
@@ -21,7 +21,7 @@ public:
 
 private:
 	int btn_countdown[8][8]; // [player] => [button] => frames for next tick. 0 = it wasn't pressed before, 1 = tick now, reset to 5.
-	std::chrono::system_clock::time_point started;
+	timestamp_t started;
 };
 
 extern MachineState* machineState;

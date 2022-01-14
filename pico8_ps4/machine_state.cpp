@@ -10,7 +10,7 @@ Log DEBUGLOG = logger.log("MachineState");
 
 MachineState::MachineState()
 {
-	this->started = std::chrono::system_clock::now();
+	this->started = getTimestamp();
 
 	for (int p = 0; p < 8; p++) {
 		for (int b = 0; b < 8; b++) {
@@ -34,7 +34,7 @@ void MachineState::initialize()
 	}
 
 	// Things that are not in p8's memory
-	this->started = std::chrono::system_clock::now();
+	this->started = getTimestamp();
 	for (int p = 0; p < 8; p++) {
 		for (int b = 0; b < 8; b++) {
 			this->btn_countdown[p][b] = 0;
@@ -110,7 +110,6 @@ void MachineState::registerFrame()
 
 float MachineState::getTime()
 {
-	auto now = std::chrono::system_clock::now();
-	auto timediff = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->started).count();
+	auto timediff = getMillisecondsDiff(getTimestamp(), this->started);
 	return (float)timediff / 1000;
 }

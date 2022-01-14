@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClCompile Include="audio.cpp" />
     <ClCompile Include="cartridge.cpp" />
+    <ClCompile Include="chrono.cpp" />
     <ClCompile Include="efla.e.cpp" />
     <ClCompile Include="events.cpp" />
     <ClCompile Include="font.cpp" />
@@ -171,6 +172,7 @@
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
     <ClInclude Include="audio.h" />
     <ClInclude Include="cartridge.h" />
+    <ClInclude Include="chrono.h" />
     <ClInclude Include="concurrent_queue.h" />
     <ClInclude Include="efla.e.h" />
     <ClInclude Include="events.h" />

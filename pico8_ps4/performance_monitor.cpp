@@ -1,7 +1,6 @@
 #include "performance_monitor.h"
 #include "log.h"
 
-
 #define DEBUGLOG Performance_DEBUGLOG
 Log DEBUGLOG = logger.log("Performance");
 
@@ -9,7 +8,7 @@ void PerformanceMonitor::registerStart(std::string task)
 {
 	if (this->tasks.count(task) == 0) {
 		this->tasks[task] = Task{
-			std::chrono::high_resolution_clock::now(),
+			getTimestamp(),
 			0,
 			0,
 			0,
@@ -17,7 +16,7 @@ void PerformanceMonitor::registerStart(std::string task)
 		};
 	}
 	else {
-		this->tasks[task].last_start = std::chrono::high_resolution_clock::now();
+		this->tasks[task].last_start = getTimestamp();
 	}
 }
 
@@ -26,8 +25,8 @@ void PerformanceMonitor::registerEnd(std::string task)
 	if (this->tasks.count(task) == 0) {
 		return;
 	}
-	auto now = std::chrono::high_resolution_clock::now();
-	auto timediff = std::chrono::duration_cast<std::chrono::nanoseconds>(now - this->tasks[task].last_start).count();
+	auto now = getTimestamp();
+	auto timediff = getMicrosecondsDiff(now, this->tasks[task].last_start);
 	this->tasks[task].total_time += timediff;
 	this->tasks[task].total_calls++;
 	this->tasks[task].longest_call = std::max(this->tasks[task].longest_call, timediff);

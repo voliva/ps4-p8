@@ -1,11 +1,11 @@
 #pragma once
 
 #include <map>
-#include <chrono>
 #include <string>
+#include "chrono.h"
 
 typedef struct {
-	std::chrono::steady_clock::time_point last_start;
+	timestamp_t last_start;
 	unsigned long long total_time;
 	int total_calls;
 	long long longest_call;

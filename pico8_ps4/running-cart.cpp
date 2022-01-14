@@ -5,7 +5,7 @@
 #include "machine_state.h"
 #include "font.h"
 #include "lua_state.h"
-
+#include "chrono.h"
 #include <thread>
 #include "pause_menu.h"
 
@@ -128,7 +128,9 @@ void RunningCart::runOnce()
 	short ms_per_frame = millisecs_per_frame(luaState->is60FPS);
 
 	this->status = RunningStatus::Running;
+	int frame = 0;
 	while (this->status == RunningStatus::Running) {
+		frame++;
 		machineState->registerFrame();
 
 		// When dragging the window the app pauses, on that case, ignore frame_start
@@ -157,7 +159,7 @@ void RunningCart::runOnce()
 
 			delete result;
 		}
-		auto frame_start = std::chrono::high_resolution_clock::now();
+		auto frame_start = getTimestamp();
 
 		if (this->status == RunningStatus::Running) {
 			if (this->paused) {
@@ -176,8 +178,7 @@ void RunningCart::runOnce()
 			}
 		}
 
-		auto frame_end = std::chrono::high_resolution_clock::now();
-		auto timediff = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start).count();
+		auto timediff = getMillisecondsDiff(getTimestamp(), frame_start);
 		int remainingTime = ms_per_frame - timediff;
 		if (remainingTime > 0) {
 			if (remainingTime > time_debt) {
