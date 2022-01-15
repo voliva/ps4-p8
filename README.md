@@ -17,18 +17,19 @@ It comes with one simple game which fully works, Minewalker, which is a game ins
 More .p8.png cartridges can be bundled with the .pkg file by adding them into `/assets/misc` folder, or they will be loaded in runtime from PS4's `/data/p8-cartridges` folder.
 
 - `print`: It prints text on the screen, but it's missing some P8SCII control codes, non-ascii characters.
-- Sprites: It draws sprites without stretching.
-- Sfx: Mostly complete - Instrument 7 (phaser) does triangle wave, the noise channel needs some tuning.
-- Music: Mostly done.
+- Sprites: Done
+- Sfx: Done
+- Music: Done
 - Menu: WIP.
 - Memory manipulation: Almost complete.
-- Maps: WIP.
-
-When this is finished, one future idea is to have a cartridge explorer where you can just play any cartridge published on the internet.
+- Maps: Done
+- Custom P8-Lua: WIP
 
 ## Building
 
 The project is cross-platform for Windows + PS4.
+
+You'll need [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) installed with its dependencies (.NET Core) and clang++.
 
 You'll need to add the external libraries in `${SolutionDir}/lib`:
 
@@ -39,6 +40,7 @@ Additionally, to run it on windows, you will need:
 - lib/include/SDL2: SDL2 headers
 - lib/include/dirent.h: Dirent port for windows, grab from https://github.com/tronkko/dirent
 - lib/lib/SDL2.lib: SDL2 lib
+- libcurl: Install via [vcpkg](https://curl.se/docs/install.html)
 
 ### Windows
 
@@ -49,6 +51,12 @@ Run with visual studio. First build `${SolutionDir}/lua` project, then `${Soluti
 Run `./build.bat` - First of `${SolutionDir}/lua` project, then `${SolutionDir}/pico8_ps4`.
 
 ## License
+
+### External code used
+
+Special thanks to:
+
+- Bucanero - The code under http.cpp is based from code on [apolo-ps4](https://github.com/bucanero/apollo-ps4) GPL v3
 
 ### External tools and dependencies used
 
