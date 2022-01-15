@@ -73,10 +73,10 @@ void Splore::render()
 			height
 		};
 		SDL_Rect dest{
-			x_center - width * SCALE * 0.9 / 2 - width * SCALE * 0.5,
+			(int)(x_center - width * SCALE * 0.9 / 2 - width * SCALE * 0.5),
 			(int)y + 20,
-			width * SCALE * 0.9,
-			height * SCALE * 0.9
+			(int)(width * SCALE * 0.9),
+			(int)(height * SCALE * 0.9)
 		};
 		SDL_RenderCopy(renderer->renderer, this->texture, &src, &dest);
 	}
@@ -88,10 +88,10 @@ void Splore::render()
 			height
 		};
 		SDL_Rect dest{
-			x_center - width * SCALE * 0.9 / 2 + width * SCALE * 0.5,
+			(int)(x_center - width * SCALE * 0.9 / 2 + width * SCALE * 0.5),
 			(int)y + 20,
-			width * SCALE * 0.9,
-			height * SCALE * 0.9
+			(int)(width * SCALE * 0.9),
+			(int)(height * SCALE * 0.9)
 		};
 		SDL_RenderCopy(renderer->renderer, this->texture, &src, &dest);
 	}
@@ -107,8 +107,8 @@ void Splore::render()
 	SDL_Rect dest{
 		(int)x,
 		(int)y,
-		width*SCALE,
-		height*SCALE
+		(int)(width*SCALE),
+		(int)(height*SCALE)
 	};
 	SDL_RenderCopy(renderer->renderer, this->texture, &src, &dest);
 

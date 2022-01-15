@@ -64,6 +64,7 @@ int main(void)
 	font = new Font();
 	pauseMenu = new PauseMenu();
 	runningCart = new RunningCart();
+	http_init();
 
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)
