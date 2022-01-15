@@ -9,10 +9,12 @@
 #include "memory.h"
 #include "font.h"
 #include "running-cart.h"
+#include <set>
 
 #define DEBUGLOG LuaState_DEBUGLOG
 Log DEBUGLOG = logger.log("LuaState");
 
+int luaB_next(lua_State* L);
 int rnd(lua_State* L);
 int flr(lua_State* L);
 int ceil(lua_State* L);
@@ -58,12 +60,15 @@ int extcmd(lua_State* L);
 int fget(lua_State* L);
 int fset(lua_State* L);
 int dget(lua_State* L);
+int dset(lua_State* L);
 int shr(lua_State* L);
 int shl(lua_State* L);
 int printh(lua_State* L);
 int sget(lua_State* L);
 int sset(lua_State* L);
 int clip(lua_State* L);
+int memset(lua_State* L);
+int stat(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -73,7 +78,9 @@ LuaState::LuaState()
 	this->is60FPS = false;
 
 	lua_pushcfunction(this->state, rnd);
-	lua_setglobal(this->state, "rnd");
+	lua_setglobal(this->state, "__rnd_num");
+	lua_pushcfunction(this->state, luaB_next);
+	lua_setglobal(this->state, "__luaB_next");
 	lua_pushcfunction(this->state, flr);
 	lua_setglobal(this->state, "flr");
 	lua_pushcfunction(this->state, ceil);
@@ -162,7 +169,7 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "fset");
 	lua_pushcfunction(this->state, dget);
 	lua_setglobal(this->state, "dget");
-	lua_pushcfunction(this->state, noop);
+	lua_pushcfunction(this->state, dset);
 	lua_setglobal(this->state, "dset");
 	lua_pushcfunction(this->state, noop);
 	lua_setglobal(this->state, "cartdata");
@@ -178,6 +185,10 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "sset");
 	lua_pushcfunction(this->state, clip);
 	lua_setglobal(this->state, "clip");
+	lua_pushcfunction(this->state, memset);
+	lua_setglobal(this->state, "memset");
+	lua_pushcfunction(this->state, stat);
+	lua_setglobal(this->state, "stat");
 
 	// It needs to count from the end of the table in case the elements get removed in-between
 	std::string all =
@@ -194,6 +205,13 @@ LuaState::LuaState()
 			end \
 		end";
 	luaL_loadbuffer(this->state, all.c_str(), all.length(), "all");
+	lua_pcall(this->state, 0, 0, 0);
+
+	std::string pairs =
+		"function pairs(t) \
+			return __luaB_next, t, nil \
+		end";
+	luaL_loadbuffer(this->state, pairs.c_str(), pairs.length(), "pairs");
 	lua_pcall(this->state, 0, 0, 0);
 
 	std::string min =
@@ -306,9 +324,40 @@ LuaState::LuaState()
 	luaL_loadbuffer(this->state, count.c_str(), count.length(), "count");
 	lua_pcall(this->state, 0, 0, 0);
 
+	std::string rnd_lua =
+		"function rnd(value) \
+			if type(value) == \"table\" then \
+				return value[__rnd_num(1 + flr(#value))] \
+			else \
+				return __rnd_num(value) \
+			end \
+		end";
+	luaL_loadbuffer(this->state, rnd_lua.c_str(), rnd_lua.length(), "rnd");
+	lua_pcall(this->state, 0, 0, 0);
+
 	// DEBUGLOG << program << ENDL;
 	/*std::string e = lua_tostring(this->state, -1);
 	DEBUGLOG << e << ENDL;*/
+}
+
+std::set<std::string> alerted;
+void alert_todo(std::string key) {
+	if (alerted.count(key) == 0) {
+		DEBUGLOG << "TODO called: " << key << ENDL;
+		alerted.insert(key);
+	}
+}
+
+// Grabbed from luaopen_base lbaselib.c
+int luaB_next(lua_State* L) {
+	luaL_checktype(L, 1, LUA_TTABLE);
+	lua_settop(L, 2);
+	if (lua_next(L, 1))
+		return 2;
+	else {
+		lua_pushnil(L);
+		return 1;
+	}
 }
 
 int sfx(lua_State* L) {
@@ -436,6 +485,7 @@ int rect(lua_State* L) {
 }
 
 int ovalfill(lua_State* L) {
+	alert_todo("ovalfill");
 	int x0 = luaL_checknumber(L, 1);
 	int y0 = luaL_checknumber(L, 2);
 	int x1 = luaL_checknumber(L, 3);
@@ -462,6 +512,7 @@ int oval(lua_State* L) {
 }
 
 int circfill(lua_State* L) {
+	alert_todo("circfill");
 	int x = luaL_checknumber(L, 1);
 	int y = luaL_checknumber(L, 2);
 	int r = luaL_optnumber(L, 3, 4);
@@ -616,18 +667,20 @@ void LuaState::run_update()
 	}
 }
 
+void poke_memory(unsigned short addr, unsigned char value) {
+	audioManager->poke(addr, value);
+	p8_memory[addr] = value;
+}
 int poke(lua_State* L) {
 	unsigned short addr = luaL_checkinteger(L, 1) & 0x0FFFF;
 	unsigned char value = luaL_optinteger(L, 2, 0) & 0x0FF;
 
-	audioManager->poke(addr, value);
-	p8_memory[addr] = value;
+	poke_memory(addr, value);
 
 	for (int i = 3; lua_isinteger(L, i); i++) {
 		value = lua_tointeger(L, 2) & 0x0FF;
 		addr++;
-		audioManager->poke(addr, value);
-		p8_memory[addr] = value;
+		poke_memory(addr, value);
 	}
 
 	return 0;
@@ -637,17 +690,8 @@ int string_to_num(std::string& str, short* shortval, double* doubleval);
 int rnd(lua_State* L) {
 	double max = 0;
 	if (lua_isstring(L, 1)) {
-		std::string str = luaL_checkstring(L, 1);
-		short intval = 0;
-		int r = string_to_num(str, &intval, &max);
-		if (r == 0) {
-			max = 0; // Ok? - Undocumented, taken experimentally from pico-8
-		}
-		else if (r == 1) {
-			max = intval;
-		}
-	}
-	else {
+		max = lua_tonumber(L, 1);
+	} else {
 		max = luaL_optnumber(L, 1, 1);
 	}
 	double result = std::rand() * max / RAND_MAX;
@@ -675,6 +719,7 @@ int srand(lua_State* L) {
 
 // TODO https://pico-8.fandom.com/wiki/Tostr decimal hex?
 int tostr(lua_State* L) {
+	alert_todo("tostr");
 	double num = lua_tonumber(L, 1);
 	bool useHex = false;
 	if (lua_isboolean(L, 2)) {
@@ -773,7 +818,6 @@ int spr(lua_State* L) {
 	return 0;
 }
 
-// TODO stretch+flip
 int sspr(lua_State* L) {
 	int sx = luaL_checknumber(L, 1);
 	int sy = luaL_checknumber(L, 2);
@@ -1047,7 +1091,7 @@ int pal(lua_State* L) {
 	}
 
 	if (lua_istable(L, 1)) {
-		DEBUGLOG << "pal with table unsupported" << ENDL;
+		alert_todo("pal with table");
 
 		return 0;
 	}
@@ -1056,7 +1100,8 @@ int pal(lua_State* L) {
 	int c1 = luaL_optinteger(L, 2, 0);
 	int p = luaL_optinteger(L, 3, 0);
 	if (p > 1) {
-		DEBUGLOG << "pal for pattern unsupported" << ENDL;
+		alert_todo("pal for pattern");
+
 		return 0;
 	}
 	int addr = ADDR_DS_DRAW_PAL;
@@ -1159,7 +1204,7 @@ int extcmd(lua_State* L) {
 		runningCart->stop();
 	}
 	else {
-		DEBUGLOG << "extcmd: Unrecognized command " << cmd << ENDL;
+		alert_todo("extcmd(" + cmd + ")");
 	}
 
 	return 0;
@@ -1203,8 +1248,19 @@ int fset(lua_State* L) {
 	return 0;
 }
 
+int dset(lua_State* L) {
+	int index = luaL_checkinteger(L, 1);
+	int value = luaL_checkinteger(L, 2);
+
+	memory_write_int(ADDR_PERSISTENT + index * 4, value);
+
+	return 0;
+}
+
 int dget(lua_State* L) {
-	lua_pushinteger(L, 0);
+	int index = luaL_checkinteger(L, 1);
+
+	lua_pushinteger(L, memory_read_int(ADDR_PERSISTENT + index * 4));
 
 	return 1;
 }
@@ -1320,6 +1376,28 @@ int clip(lua_State* L) {
 	return 4;
 }
 
+int memset(lua_State* L) {
+	int destaddr = lua_tonumber(L, 1);
+	unsigned char val = lua_tonumber(L, 2);
+	int len = lua_tonumber(L, 3);
+
+	for (int i = 0; i < len; i++) {
+		poke_memory(destaddr + i, val);
+	}
+
+	return 0;
+}
+
+int stat(lua_State* L) {
+	int n = luaL_checkinteger(L, 1);
+
+	alert_todo("stat(" + std::to_string(n) + ")");
+
+	lua_pushinteger(L, 0);
+	return 1;
+}
+
 int noop(lua_State* L) {
+	alert_todo("noop");
 	return 0;
 }
