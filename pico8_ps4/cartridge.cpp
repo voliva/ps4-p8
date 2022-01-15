@@ -300,14 +300,24 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 const std::string assignmentOperators[] = { "-", "+", "/", "*", ".." };
 
 int find_end_of_statement(std::string s) {
-    int pos = s.find_first_not_of(WHITESPACE);
+    int pos = s.find(";");
+    if (pos != std::string::npos) {
+        return pos;
+    }
+        
+    pos = s.find_first_not_of(WHITESPACE);
     if (pos == std::string::npos) {
         return -1;
     }
+
     bool found_operator;
     do {
-        // Eat the first value
-        if (s[pos] == '(') {
+        // case `x += shr(12)`: We can't look straight for the next whitespace, we need to follow the brackets instead
+        int parens_pos = s.find_first_of("(", pos);
+        int whitespace_pos = s.find_first_of(WHITESPACE, pos);
+
+        if (parens_pos != std::string::npos && (whitespace_pos == std::string::npos || parens_pos < whitespace_pos)) {
+            pos = parens_pos;
             int parens = 1;
             while (parens > 0 || pos == s.length()) {
                 pos++;
@@ -324,7 +334,7 @@ int find_end_of_statement(std::string s) {
             pos++;
         }
         else {
-            pos = s.find_first_of(WHITESPACE, pos);
+            pos = whitespace_pos;
         }
 
         pos = s.find_first_not_of(WHITESPACE, pos);
@@ -413,8 +423,8 @@ std::string p8lua_to_std_lua(std::string& s) {
             /*
             * We can't just unroll x -= k to x = x - k, because this case:
             * value -= 3 + 2
-            * should become `value = value - (3 + 2)`
-            * But we can't put parenthesis on "the rest of the line", because this is valid:
+            * would become `value = value - 3 + 2`, but it should become `value = value - (3 + 2)` instead.
+            * But we can't put parenthesis on "the rest of the line", because this is also valid lua:
             * x -= 2     x -= 3
             * x -= 2 + y x -= 3
             * One idea I had is to break it down into many statements, adding in a temporary variable.
@@ -429,10 +439,10 @@ std::string p8lua_to_std_lua(std::string& s) {
             pos = 0;
             while ((pos = line.find(assignment)) != std::string::npos) {
                 int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
-                int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE);
+                int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE) + 1;
 
                 std::string code_before_assignment = line.substr(0, pos);
-                std::string variable_name = line.substr(last_word_start, pos - last_word_start);
+                std::string variable_name = line.substr(last_word_start, pos - last_word_start - 1);
                 std::string code_after_assignment = line.substr(pos + 2);
 
                 pos = find_end_of_statement(code_after_assignment);

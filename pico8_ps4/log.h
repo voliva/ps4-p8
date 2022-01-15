@@ -6,7 +6,7 @@
 
 class Log;
 
-#define ENDL "\n";
+#define ENDL "\n"
 
 class Logger
 {
