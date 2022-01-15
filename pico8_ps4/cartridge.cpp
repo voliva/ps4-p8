@@ -266,18 +266,8 @@ std::string replace_escape_chars(std::string& line) {
             if (string_char == 0) {
                 // Assume integer division
                 line.replace(i, 1, "//");
-            }
-            else if ('0' <= line[i + 1] && line[i + 1] <= '9') {
-                std::string num = "";
-                for (int j = 1; j <= 3 && '0' <= line[i + j] && line[i + j] <= '9' && i+j < line.size(); j++) {
-                    num += line[i + j];
-                }
-
-                unsigned char c = std::stoi(num);
-                if (c >= SPECIAL_CHAR_OFFSET) {
-                    line.replace(i, 1 + num.size(), "" + (char)c);
-                }
             } else {
+                // We don't need to replace special characters e.g. \126, lua already parses them correctly
                 char next = line[i + 1];
                 if (next == '\\') {
                     line.replace(i, 2, "\\\\/" + next);

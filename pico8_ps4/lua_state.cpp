@@ -61,6 +61,8 @@ int dget(lua_State* L);
 int shr(lua_State* L);
 int shl(lua_State* L);
 int printh(lua_State* L);
+int sget(lua_State* L);
+int sset(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -169,6 +171,10 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "shl");
 	lua_pushcfunction(this->state, printh);
 	lua_setglobal(this->state, "printh");
+	lua_pushcfunction(this->state, sget);
+	lua_setglobal(this->state, "sget");
+	lua_pushcfunction(this->state, sset);
+	lua_setglobal(this->state, "sset");
 
 	// It needs to count from the end of the table in case the elements get removed in-between
 	std::string all =
@@ -1221,6 +1227,50 @@ int printh(lua_State* L) {
 	std::string str = luaL_checkstring(L, 1);
 
 	DEBUGLOG << str << ENDL;
+
+	return 0;
+}
+
+int sget(lua_State* L) {
+	unsigned int x = lua_tointeger(L, 1);
+	unsigned int y = lua_tointeger(L, 2);
+
+	if (x > 127 || y > 127) {
+		lua_pushinteger(L, 0);
+	}
+	else {
+		unsigned char pair = p8_memory[ADDR_SPRITE_SHEET + (y * 128 + x) / 2];
+		if (x % 2 == 0) {
+			unsigned char left = pair & 0x0F;
+			lua_pushinteger(L, left);
+		}
+		else {
+			unsigned char right = pair >> 4;
+			lua_pushinteger(L, right);
+		}
+	}
+
+	return 1;
+}
+
+int sset(lua_State* L) {
+	unsigned int x = lua_tointeger(L, 1);
+	unsigned int y = lua_tointeger(L, 2);
+	unsigned char color = luaL_optinteger(L, 3, p8_memory[ADDR_DS_COLOR]) & 0x0F;
+
+	if (x > 127 || y > 127) {
+		return 0;
+	}
+
+	int addr = ADDR_SPRITE_SHEET + (y * 128 + x) / 2;
+	if (x % 2 == 0) {
+		// Update left - Least significant bits.
+		p8_memory[addr] = (p8_memory[addr] & 0xF0) | color;
+	}
+	else {
+		// Update right - Most significant bits.
+		p8_memory[addr] = (p8_memory[addr] & 0x0F) | (color << 4);
+	}
 
 	return 0;
 }
