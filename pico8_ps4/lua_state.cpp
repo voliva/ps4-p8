@@ -179,6 +179,7 @@ LuaState::LuaState()
 	// It needs to count from the end of the table in case the elements get removed in-between
 	std::string all =
 		"function all(t) \
+			if t == nil then return function() end end \
 			local n = #t \
 			return function() \
 				local v = nil \
