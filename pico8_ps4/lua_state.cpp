@@ -63,6 +63,7 @@ int shl(lua_State* L);
 int printh(lua_State* L);
 int sget(lua_State* L);
 int sset(lua_State* L);
+int clip(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -175,6 +176,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "sget");
 	lua_pushcfunction(this->state, sset);
 	lua_setglobal(this->state, "sset");
+	lua_pushcfunction(this->state, clip);
+	lua_setglobal(this->state, "clip");
 
 	// It needs to count from the end of the table in case the elements get removed in-between
 	std::string all =
@@ -1274,6 +1277,47 @@ int sset(lua_State* L) {
 	}
 
 	return 0;
+}
+
+int clip(lua_State* L) {
+	int x = luaL_optnumber(L, 1, 0);
+	int y = luaL_optnumber(L, 2, 0);
+	int w = luaL_optnumber(L, 3, P8_WIDTH-1);
+	int h = luaL_optnumber(L, 4, P8_HEIGHT-1);
+	bool clip_previous = lua_toboolean(L, 5);
+
+	int x_end = x + w - 1;
+	int y_end = y + h - 1;
+
+	int px = p8_memory[ADDR_DS_CLIP_RECT];
+	int py = p8_memory[ADDR_DS_CLIP_RECT + 1];
+	int px_end = p8_memory[ADDR_DS_CLIP_RECT + 2];
+	int py_end = p8_memory[ADDR_DS_CLIP_RECT + 3];
+	int pw = px_end - px + 1;
+	int ph = py_end - py + 1;
+
+	x = std::max(0, std::min(x, P8_WIDTH - 1));
+	y = std::max(0, std::min(y, P8_WIDTH - 1));
+	x_end = std::max(0, std::min(x_end, P8_WIDTH - 1));
+	y_end = std::max(0, std::min(y_end, P8_WIDTH - 1));
+
+	if (clip_previous) {
+		x = std::max(x, px);
+		y = std::max(y, py);
+		x_end = std::min(x_end, px_end);
+		y_end = std::min(y_end, py_end);
+	}
+
+	p8_memory[ADDR_DS_CLIP_RECT] = x;
+	p8_memory[ADDR_DS_CLIP_RECT + 1] = y;
+	p8_memory[ADDR_DS_CLIP_RECT + 2] = x_end;
+	p8_memory[ADDR_DS_CLIP_RECT + 3] = y_end;
+
+	lua_pushinteger(L, px);
+	lua_pushinteger(L, py);
+	lua_pushinteger(L, pw);
+	lua_pushinteger(L, ph);
+	return 4;
 }
 
 int noop(lua_State* L) {
