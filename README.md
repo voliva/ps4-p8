@@ -25,6 +25,8 @@ More .p8.png cartridges can be bundled with the .pkg file by adding them into `/
 - Maps: Done
 - Custom P8-Lua: WIP
 
+A list of some playable cartridges can be found [here](https://github.com/voliva/ps4-p8/blob/main/PlayableCartridges.md)
+
 ## Building
 
 The project is cross-platform for Windows + PS4.
