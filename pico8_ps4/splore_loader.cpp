@@ -3,8 +3,8 @@
 #include <stb/stb_image.h>
 #include "log.h"
 
-#define DEBUGLOG Splore_DEBUGLOG
-Log DEBUGLOG = logger.log("Splore");
+#define DEBUGLOG SploreLoader_DEBUGLOG
+Log DEBUGLOG = logger.log("SploreLoader");
 
 /*
 http://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=harold-4

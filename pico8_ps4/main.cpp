@@ -51,20 +51,9 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory);
 
 #include "http.h"
 #include "splore_loader.h"
+#include "splore.h"
 int main(void)
 {
-	/*http_init();
-	DEBUGLOG << "Making request" << ENDL;
-	DEBUGLOG << http_get_string("https://www.lexaloffle.com/bbs/?cat=7&carts_tab=1#mode=carts&sub=2") << ENDL;
-	*/
-	/*
-	std::string folder = CARTRIDGE_FOLDER;
-	load_from_png(folder + "/cpost_lister3.png");
-	*/
-	splore_get_featured();
-
-	return -1;
-
 	DEBUGLOG << "Initializing renderer..." << ENDL;
 	renderer = new Renderer();
 
@@ -87,6 +76,10 @@ int main(void)
 
 	std::vector<LocalCartridge> bundledCartridges = load_local_cartridges(BUNDLED_FOLDER);
 	std::vector<LocalCartridge> localCartridges = load_local_cartridges(CARTRIDGE_FOLDER);
+	std::vector<LocalCartridge> fakeBbs;
+	fakeBbs.push_back(LocalCartridge{
+		NULL, ""
+	});
 
 	Screen screens[] = {
 		Screen{
@@ -97,8 +90,12 @@ int main(void)
 			"local",
 			localCartridges
 		},
-		// TODO BBS
+		Screen{
+			"bbs",
+			fakeBbs
+		},
 	};
+	Splore splore;
 	int currentScreen = 1;
 	if (localCartridges.size() == 0) {
 		currentScreen = 0;
@@ -117,10 +114,10 @@ int main(void)
 		}
 		bool canDecScreen = prevScreen >= 0;
 		int nextScreen = currentScreen + 1;
-		while (nextScreen < 2 && screens[nextScreen].cartridges.size() == 0) {
+		while (nextScreen < 3 && screens[nextScreen].cartridges.size() == 0) {
 			nextScreen++;
 		}
-		bool canIncScreen = nextScreen < 2;
+		bool canIncScreen = nextScreen < 3;
 
 		while (SDL_PollEvent(&e) != 0)
 		{
@@ -128,7 +125,8 @@ int main(void)
 				quit = true;
 			}
 
-			switch (getKeyDown(e)) {
+			Key k = getKeyDown(e);
+			switch (k) {
 			case Key::L2:
 				if (canDecScreen) {
 					currentScreen = prevScreen;
@@ -141,24 +139,36 @@ int main(void)
 					currentScreen = nextScreen;
 					selectedCart = 0;
 					renderingTargetCart = 0;
+
+					if (currentScreen == 2) {
+						splore.initialize();
+					}
 				}
 				break;
-			case Key::left:
-				if (selectedCart == 0) break;
-				selectedCart--;
-				break;
-			case Key::right:
-				if (selectedCart == screens[currentScreen].cartridges.size() - 1) break;
-				selectedCart++;
-				break;
-			case Key::cross:
-				Cartridge* r = load_from_png(screens[currentScreen].cartridges[selectedCart].path);
-				runningCart->load(r);
-				runningCart->run();
-				delete r;
-				SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
-				SDL_RenderSetViewport(renderer->renderer, NULL);
-				break;
+			}
+
+			if (currentScreen == 2) {
+				splore.key_down(k);
+			}
+			else {
+				switch (k) {
+				case Key::left:
+					if (selectedCart == 0) break;
+					selectedCart--;
+					break;
+				case Key::right:
+					if (selectedCart == screens[currentScreen].cartridges.size() - 1) break;
+					selectedCart++;
+					break;
+				case Key::cross:
+					Cartridge* r = load_from_png(screens[currentScreen].cartridges[selectedCart].path);
+					runningCart->load(r);
+					runningCart->run();
+					delete r;
+					SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
+					SDL_RenderSetViewport(renderer->renderer, NULL);
+					break;
+				}
 			}
 		}
 
@@ -201,44 +211,49 @@ int main(void)
 			font->sys_print("r2>", 2 * FRAME_WIDTH / 3, 30);
 		}
 
-		for (int i = 0; i < scr.cartridges.size(); i++) {
-			double rendering_diff = fabs(renderingTargetCart - i);
-			if (rendering_diff > 2.2) {
-				continue;
-			}
-
-			SDL_Texture* srf = scr.cartridges[i].surface;
-			int width = 160 * ((double)CAROUSEL_CART_HEIGHT / 205);
-
-			int alpha = 255 - 255 * rendering_diff / 2.2;
-			if (alpha < 0) alpha = 0;
-			SDL_SetTextureAlphaMod(srf, alpha);
-
-			double scale = 1.2 - 0.2 * rendering_diff;
-			if (scale < 1) scale = 1;
-
-			int x_center = FRAME_WIDTH / 2 + (width + 100) * ((double)i - renderingTargetCart);
-			double x = x_center - width * scale / 2;
-			double y = 30 + SYS_CHAR_HEIGHT + 100 + (1 - scale) * CAROUSEL_CART_HEIGHT / 2;
-			double w = (double)width * scale;
-			double h = (double)CAROUSEL_CART_HEIGHT * scale;
-
-			SDL_Rect dest {
-				(int)x,
-				(int)y,
-				(int)w,
-				(int)h
-			};
-			SDL_RenderCopy(renderer->renderer, srf, NULL, &dest);
+		if (currentScreen == 2) {
+			splore.render();
 		}
-		std::string currentPath = scr.cartridges[round(renderingTargetCart)].path;
-		std::string filename = currentPath.substr(currentPath.find_last_of("/") + 1);
-		std::string name = filename.substr(0, filename.length() - 7);
-		font->sys_print(
-			name,
-			(FRAME_WIDTH - SYS_CHAR_WIDTH * name.length()) / 2,
-			30 + SYS_CHAR_HEIGHT + 100 + CAROUSEL_CART_HEIGHT + 100
-		);
+		else {
+			for (int i = 0; i < scr.cartridges.size(); i++) {
+				double rendering_diff = fabs(renderingTargetCart - i);
+				if (rendering_diff > 2.2) {
+					continue;
+				}
+
+				SDL_Texture* srf = scr.cartridges[i].surface;
+				int width = 160 * ((double)CAROUSEL_CART_HEIGHT / 205);
+
+				int alpha = 255 - 255 * rendering_diff / 2.2;
+				if (alpha < 0) alpha = 0;
+				SDL_SetTextureAlphaMod(srf, alpha);
+
+				double scale = 1.2 - 0.2 * rendering_diff;
+				if (scale < 1) scale = 1;
+
+				int x_center = FRAME_WIDTH / 2 + (width + 100) * ((double)i - renderingTargetCart);
+				double x = x_center - width * scale / 2;
+				double y = 30 + SYS_CHAR_HEIGHT + 100 + (1 - scale) * CAROUSEL_CART_HEIGHT / 2;
+				double w = (double)width * scale;
+				double h = (double)CAROUSEL_CART_HEIGHT * scale;
+
+				SDL_Rect dest{
+					(int)x,
+					(int)y,
+					(int)w,
+					(int)h
+				};
+				SDL_RenderCopy(renderer->renderer, srf, NULL, &dest);
+			}
+			std::string currentPath = scr.cartridges[round(renderingTargetCart)].path;
+			std::string filename = currentPath.substr(currentPath.find_last_of("/") + 1);
+			std::string name = filename.substr(0, filename.length() - 7);
+			font->sys_print(
+				name,
+				(FRAME_WIDTH - SYS_CHAR_WIDTH * name.length()) / 2,
+				30 + SYS_CHAR_HEIGHT + 100 + CAROUSEL_CART_HEIGHT + 100
+			);
+		}
 
 		SDL_UpdateWindowSurface(renderer->window);
 	}
