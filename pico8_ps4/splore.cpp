@@ -2,6 +2,8 @@
 #include "log.h"
 #include "font.h"
 #include "renderer.h"
+#include "cartridge.h"
+#include "running-cart.h"
 
 #define DEBUGLOG Splore_DEBUGLOG
 Log DEBUGLOG = logger.log("Splore");
@@ -38,14 +40,14 @@ void Splore::key_down(Key k)
 		if (this->focus == this->cartridges.size() - 1) break;
 		this->focus++;
 		break;
-	/*case Key::cross:
-		Cartridge* r = load_from_png(screens[currentScreen].cartridges[selectedCart].path);
+	case Key::cross:
+		Cartridge* r = load_from_url("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + this->cartridges[this->focus].lid);
 		runningCart->load(r);
 		runningCart->run();
 		delete r;
 		SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
 		SDL_RenderSetViewport(renderer->renderer, NULL);
-		break;*/
+		break;
 	}
 }
 

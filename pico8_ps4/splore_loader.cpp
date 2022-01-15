@@ -25,9 +25,9 @@ SploreResult* splore_get_featured()
 {
     int width, height, channels;
 
-    /*std::vector<unsigned char> png_data = http_get("http://www.lexaloffle.com/bbs/cpost_lister3.php?max=32&start_index=0&cat=7&sub=2&orderby=rating&version=000204w&cfil=0");
-    unsigned char* data = stbi_load_from_memory(&png_data[0], png_data.size(), &width, &height, &channels, STBI_rgb_alpha);*/
-    unsigned char* data = stbi_load("../p8-cartridges/cpost_lister3.png", &width, &height, &channels, STBI_rgb_alpha);
+    std::vector<unsigned char> png_data = http_get("http://www.lexaloffle.com/bbs/cpost_lister3.php?max=32&start_index=0&cat=7&sub=2&orderby=rating&version=000204w&cfil=0");
+    unsigned char* data = stbi_load_from_memory(&png_data[0], png_data.size(), &width, &height, &channels, STBI_rgb_alpha);
+    // unsigned char* data = stbi_load("../p8-cartridges/cpost_lister3.png", &width, &height, &channels, STBI_rgb_alpha);
 
     SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(data, width, height, 4 * 8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
 
