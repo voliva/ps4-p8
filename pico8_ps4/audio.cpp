@@ -260,6 +260,7 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 
 		if (channel == -1) {
 			DEBUGLOG << "No channel available to play sfx. Skipping" << ENDL;
+			SDL_UnlockAudioDevice(this->deviceId);
 			return;
 		}
 	}
@@ -625,16 +626,22 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 	channel->previousSample2 = stream[length - 2] - prevValue2;
 	channel->previousSample = stream[length - 1] - prevValue;
 
+	// Now there's two possibilities, derived from `int length = std::min(...)`: We wither have finished the current note or not
+	// If we have finished the note, then it probably means we need to fill out the rest of the buffer with the next note.
 	if (channel->offset == end_of_note) {
-		int next_note = current_index + 1;
 		if (channel->music_timing > 0) {
+			// This channel is the one that times the music - notify if necessary
 			channel->music_timing--;
 			if (channel->music_timing == 0) {
 				audioManager->music_notifier.push(true);
+				channel->sfx = -1;
+				channel->offset = 0;
+				return length;
 			}
 		}
 
 		// Look for loop so we can start putting data from the next loop beginning.
+		int next_note = current_index + 1;
 		if (sfx.loopEnd == next_note) {
 			channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
 			int t = audio_cb_channel(channel, &stream[length], data_points - length);
@@ -643,15 +650,14 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 
 		// If we don't have more notes to play, finish here
 		bool has_more = false;
-		for (int i = current_index + 1; i < NOTE_AMOUNT && !has_more; i++) {
+		for (int i = next_note; i < NOTE_AMOUNT && !has_more; i++) {
 			has_more = sfx.notes[i].volume > 0;
 		}
 
-		if (!has_more && sfx.loopEnd < NOTE_AMOUNT) {
-			if (channel->music_timing < 0) {
-				channel->sfx = -1;
-				channel->offset = 0;
-			}
+		if (!has_more && sfx.loopEnd <= current_index && channel->music_timing < 0) {
+			// We're done if we don't have more notes, the loopEnd is in the past, and it's not timing music
+			channel->sfx = -1;
+			channel->offset = 0;
 		}
 		else if(length < data_points) {
 			// Try to fill in as much as posible from the next note
