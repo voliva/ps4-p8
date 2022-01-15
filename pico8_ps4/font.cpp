@@ -208,7 +208,9 @@ void Font::sys_print(std::string c, int x, int y, double scale)
 		CharData charData = this->charData[character];
 
 		if (charData.coords.size() == 0) {
-			return;
+			start++;
+			x += (charData.size + 1) * SYS_SCALE * scale;
+			continue;
 		}
 
 		for (int i = 0; i < charData.coords.size(); i++) {

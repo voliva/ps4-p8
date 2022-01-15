@@ -9,20 +9,12 @@
 #include <sstream>
 #include <map>
 #include "events.h"
+#include "http.h"
 
 std::string p8lua_to_std_lua(std::string& s);
 std::string decompress_lua(std::vector<unsigned char> &compressed_lua);
 
-Cartridge *load_from_png(std::string path)
-{
-    int width, height, channels;
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-
-    if (data == NULL) {
-        logger << "Couldn't open file " << path << ": " << stbi_failure_reason() << ENDL;
-        return NULL;
-    }
-
+Cartridge* load_from_memory(unsigned char* data, int width, int height) {
     std::vector<unsigned char> p8_bytes(width * height);
 
     for (int y = 0; y < height; y++) {
@@ -50,6 +42,33 @@ Cartridge *load_from_png(std::string path)
     ret->lua = p8lua_to_std_lua(p8_lua);
 
     return ret;
+}
+
+Cartridge* load_from_png(std::string path)
+{
+    int width, height, channels;
+    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+
+    if (data == NULL) {
+        logger << "Couldn't open file " << path << ": " << stbi_failure_reason() << ENDL;
+        return NULL;
+    }
+
+    return load_from_memory(data, width, height);
+}
+
+Cartridge* load_from_url(std::string url)
+{
+    int width, height, channels;
+    std::vector<unsigned char> png_data = http_get(url);
+    unsigned char* data = stbi_load_from_memory(&png_data[0], png_data.size(), &width, &height, &channels, STBI_rgb_alpha);
+
+    if (data == NULL) {
+        logger << "Couldn't load from url " << url << ": " << stbi_failure_reason() << ENDL;
+        return NULL;
+    }
+
+    return load_from_memory(data, width, height);
 }
 
 class BinaryReader {

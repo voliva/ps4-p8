@@ -7,7 +7,7 @@
 
 #define SYS_SCALE 10
 #define SYS_CHAR_WIDTH SYS_SCALE * 4
-#define SYS_CHAR_HEIGHT SYS_SCALE * 4
+#define SYS_CHAR_HEIGHT SYS_SCALE * 6
 
 typedef struct {
 	int size;

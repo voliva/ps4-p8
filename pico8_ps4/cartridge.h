@@ -12,3 +12,4 @@ typedef struct {
 } Cartridge;
 
 Cartridge *load_from_png(std::string path);
+Cartridge *load_from_url(std::string url);
