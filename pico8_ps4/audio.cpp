@@ -539,6 +539,21 @@ void AudioManager::poke(unsigned short addr, unsigned char value)
 	// Does nothing
 }
 
+int AudioManager::getCurrentIndex(int c)
+{
+	if (this->channels[c].sfx == -1) {
+		return -1;
+	}
+
+	P8_SFX sfx = get_sfx(this->channels[c].sfx);
+	return this->channels[c].offset / (sfx.speed * P8_TICKS_PER_T);
+}
+
+int AudioManager::getActivePattern()
+{
+	return this->pattern;
+}
+
 void AudioManager::music_loop()
 {
 	bool dummy;

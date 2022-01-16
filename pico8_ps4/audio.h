@@ -38,6 +38,9 @@ public:
 	void stopChannel(int channel);
 	void poke(unsigned short addr, unsigned char value);
 
+	int getCurrentIndex(int channel);
+	int getActivePattern();
+
 	Channel channels[4];
 
 	ConcurrentQueue<bool> music_notifier;

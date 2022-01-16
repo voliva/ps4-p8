@@ -38,7 +38,9 @@ int deli(lua_State* L);
 int noop(lua_State* L);
 int time(lua_State* L);
 int type(lua_State* L);
+int pget(lua_State* L);
 int pset(lua_State* L);
+int fillp(lua_State* L);
 int line(lua_State* L);
 int rect(lua_State* L);
 int rectfill(lua_State* L);
@@ -129,8 +131,12 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "time");
 	lua_pushcfunction(this->state, type);
 	lua_setglobal(this->state, "type");
+	lua_pushcfunction(this->state, pget);
+	lua_setglobal(this->state, "pget");
 	lua_pushcfunction(this->state, pset);
 	lua_setglobal(this->state, "pset");
+	lua_pushcfunction(this->state, fillp);
+	lua_setglobal(this->state, "fillp");
 	lua_pushcfunction(this->state, line);
 	lua_setglobal(this->state, "line");
 	lua_pushcfunction(this->state, rect);
@@ -445,6 +451,23 @@ int pset(lua_State* L) {
 	return 0;
 }
 
+int pget(lua_State* L) {
+	int x = luaL_checknumber(L, 1);
+	int y = luaL_checknumber(L, 2);
+
+	lua_pushinteger(L, renderer->get_pixel(x, y));
+
+	return 1;
+}
+
+int fillp(lua_State* L) {
+	int pat = luaL_optinteger(L, 1, 0);
+
+	memory_write_short(ADDR_DS_FILL_PAT, pat);
+
+	return 0;
+}
+
 int line(lua_State* L) {
 	int x0 = luaL_checknumber(L, 1);
 	int y0 = luaL_checknumber(L, 2);
@@ -485,7 +508,6 @@ int rect(lua_State* L) {
 }
 
 int ovalfill(lua_State* L) {
-	alert_todo("ovalfill");
 	int x0 = luaL_checknumber(L, 1);
 	int y0 = luaL_checknumber(L, 2);
 	int x1 = luaL_checknumber(L, 3);
@@ -512,7 +534,6 @@ int oval(lua_State* L) {
 }
 
 int circfill(lua_State* L) {
-	alert_todo("circfill");
 	int x = luaL_checknumber(L, 1);
 	int y = luaL_checknumber(L, 2);
 	int r = luaL_optnumber(L, 3, 4);
@@ -1390,6 +1411,28 @@ int memset(lua_State* L) {
 
 int stat(lua_State* L) {
 	int n = luaL_checkinteger(L, 1);
+
+	if (16 <= n && n <= 26) {
+		// Deprecated, bump to 46..56
+		n += 30;
+	}
+
+	if (46 <= n && n <= 49) {
+		unsigned char c = n - 46;
+		// Get SFX playing on channel c
+		lua_pushinteger(L, audioManager->channels[c].sfx);
+		return 1;
+	}
+	if (50 <= n && n <= 53) {
+		unsigned char c = n - 50;
+		// Get Note number playing on channel c
+		lua_pushinteger(L, audioManager->getCurrentIndex(c));
+		return 1;
+	}
+	if (n == 54) {
+		lua_pushinteger(L, audioManager->getActivePattern());
+		return 1;
+	}
 
 	alert_todo("stat(" + std::to_string(n) + ")");
 

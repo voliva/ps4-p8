@@ -5,6 +5,7 @@
 #include <thread>
 #include "efla.e.h"
 #include <math.h>
+#include <functional>
 
 std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input);
 
@@ -174,21 +175,6 @@ void Renderer::clear_screen(unsigned char color)
 	memset(&p8_memory[ADDR_SCREEN], color, 0x2000);
 }
 
-// Screen cooridantes (after camera transform!)
-bool is_y_drawable(int y) {
-	unsigned char y0 = p8_memory[ADDR_DS_CLIP_RECT + 1];
-	unsigned char y1 = p8_memory[ADDR_DS_CLIP_RECT + 3];
-	return y0 <= y && y <= y1;
-}
-bool is_x_drawable(int x) {
-	unsigned char x0 = p8_memory[ADDR_DS_CLIP_RECT];
-	unsigned char x1 = p8_memory[ADDR_DS_CLIP_RECT + 2];
-	return (x0 <= x && x <= x1);
-}
-bool is_drawable(int x, int y) {
-	return is_x_drawable(x) && is_y_drawable(y);
-}
-
 void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned char layer)
 {
 	for (int y = 0; y < ch; y++) {
@@ -258,15 +244,29 @@ void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int
 			else {
 				color = color >> 4;
 			}
-			this->set_transform_pixel(dx + _x, dy + _y, color, true);
+
+			unsigned char mapped_color = this->get_screen_color(color);
+			// Skip if it's transparent
+			if (mapped_color >= 0x10) {
+				continue;
+			}
+			Renderer_Point sc = this->coord_to_screen(dx + _x, dy + _y);
+			if(this->is_drawable(sc.x, sc.y)) {
+				this->set_pixel(sc.x, sc.y, mapped_color);
+			}
 		}
 	}
 }
 
 void Renderer::draw_point(int x, int y)
 {
-	unsigned char color = p8_memory[ADDR_DS_COLOR] & 0x0F;
-	this->set_transform_pixel(x, y, color, false);
+	unsigned char color = p8_memory[ADDR_DS_COLOR];
+	unsigned short pattern = memory_read_short(ADDR_DS_FILL_PAT);
+	Renderer_Point sc = this->coord_to_screen(x, y);
+	unsigned char mapped_color = this->get_screen_pat_color(color, pattern, sc.x, sc.y);
+	if (this->is_drawable(sc.x, sc.y)) {
+		this->set_pixel(sc.x, sc.y, mapped_color);
+	}
 }
 
 void Renderer::draw_points(std::vector<Renderer_Point>& points)
@@ -282,13 +282,33 @@ void Renderer::draw_line(int x0, int y0, int x1, int y1)
 	this->draw_points(points);
 }
 
-// TODO fill + pattern
 void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 {
 	int width = x1 - x0;
 	int height = y1 - y0;
 	double mid_x = x0 + (double)width / 2;
 	double mid_y = y0 + (double)height / 2;
+
+	std::function<void(double, double)> draw_all = [width, height, mid_x, mid_y, this](double x_t, double y_t) {
+		int x2 = round(mid_x + x_t * width / 2);
+		int x3 = round(mid_x - x_t * width / 2);
+		int y2 = round(mid_y + y_t * height / 2);
+		int y3 = round(mid_y - y_t * height / 2);
+		this->draw_point(x2, y2);
+		this->draw_point(x2, y3);
+		this->draw_point(x3, y2);
+		this->draw_point(x3, y3);
+	};
+	if (fill) {
+		draw_all = [width, height, mid_x, mid_y, this](double x_t, double y_t) {
+			int x2 = round(mid_x + x_t * width / 2);
+			int x3 = round(mid_x - x_t * width / 2);
+			int y2 = round(mid_y + y_t * height / 2);
+			int y3 = round(mid_y - y_t * height / 2);
+			this->draw_line(x2, y2, x2, y3);
+			this->draw_line(x3, y2, x3, y3);
+		};
+	}
 
 	// The second part of this formula was taken temptatively.... halfway_t is cos(M_PI/4) for circles, but not for ellipses where they are squished
 	// On the limit when width or height = 0, then it needs to go all the way from 0..1. So this seems to work.
@@ -298,14 +318,7 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 		double y_t = 2 * (double)dy / height; // dy/(height/2) = 2*dy/height
 		double x_t = sqrt(1 - y_t * y_t);
 
-		int x2 = round(mid_x + x_t * width / 2);
-		int x3 = round(mid_x - x_t * width / 2);
-		int y2 = round(mid_y + dy);
-		int y3 = round(mid_y - dy);
-		this->draw_point(x2, y2);
-		this->draw_point(x2, y3);
-		this->draw_point(x3, y2);
-		this->draw_point(x3, y3);
+		draw_all(x_t, y_t);
 	}
 	
 	int halfway_w = ceil(halfway_t * width / 2);
@@ -313,72 +326,33 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 		double x_t = 2 * (double)dx / width;
 		double y_t = sqrt(1 - x_t * x_t);
 
-		int x2 = round(mid_x + x_t * width / 2);
-		int x3 = round(mid_x - x_t * width / 2);
-		int y2 = round(mid_y + y_t * height / 2);
-		int y3 = round(mid_y - y_t * height / 2);
-		this->draw_point(x2, y2);
-		this->draw_point(x2, y3);
-		this->draw_point(x3, y2);
-		this->draw_point(x3, y3);
+		draw_all(x_t, y_t);
 	}
 }
 
 void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 {
-	unsigned char color = p8_memory[ADDR_DS_COLOR] & 0x0F;
-
-	// TODO pattern
-
-	int start_x = x0 - (short)memory_read_short(ADDR_DS_CAMERA_X);
-	int end_x = x1 - (short)memory_read_short(ADDR_DS_CAMERA_X);
-	int start_y = y0 - (short)memory_read_short(ADDR_DS_CAMERA_Y);
-	int end_y = y1 - (short)memory_read_short(ADDR_DS_CAMERA_Y);
-
 	if (fill) {
-		unsigned char mapped_color = p8_memory[ADDR_DS_DRAW_PAL + color] & 0x0F;
-		mapped_color = mapped_color | (mapped_color << 4);
-		int clipped_sx = std::max(start_x, (int)p8_memory[ADDR_DS_CLIP_RECT]);
-		int clipped_ex = std::min(end_x, (int)p8_memory[ADDR_DS_CLIP_RECT+2]);
-		int clipped_sy = std::max(start_y, (int)p8_memory[ADDR_DS_CLIP_RECT+1]);
-		int clipped_ey = std::min(end_y, (int)p8_memory[ADDR_DS_CLIP_RECT+3]);
+		unsigned char color = p8_memory[ADDR_DS_COLOR];
+		unsigned short pattern = memory_read_short(ADDR_DS_FILL_PAT);
 
-		if (clipped_sx % 2 == 1) {
-			for (int y = clipped_sy; y <= clipped_ey; y++) {
-				int addr = ADDR_SCREEN + y * LINE_JMP + clipped_sx / 2;
-				p8_memory[addr] = (p8_memory[addr] & 0x0F) | (mapped_color << 4);
-			}
+		Renderer_Point sc_start = this->coord_to_screen(x0, y0);
+		Renderer_Point sc_end = this->coord_to_screen(x1, y1);
 
-			clipped_sx++;
-		}
-		// clipped_sx is now even: we can just fill in pairs
-		for (int x = clipped_sx; x < clipped_ex; x+=2) { // Excluding last row: If it ends on a even position, we need to manuall fill in the last column (next for loop)
-			for (int y = clipped_sy; y <= clipped_ey; y++) {
-				int addr = ADDR_SCREEN + y * LINE_JMP + x / 2;
-				p8_memory[addr] = mapped_color;
-			}
-		}
+		this->apply_clip(&sc_start.x, &sc_start.y, &sc_end.x, &sc_end.y);
 
-		if (clipped_ex % 2 == 0) {
-			for (int y = clipped_sy; y <= clipped_ey; y++) {
-				int addr = ADDR_SCREEN + y * LINE_JMP + clipped_ex / 2;
-				p8_memory[addr] = (p8_memory[addr] & 0xF0) | (mapped_color & 0x0F);
+		for (int y = sc_start.y; y <= sc_end.y; y++) {
+			for (int x = sc_start.x; x <= sc_end.x; x++) {
+				unsigned char mapped_color = this->get_screen_pat_color(color, pattern, x, y);
+				this->set_pixel(x, y, mapped_color);
 			}
 		}
 	}
 	else {
-		if (is_y_drawable(start_y) || is_y_drawable(end_y)) {
-			for (int x = x0; x <= x1; x++) {
-				this->set_transform_pixel(x, y0, color, false);
-				this->set_transform_pixel(x, y1, color, false);
-			}
-		}
-		if (is_x_drawable(start_x) || is_x_drawable(start_y)) {
-			for (int y = y0; y <= y1; y++) {
-				this->set_transform_pixel(x0, y, color, false);
-				this->set_transform_pixel(x1, y, color, false);
-			}
-		}
+		this->draw_line(x0, y0, x0, y1);
+		this->draw_line(x0, y1, x1, y1);
+		this->draw_line(x0, y0, x1, y0);
+		this->draw_line(x1, y0, x1, y1);
 	}
 }
 
@@ -478,24 +452,83 @@ void Renderer::present()
 	memcpy(this->prev_screen, &p8_memory[ADDR_SCREEN], SCREEN_MEMORY_SIZE);
 }
 
-void Renderer::set_transform_pixel(int x, int y, unsigned char color, bool transparency)
+void Renderer::set_pixel(int sx, int sy, unsigned char color)
 {
-	unsigned char mapped_color = p8_memory[ADDR_DS_DRAW_PAL + color];
-	// Skip if it's transparent
-	if (transparency && mapped_color >= 0x10) {
-		return;
+	color = color & 0x0F;
+	int addr = ADDR_SCREEN + sy * LINE_JMP + sx / 2;
+	if (sx % 2 == 0) {
+		p8_memory[addr] = (p8_memory[addr] & 0xF0) | color;
 	}
-	mapped_color = mapped_color & 0x0F;
+	else {
+		p8_memory[addr] = (p8_memory[addr] & 0x0F) | (color << 4);
+	}
+}
 
-	int screen_x = x - (short)memory_read_short(ADDR_DS_CAMERA_X);
-	int screen_y = y - (short)memory_read_short(ADDR_DS_CAMERA_Y);
-	if (is_drawable(screen_x, screen_y)) {
-		int addr = ADDR_SCREEN + screen_y * LINE_JMP + screen_x / 2;
-		if (screen_x % 2 == 0) {
-			p8_memory[addr] = (p8_memory[addr] & 0xF0) | mapped_color;
-		}
-		else {
-			p8_memory[addr] = (p8_memory[addr] & 0x0F) | (mapped_color << 4);
-		}
+unsigned char Renderer::get_pixel(int sx, int sy)
+{
+	int addr = ADDR_SCREEN + sy * LINE_JMP + sx / 2;
+	if (sx % 2 == 0) {
+		return p8_memory[addr] & 0x0F;
 	}
+	return p8_memory[addr] >> 4;
+}
+
+void Renderer::set_pixel_pair(int sx, int sy, unsigned char colors)
+{
+	int addr = ADDR_SCREEN + sy * LINE_JMP + sx / 2;
+	p8_memory[addr] = colors;
+}
+
+Renderer_Point Renderer::coord_to_screen(int x, int y)
+{
+	int sx = x - (short)memory_read_short(ADDR_DS_CAMERA_X);
+	int sy = y - (short)memory_read_short(ADDR_DS_CAMERA_Y);
+	return Renderer_Point{ x,y };
+}
+
+bool Renderer::is_y_drawable(int sy) {
+	unsigned char y0 = p8_memory[ADDR_DS_CLIP_RECT + 1];
+	unsigned char y1 = p8_memory[ADDR_DS_CLIP_RECT + 3];
+	return y0 <= sy && sy <= y1;
+}
+bool Renderer::is_x_drawable(int sx) {
+	unsigned char x0 = p8_memory[ADDR_DS_CLIP_RECT];
+	unsigned char x1 = p8_memory[ADDR_DS_CLIP_RECT + 2];
+	return (x0 <= sx && sx <= x1);
+}
+
+bool Renderer::is_drawable(int sx, int sy)
+{
+	return this->is_x_drawable(sx) && this->is_y_drawable(sy);
+}
+
+void Renderer::apply_clip(int* sx0, int* sy0, int* sxf, int* syf)
+{
+	unsigned char cx0 = p8_memory[ADDR_DS_CLIP_RECT];
+	unsigned char cy0 = p8_memory[ADDR_DS_CLIP_RECT + 1];
+	unsigned char cxf = p8_memory[ADDR_DS_CLIP_RECT + 2];
+	unsigned char cyf = p8_memory[ADDR_DS_CLIP_RECT + 3];
+
+	*sx0 = std::max(*sx0, (int)cx0);
+	*sy0 = std::max(*sy0, (int)cy0);
+	*sxf = std::min(*sxf, (int)cxf);
+	*syf = std::min(*syf, (int)cyf);
+}
+
+unsigned char Renderer::get_screen_color(unsigned char color)
+{
+	return p8_memory[ADDR_DS_DRAW_PAL + (color & 0x0F)];
+}
+
+unsigned char Renderer::get_screen_pat_color(unsigned char color, unsigned short pattern, int sx, int sy)
+{
+	unsigned char bit = 15 - ((sy % 4) * 4 + sx % 4);
+	unsigned short mask = 0x1 << bit;
+	unsigned short value = (pattern & mask) >> bit;
+
+	// 0 => 0x0F, 1 => 0xF0
+	unsigned char bitshift = value * 4;
+
+	color = (color & (0x0F << bitshift)) >> bitshift;
+	return this->get_screen_color(color);
 }

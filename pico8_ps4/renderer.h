@@ -42,6 +42,7 @@ public:
 	void draw_rectangle(int x0, int y0, int x1, int y1, bool fill);
 	void scroll(unsigned char lines);
 	bool will_be_drawn(int x, int y, int w, int h);
+	unsigned char get_pixel(int x, int y);
 
 	// Palette
 	void reset_draw_pal();
@@ -55,7 +56,22 @@ public:
 	SDL_Window* window;
 
 private:
-	void set_transform_pixel(int x, int y, unsigned char color, bool transparency);
+	void set_pixel(int sx, int sy, unsigned char color);
+	void set_pixel_pair(int sx, int sy, unsigned char colors);
+
+	// Camera
+	Renderer_Point coord_to_screen(int x, int y);
+
+	// Clip
+	bool is_x_drawable(int sx);
+	bool is_y_drawable(int sy);
+	bool is_drawable(int sx, int sy);
+	void apply_clip(int* sx0, int* sy0, int* sxf, int* syf);
+
+	// Screen color
+	unsigned char get_screen_color(unsigned char color);
+	unsigned char get_screen_pat_color(unsigned char color, unsigned short pattern, int sx, int sy);
+
 	unsigned char prev_screen[SCREEN_MEMORY_SIZE];
 };
 extern Renderer *renderer;

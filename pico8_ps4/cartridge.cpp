@@ -355,6 +355,35 @@ int find_end_of_statement(std::string s) {
     return pos;
 }
 
+std::map<unsigned char, unsigned short> char_to_pattern = {
+    {0x80, 0x0000}, //█
+    {0x81, 0xA5A5}, //▒
+    {0x82, 0xE1FA}, //🐱
+    {0x83, 0x0003}, //⬇️
+    {0x84, 0xD7D7}, //░
+    {0x85, 0x81DB}, //✽
+    {0x86, 0x99FF}, //
+    {0x87, 0xBF51}, //
+    {0x88, 0x5BFB}, //
+    {0x89, 0x99F9}, //
+    {0x8A, 0x11FB}, //
+    {0x8B, 0x0000}, //
+    {0x8C, 0x0E0A}, //
+    {0x8D, 0x9B3F}, // ♪
+    {0x8E, 0x0004}, //
+    {0x8F, 0xB1BF}, //
+    {0x90, 0x5FFF}, //
+    {0x91, 0x0001}, //
+    {0x92, 0xB15F}, //
+    {0x93, 0x1B1F}, //
+    {0x94, 0x0002}, //
+    {0x95, 0xF5BF}, //
+    {0x96, 0x7ADF}, //
+    {0x97, 0x0005}, //
+    {0x98, 0x0F0F}, //
+    {0x99, 0x5555}, // ▥
+};
+
 std::string p8lua_to_std_lua(std::string& s) {
     std::ostringstream out;
     std::istringstream in(s);
@@ -380,9 +409,11 @@ std::string p8lua_to_std_lua(std::string& s) {
             }
         }
 
-        // TODO fillp patterns
-        if (line.find("fillp(") != std::string::npos) {
-            line = "";
+        if ((pos = line.find("fillp(")) != std::string::npos) {
+            pos += 6;
+            if (char_to_pattern.count(line[pos]) > 0) {
+                line = line.substr(0, pos) + std::to_string(char_to_pattern[line[pos]]) + line.substr(pos+1);
+            }
         }
 
         // ?"..." => print("...")
