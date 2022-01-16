@@ -195,6 +195,16 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
                     length += part;
                 } while (part == 7);
                 unsigned int start = d_i - offset;
+
+                if (length > decompressed_length - d_i) {
+                    logger << "Error when decompressing: it would overflow the buffer" << ENDL;
+                    break;
+                }
+                if (start >= d_i) {
+                    logger << "Error when decompressing: reading from uninitialized data" << ENDL;
+                    break;
+                }
+
                 for (int i = 0; i < length; i++) {
                     decompressed[d_i++] = decompressed[start + i];
                 }
@@ -319,7 +329,7 @@ int find_end_of_statement(std::string s) {
         if (parens_pos != std::string::npos && (whitespace_pos == std::string::npos || parens_pos < whitespace_pos)) {
             pos = parens_pos;
             int parens = 1;
-            while (parens > 0 || pos == s.length()) {
+            while (parens > 0 && pos < s.length()-1) {
                 pos++;
                 if (s[pos] == '(') {
                     parens++;
@@ -513,7 +523,7 @@ std::string p8lua_to_std_lua(std::string& s) {
 
         // if something > 3then => if something > 3 then
         // WTF?!?
-        if (((pos = line.find("then")) != std::string::npos) &&
+        if (((pos = line.find("then")) != std::string::npos) && pos > 0 &&
             line[pos-1] >= '0' && line[pos-1] <= '9') {
             line = line.replace(pos, 0, " ");
         }

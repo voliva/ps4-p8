@@ -42,11 +42,8 @@ void Splore::key_down(Key k)
 		break;
 	case Key::cross:
 		Cartridge* r = load_from_url("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + this->cartridges[this->focus].lid);
-		runningCart->load(r);
-		runningCart->run();
+		run_cartridge(r);
 		delete r;
-		SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
-		SDL_RenderSetViewport(renderer->renderer, NULL);
 		break;
 	}
 }

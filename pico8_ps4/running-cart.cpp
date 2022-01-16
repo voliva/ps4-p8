@@ -214,3 +214,50 @@ void RunningCart::runOnce()
 		}
 	}
 }
+
+void blocking_alert(std::string str)
+{
+	int text_width = str.size() * SYS_CHAR_WIDTH;
+
+	SDL_SetRenderDrawColor(renderer->renderer, 0x00, 0x00, 0x00, 0xFF);
+	SDL_Rect rect{
+		(FRAME_WIDTH - (text_width + 20)) / 2,
+		(FRAME_HEIGHT - (SYS_CHAR_HEIGHT + 20)) / 2,
+		text_width + 20,
+		SYS_CHAR_HEIGHT + 20
+	};
+	SDL_RenderFillRect(renderer->renderer, &rect);
+	SDL_SetRenderDrawColor(renderer->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+	font->sys_print(str, rect.x + 10, rect.y + 10);
+	SDL_UpdateWindowSurface(renderer->window);
+
+	SDL_Event e;
+	bool quit = false;
+	while (!quit) {
+		if (SDL_PollEvent(&e) == 0) {
+			SDL_Delay(100);
+			continue;
+		}
+		if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE)) {
+			quit = true;
+		}
+
+		if (getKeyDown(e) == Key::cross) {
+			quit = true;
+		}
+	}
+}
+
+void run_cartridge(Cartridge* r)
+{
+	if (runningCart->load(r)) {
+		runningCart->run();
+		SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
+		SDL_RenderSetViewport(renderer->renderer, NULL);
+	}
+	else {
+		SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
+		SDL_RenderSetViewport(renderer->renderer, NULL);
+		blocking_alert("cartridge not compatible yet");
+	}
+}

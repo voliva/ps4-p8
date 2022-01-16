@@ -52,6 +52,7 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory);
 #include "http.h"
 #include "splore_loader.h"
 #include "splore.h"
+
 int main(void)
 {
 	DEBUGLOG << "Initializing renderer..." << ENDL;
@@ -163,11 +164,8 @@ int main(void)
 					break;
 				case Key::cross:
 					Cartridge* r = load_from_png(screens[currentScreen].cartridges[selectedCart].path);
-					runningCart->load(r);
-					runningCart->run();
+					run_cartridge(r);
 					delete r;
-					SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
-					SDL_RenderSetViewport(renderer->renderer, NULL);
 					break;
 				}
 			}

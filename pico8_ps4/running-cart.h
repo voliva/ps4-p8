@@ -27,3 +27,5 @@ private:
 	void runOnce();
 };
 extern RunningCart *runningCart;
+
+void run_cartridge(Cartridge* r);
