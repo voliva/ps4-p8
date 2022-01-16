@@ -2,6 +2,7 @@
 
 #include <SDL2/SDL.h>
 #include <vector>
+#include "chrono.h"
 
 #ifdef __PS4__
 #include <orbis/libkernel.h>
@@ -51,6 +52,7 @@ public:
 	void reset_transparency_pal();
 
 	void present();
+	void syncrhonize_30fps();
 
 	SDL_Renderer* renderer;
 	SDL_Window* window;
@@ -73,5 +75,8 @@ private:
 	unsigned char get_screen_pat_color(unsigned char color, unsigned short pattern, int sx, int sy);
 
 	unsigned char prev_screen[SCREEN_MEMORY_SIZE];
+
+	timestamp_t prev_frame;
+	int sync_delay;
 };
 extern Renderer *renderer;

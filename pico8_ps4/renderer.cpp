@@ -450,6 +450,25 @@ void Renderer::present()
 
 	SDL_UpdateWindowSurface(this->window);
 	memcpy(this->prev_screen, &p8_memory[ADDR_SCREEN], SCREEN_MEMORY_SIZE);
+
+	timestamp_t now = getTimestamp();
+	long long timediff = getMillisecondsDiff(now, this->prev_frame);
+	if (timediff < 33) {
+		this->sync_delay = timediff;
+	}
+	else {
+		this->sync_delay = 0;
+	}
+	this->prev_frame = now;
+}
+
+// This is only called by flip - runningCart has a better control of FPS and might skip a render if needed.
+void Renderer::syncrhonize_30fps()
+{
+	if (this->sync_delay > 0) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(this->sync_delay));
+		this->sync_delay = 0;
+	}
 }
 
 void Renderer::set_pixel(int sx, int sy, unsigned char color)

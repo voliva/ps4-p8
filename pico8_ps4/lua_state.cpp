@@ -65,12 +65,15 @@ int dget(lua_State* L);
 int dset(lua_State* L);
 int shr(lua_State* L);
 int shl(lua_State* L);
+int band(lua_State* L);
+int bor(lua_State* L);
 int printh(lua_State* L);
 int sget(lua_State* L);
 int sset(lua_State* L);
 int clip(lua_State* L);
 int memset(lua_State* L);
 int stat(lua_State* L);
+int flip(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -183,6 +186,10 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "shr");
 	lua_pushcfunction(this->state, shl);
 	lua_setglobal(this->state, "shl");
+	lua_pushcfunction(this->state, band);
+	lua_setglobal(this->state, "band");
+	lua_pushcfunction(this->state, bor);
+	lua_setglobal(this->state, "bor");
 	lua_pushcfunction(this->state, printh);
 	lua_setglobal(this->state, "printh");
 	lua_pushcfunction(this->state, sget);
@@ -195,6 +202,8 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "memset");
 	lua_pushcfunction(this->state, stat);
 	lua_setglobal(this->state, "stat");
+	lua_pushcfunction(this->state, flip);
+	lua_setglobal(this->state, "flip");
 
 	// It needs to count from the end of the table in case the elements get removed in-between
 	std::string all =
@@ -391,7 +400,7 @@ int sfx(lua_State* L) {
 }
 
 int music(lua_State* L) {
-	int n = luaL_checkinteger(L, 1);
+	int n = luaL_optinteger(L, 1, 0);
 	int fade = luaL_optinteger(L, 2, 0);
 	int channelmask = luaL_optinteger(L, 3, 0);
 
@@ -461,7 +470,8 @@ int pget(lua_State* L) {
 }
 
 int fillp(lua_State* L) {
-	int pat = luaL_optinteger(L, 1, 0);
+	alert_todo("fillp"); // TODO decimals
+	int pat = luaL_optnumber(L, 1, 0);
 
 	memory_write_short(ADDR_DS_FILL_PAT, pat);
 
@@ -1294,6 +1304,24 @@ int shl(lua_State* L) {
 	return 1;
 }
 
+int band(lua_State* L) {
+	int a = lua_tonumber(L, 1);
+	int b = lua_tonumber(L, 2);
+
+	lua_pushinteger(L, a & b);
+
+	return 1;
+}
+
+int bor(lua_State* L) {
+	int a = lua_tonumber(L, 1);
+	int b = lua_tonumber(L, 2);
+
+	lua_pushinteger(L, a | b);
+
+	return 1;
+}
+
 int printh(lua_State* L) {
 	std::string str = luaL_checkstring(L, 1);
 
@@ -1428,6 +1456,13 @@ int stat(lua_State* L) {
 
 	lua_pushinteger(L, 0);
 	return 1;
+}
+
+int flip(lua_State* L) {
+	renderer->present();
+	renderer->syncrhonize_30fps();
+
+	return 0;
 }
 
 int noop(lua_State* L) {
