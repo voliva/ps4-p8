@@ -306,6 +306,7 @@ std::map<unsigned char, P8_Key> button_to_key = {
 };
 
 const std::string WHITESPACE = " \n\r\t\f\v";
+const std::string ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 #define AO_LENGTH 5
 const std::string assignmentOperators[] = { "-", "+", "/", "*", ".." };
 
@@ -363,6 +364,97 @@ int find_end_of_statement(std::string s) {
         }
     } while (found_operator);
     return pos;
+}
+
+std::string replace_assignment_operators(std::string& line) {
+    for (int i = 0; i < AO_LENGTH; i++) {
+        std::string op = assignmentOperators[i];
+        std::string assignment = op + "=";
+
+        /*
+        * We can't just unroll x -= k to x = x - k, because this case:
+        * value -= 3 + 2
+        * would become `value = value - 3 + 2`, but it should become `value = value - (3 + 2)` instead.
+        * But we can't put parenthesis on "the rest of the line", because this is also valid lua:
+        * x -= 2     x -= 3
+        * x -= 2 + y x -= 3
+        * One idea I had is to break it down into many statements, adding in a temporary variable.
+        * So `value -= 3 + 2` becomes `_tmp0 = 3 + 2 value = value + _tmp0`.
+        * This would also work in multi-statement:
+        * `x -= 2     x -= 3` => `_tmp0 = 2 x -= 3 x = x - _tmp0` => `_tmp0 = 2 _tmp1 = 3 x = x - _tmp0 x = x - _tmp1`
+        * But this will break if the order of execution is important, and will break with things like `if something then x += 2 end`
+        *
+        * So I'll do another idea: Put parenthesis as long as we don't find any other operator. Let's build a parser yay!
+        */
+
+        int pos = 0;
+        while ((pos = line.find(assignment)) != std::string::npos) {
+            int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
+            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE) + 1;
+
+            std::string code_before_assignment = line.substr(0, pos);
+            std::string variable_name = line.substr(last_word_start, last_word_end - last_word_start + 1);
+            std::string code_after_assignment = line.substr(pos + assignment.size());
+
+            pos = find_end_of_statement(code_after_assignment);
+
+            if (pos == -1) { // Line ends before the statement finishes => I guess don't worry about it?
+                line = code_before_assignment + "=" + variable_name + op + code_after_assignment;
+            }
+            else {
+                std::string assignment_expression = code_after_assignment.substr(0, pos);
+                std::string other_statements = code_after_assignment.substr(pos);
+
+                line = code_before_assignment + "=" + variable_name + op + "(" + assignment_expression + ") " + other_statements;
+            }
+        }
+    }
+    return line;
+}
+
+std::map<std::string, std::string> unary_functions = {
+    {"@", "peek"},
+    {"%", "peek2"},
+    {"$", "peek4"},
+};
+
+std::string replace_unary_functions(std::string& line) {
+    for (auto pair = unary_functions.begin(); pair != unary_functions.end(); pair++) {
+        std::string token = (*pair).first;
+        std::string replacement = (*pair).second;
+
+        int pos = 0;
+        while ((pos = line.find(token, pos)) != std::string::npos) {
+            int prev_char_pos = line.substr(0, pos).find_last_not_of(WHITESPACE);
+            // If it's alphanumeric, skip (e.g. don't want to change `value = 3 % 2`
+            if (prev_char_pos != std::string::npos && (
+                (line[prev_char_pos] >= 'a' && line[prev_char_pos] <= 'z') ||
+                (line[prev_char_pos] >= 'A' && line[prev_char_pos] <= 'Z') ||
+                (line[prev_char_pos] >= '0' && line[prev_char_pos] <= '9') ||
+                line[prev_char_pos] == ')'
+            )) {
+                pos++;
+                continue;
+            }
+
+            logger << line << ENDL;
+            int param_start = line.find_first_not_of(WHITESPACE, pos + token.size());
+            // That must be alphanumeric, otherwise skip
+            if (param_start == std::string::npos || !(
+                (line[param_start] >= 'a' && line[param_start] <= 'z') ||
+                (line[param_start] >= 'A' && line[param_start] <= 'Z') ||
+                (line[param_start] >= '0' && line[param_start] <= '9')
+            )) {
+                pos++;
+                continue;
+            }
+            int param_end = line.find_first_not_of(ALPHANUMERIC, param_start);
+
+            line = line.substr(0, pos) + replacement + "(" + line.substr(param_start, param_end-param_start) + ")" + line.substr(param_end);
+            logger << "=> " << line << ENDL;
+        }
+    }
+    return line;
 }
 
 std::map<unsigned char, unsigned short> char_to_pattern = {
@@ -457,48 +549,7 @@ std::string p8lua_to_std_lua(std::string& s) {
             pos += 2;
         }
 
-        for (int i = 0; i < AO_LENGTH; i++) {
-            std::string op = assignmentOperators[i];
-            std::string assignment = op + "=";
-
-            /*
-            * We can't just unroll x -= k to x = x - k, because this case:
-            * value -= 3 + 2
-            * would become `value = value - 3 + 2`, but it should become `value = value - (3 + 2)` instead.
-            * But we can't put parenthesis on "the rest of the line", because this is also valid lua:
-            * x -= 2     x -= 3
-            * x -= 2 + y x -= 3
-            * One idea I had is to break it down into many statements, adding in a temporary variable.
-            * So `value -= 3 + 2` becomes `_tmp0 = 3 + 2 value = value + _tmp0`.
-            * This would also work in multi-statement:
-            * `x -= 2     x -= 3` => `_tmp0 = 2 x -= 3 x = x - _tmp0` => `_tmp0 = 2 _tmp1 = 3 x = x - _tmp0 x = x - _tmp1`
-            * But this will break if the order of execution is important, and will break with things like `if something then x += 2 end`
-            * 
-            * So I'll do another idea: Put parenthesis as long as we don't find any other operator. Let's build a parser yay!
-            */
-
-            pos = 0;
-            while ((pos = line.find(assignment)) != std::string::npos) {
-                int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
-                int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE) + 1;
-
-                std::string code_before_assignment = line.substr(0, pos);
-                std::string variable_name = line.substr(last_word_start, last_word_end - last_word_start + 1);
-                std::string code_after_assignment = line.substr(pos + assignment.size());
-
-                pos = find_end_of_statement(code_after_assignment);
-
-                if (pos == -1) { // Line ends before the statement finishes => I guess don't worry about it?
-                    line = code_before_assignment + "=" + variable_name + op + code_after_assignment;
-                }
-                else {
-                    std::string assignment_expression = code_after_assignment.substr(0, pos);
-                    std::string other_statements = code_after_assignment.substr(pos);
-
-                    line = code_before_assignment + "=" + variable_name + op + "(" + assignment_expression + ") " + other_statements;
-                }
-            }
-        }
+        line = replace_assignment_operators(line);
 
         // if (condition) something => if (condition) then something end
         if (((pos = line.find("if(")) != std::string::npos ||
@@ -534,6 +585,9 @@ std::string p8lua_to_std_lua(std::string& s) {
             line[pos - 1] >= '0' && line[pos - 1] <= '9') {
             line = line.replace(pos, 0, " ");
         }
+
+        // @ % $
+        line = replace_unary_functions(line);
 
         out << line << ENDL;
         line_num++;
