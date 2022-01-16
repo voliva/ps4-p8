@@ -601,35 +601,6 @@ bool LuaState::loadProgram(std::string& program)
 		return false;
 	}
 
-	// _draw or _update must exist
-	bool drawExists = true;
-	lua_getglobal(this->state, "_draw");
-	if (!lua_isfunction(this->state, 1)) {
-		drawExists = false;
-	}
-	lua_pop(this->state, 1);
-
-	bool updateExists = true;
-	lua_getglobal(this->state, "_update");
-	if (!lua_isfunction(this->state, 1)) {
-		updateExists = false;
-	}
-	lua_pop(this->state, 1);
-
-	bool update60Exists = true;
-	this->is60FPS = true;
-	lua_getglobal(this->state, "_update60");
-	if (!lua_isfunction(this->state, 1)) {
-		update60Exists = false;
-		this->is60FPS = false;
-	}
-	lua_pop(this->state, 1);
-
-	if (!drawExists && !updateExists && !update60Exists) {
-		DEBUGLOG << "_draw, _update nor _update60 don't exist" << ENDL;
-		return false;
-	}
-
 	return true;
 }
 
@@ -638,14 +609,25 @@ void LuaState::run_init()
 	lua_getglobal(this->state, "_init");
 	if (lua_isfunction(this->state, 1)) {
 		if (lua_pcall(this->state, 0, 0, 0)) {
+			// Error
 			std::string e = lua_tostring(this->state, -1);
 			lua_pop(this->state, 1);
 			DEBUGLOG << e << ENDL;
+			return;
 		}
 	}
 	else {
 		lua_pop(this->state, 1);
 	}
+
+	// Detect whether it's running in 30fps or 60fps
+	// Can't do this earlier, because some games assign _draw and/or _update in the init function
+	this->is60FPS = true;
+	lua_getglobal(this->state, "_update60");
+	if (!lua_isfunction(this->state, 1)) {
+		this->is60FPS = false;
+	}
+	lua_pop(this->state, 1);
 }
 
 void LuaState::run_draw()
