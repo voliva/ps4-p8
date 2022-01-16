@@ -498,6 +498,8 @@ int rectfill(lua_State* L) {
 	int y1 = luaL_checknumber(L, 4);
 	int col = luaL_optnumber(L, 5, p8_memory[ADDR_DS_COLOR]);
 
+	// DEBUGLOG << x0 << " " << y0 << " " << x1 << " " << y1 << " " << col << ENDL;
+
 	p8_memory[ADDR_DS_COLOR] = col;
 	renderer->draw_rectangle(x0, y0, x1, y1, true);
 

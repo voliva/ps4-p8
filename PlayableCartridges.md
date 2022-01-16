@@ -6,6 +6,7 @@ This is a list of some of the cartridges that have been tested and they are play
 - [Celeste](https://www.lexaloffle.com/bbs/?tid=2145)
 - [To a Starling](https://www.lexaloffle.com/bbs/?tid=45958)
 - [Dominion X](https://www.lexaloffle.com/bbs/?pid=73231)
+- [Tiny golf puzzles](https://www.lexaloffle.com/bbs/?pid=79680)
 - [Frog adventure](https://www.lexaloffle.com/bbs/?pid=104185)
 - [Alpine Ascent](https://www.lexaloffle.com/bbs/?tid=40791)
 - [Fruits Catcher](https://www.lexaloffle.com/bbs/?tid=45946)
