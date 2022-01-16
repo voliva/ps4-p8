@@ -1269,19 +1269,27 @@ int dget(lua_State* L) {
 }
 
 int shr(lua_State* L) {
-	int num = lua_tonumber(L, 1);
+	float num = lua_tonumber(L, 1);
 	int bits = lua_tonumber(L, 2);
 
-	lua_pushinteger(L, num >> bits);
+	for (int i = 0; i < bits; i++) {
+		num /= 2;
+	}
+
+	lua_pushnumber(L, num);
 
 	return 1;
 }
 
 int shl(lua_State* L) {
-	int num = lua_tonumber(L, 1);
+	float num = lua_tonumber(L, 1);
 	int bits = lua_tonumber(L, 2);
 
-	lua_pushinteger(L, num << bits);
+	for (int i = 0; i < bits; i++) {
+		num *= 2;
+	}
+
+	lua_pushnumber(L, num);
 
 	return 1;
 }
