@@ -473,7 +473,7 @@ std::string p8lua_to_std_lua(std::string& s) {
                 int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE) + 1;
 
                 std::string code_before_assignment = line.substr(0, pos);
-                std::string variable_name = line.substr(last_word_start, pos - last_word_start - 1);
+                std::string variable_name = line.substr(last_word_start, last_word_end - last_word_start + 1);
                 std::string code_after_assignment = line.substr(pos + 2);
 
                 pos = find_end_of_statement(code_after_assignment);
