@@ -483,7 +483,7 @@ Renderer_Point Renderer::coord_to_screen(int x, int y)
 {
 	int sx = x - (short)memory_read_short(ADDR_DS_CAMERA_X);
 	int sy = y - (short)memory_read_short(ADDR_DS_CAMERA_Y);
-	return Renderer_Point{ x,y };
+	return Renderer_Point{ sx, sy };
 }
 
 bool Renderer::is_y_drawable(int sy) {

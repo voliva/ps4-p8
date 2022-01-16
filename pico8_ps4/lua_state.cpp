@@ -1270,8 +1270,8 @@ int fset(lua_State* L) {
 }
 
 int dset(lua_State* L) {
-	int index = luaL_checkinteger(L, 1);
-	int value = luaL_checkinteger(L, 2);
+	int index = luaL_checknumber(L, 1);
+	int value = luaL_checknumber(L, 2);
 
 	memory_write_int(ADDR_PERSISTENT + index * 4, value);
 
