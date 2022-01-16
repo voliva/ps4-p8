@@ -165,7 +165,7 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
         MoveToFront mtf;
         while (d_i < decompressed_length) {
             unsigned char type = br.next_bit();
-            if (type == 1) {
+            if (type == 1 || d_i == 36535) {
                 unsigned char unary = 0;
                 while (br.next_bit() == 1) {
                     unary++;
@@ -173,6 +173,13 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
                 unsigned char unary_mask = (1 << unary) - 1;
                 unsigned char index = br.next_u8(4 + unary) + (unary_mask << 4);
                 decompressed[d_i++] = mtf.getAndMove(index);
+                if (decompressed[d_i - 1] == '\t') decompressed[d_i - 1] = ' ';
+                if (decompressed[d_i - 1] == ' ') decompressed[d_i - 1] = '_';
+                if (d_i > 36530 && d_i < 36540) {
+                    logger << 1 << ": " << std::string{ (char)decompressed[d_i - 1] } << ENDL;
+                    // if (d_i % 10 == 0) logger << ENDL << d_i << ENDL;
+                    // logger << std::string{ (char)decompressed[d_i - 1] };
+                }
             } else {
                 int offset_bits;
                 if (br.next_bit() == 1) {
@@ -195,8 +202,21 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
                     length += part;
                 } while (part == 7);
                 unsigned int start = d_i - offset;
+                if (d_i >= 36530 && d_i < 36540) {
+                    logger << "offset " << offset << ", length " << length << ", start " << start << ", d_i " << d_i << ": ";
+                }
                 for (int i = 0; i < length; i++) {
                     decompressed[d_i++] = decompressed[start + i];
+                    if (decompressed[d_i - 1] == '\t') decompressed[d_i - 1] = ' ';
+                    if (decompressed[d_i - 1] == ' ') decompressed[d_i - 1] = '_';
+                    if (d_i > 36530 && d_i < 36540) {
+                        logger << std::string{ (char)decompressed[d_i - 1] };
+                        //if (d_i % 10 == 0) logger << ENDL << d_i << ENDL;
+                        //logger << std::string{ (char)decompressed[d_i - 1] };
+                    }
+                }
+                if (d_i > 36530 && d_i < 36540) {
+                    logger << ENDL;
                 }
             }
         }

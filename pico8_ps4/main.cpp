@@ -163,6 +163,7 @@ int main(void)
 					break;
 				case Key::cross:
 					Cartridge* r = load_from_png(screens[currentScreen].cartridges[selectedCart].path);
+					return -1;
 					runningCart->load(r);
 					runningCart->run();
 					delete r;
