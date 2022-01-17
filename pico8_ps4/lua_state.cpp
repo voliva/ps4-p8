@@ -9,6 +9,7 @@
 #include "memory.h"
 #include "font.h"
 #include "running-cart.h"
+#include "saves.h"
 #include <set>
 
 #define DEBUGLOG LuaState_DEBUGLOG
@@ -63,6 +64,7 @@ int fget(lua_State* L);
 int fset(lua_State* L);
 int dget(lua_State* L);
 int dset(lua_State* L);
+int cartdata(lua_State* L);
 int shr(lua_State* L);
 int shl(lua_State* L);
 int band(lua_State* L);
@@ -180,7 +182,7 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "dget");
 	lua_pushcfunction(this->state, dset);
 	lua_setglobal(this->state, "dset");
-	lua_pushcfunction(this->state, noop);
+	lua_pushcfunction(this->state, cartdata);
 	lua_setglobal(this->state, "cartdata");
 	lua_pushcfunction(this->state, shr);
 	lua_setglobal(this->state, "shr");
@@ -1267,7 +1269,7 @@ int dset(lua_State* L) {
 	int index = luaL_checknumber(L, 1);
 	int value = luaL_checknumber(L, 2);
 
-	memory_write_int(ADDR_PERSISTENT + index * 4, value);
+	saveManager->write(index, value);
 
 	return 0;
 }
@@ -1275,9 +1277,17 @@ int dset(lua_State* L) {
 int dget(lua_State* L) {
 	int index = luaL_checkinteger(L, 1);
 
-	lua_pushinteger(L, memory_read_int(ADDR_PERSISTENT + index * 4));
+	lua_pushinteger(L, saveManager->read(index));
 
 	return 1;
+}
+
+int cartdata(lua_State* L) {
+	std::string name = luaL_checkstring(L, 1);
+
+	saveManager->open(name);
+
+	return 0;
 }
 
 int shr(lua_State* L) {

@@ -168,6 +168,7 @@
     <ClCompile Include="performance_monitor.cpp" />
     <ClCompile Include="renderer.cpp" />
     <ClCompile Include="running-cart.cpp" />
+    <ClCompile Include="saves.cpp" />
     <ClCompile Include="splore.cpp" />
     <ClCompile Include="splore_loader.cpp" />
   </ItemGroup>
@@ -189,6 +190,7 @@
     <ClInclude Include="performance_monitor.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="running-cart.h" />
+    <ClInclude Include="saves.h" />
     <ClInclude Include="splore.h" />
     <ClInclude Include="splore_loader.h" />
   </ItemGroup>

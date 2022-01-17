@@ -10,4 +10,5 @@ pkg.gp4
 *.log
 ps4_int
 /p8-cartridges/*
+/p8-saves/*
 !.gitkeep

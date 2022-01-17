@@ -8,6 +8,7 @@
 #include "chrono.h"
 #include <thread>
 #include "pause_menu.h"
+#include "saves.h"
 
 #define DEBUGLOG Runtime_DEBUGLOG
 Log DEBUGLOG = logger.log("Runtime");
@@ -176,6 +177,10 @@ void RunningCart::runOnce()
 					DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;
 				}
 			}
+		}
+
+		if (frame % 30 == 0) {
+			saveManager->persist();
 		}
 
 		// Get a temptative estimation of how much timeDebt we would have

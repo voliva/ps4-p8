@@ -69,6 +69,9 @@
     <ClCompile Include="splore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="saves.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -126,6 +129,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="splore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="saves.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
