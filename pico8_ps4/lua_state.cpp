@@ -1115,7 +1115,7 @@ int pal(lua_State* L) {
 		return 0;
 	}
 
-	int c0 = luaL_checkinteger(L, 1);
+	int c0 = lua_tointeger(L, 1);
 	int c1 = luaL_optinteger(L, 2, 0);
 	int p = luaL_optinteger(L, 3, 0);
 	if (p > 1) {

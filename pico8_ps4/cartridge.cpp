@@ -307,8 +307,14 @@ std::map<unsigned char, P8_Key> button_to_key = {
 
 const std::string WHITESPACE = " \n\r\t\f\v";
 const std::string ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-#define AO_LENGTH 5
-const std::string assignmentOperators[] = { "-", "+", "/", "*", ".." };
+#define AO_LENGTH 16
+const std::string assignmentOperators[] = { "-", "+", "/", "*", "..", "\\", "%", "^", "|", "&", "^^", "<<", ">>", ">>>", "<<>", ">><"};
+
+bool is_alphanumeric(char c) {
+    return (c >= 'a' && c <= 'z') ||
+        (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9');
+}
 
 int find_end_of_statement(std::string s) {
     int pos = s.find(";");
@@ -416,6 +422,7 @@ std::map<std::string, std::string> unary_functions = {
     {"@", "peek"},
     {"%", "peek2"},
     {"$", "peek4"},
+    {"~", "bnot"}
 };
 
 std::string replace_unary_functions(std::string& line) {
@@ -426,32 +433,155 @@ std::string replace_unary_functions(std::string& line) {
         int pos = 0;
         while ((pos = line.find(token, pos)) != std::string::npos) {
             int prev_char_pos = line.substr(0, pos).find_last_not_of(WHITESPACE);
+
+            // logger << line << ENDL;
             // If it's alphanumeric, skip (e.g. don't want to change `value = 3 % 2`
             if (prev_char_pos != std::string::npos && (
-                (line[prev_char_pos] >= 'a' && line[prev_char_pos] <= 'z') ||
-                (line[prev_char_pos] >= 'A' && line[prev_char_pos] <= 'Z') ||
-                (line[prev_char_pos] >= '0' && line[prev_char_pos] <= '9') ||
+                is_alphanumeric(line[prev_char_pos]) ||
                 line[prev_char_pos] == ')'
             )) {
                 pos++;
                 continue;
             }
 
-            logger << line << ENDL;
             int param_start = line.find_first_not_of(WHITESPACE, pos + token.size());
             // That must be alphanumeric, otherwise skip
             if (param_start == std::string::npos || !(
-                (line[param_start] >= 'a' && line[param_start] <= 'z') ||
-                (line[param_start] >= 'A' && line[param_start] <= 'Z') ||
-                (line[param_start] >= '0' && line[param_start] <= '9')
+                is_alphanumeric(line[param_start]) ||
+                line[param_start] == '('
             )) {
                 pos++;
                 continue;
             }
-            int param_end = line.find_first_not_of(ALPHANUMERIC, param_start);
+            int param_end = param_start;
+
+            // If it's a parenthesis, just follow it
+            if (line[param_end] == '(') {
+                int stack = 1;
+                for (param_end = pos + 1; stack > 0 && param_end < line.size(); param_end++) {
+                    if (line[param_end] == '(')
+                        stack++;
+                    else if (line[param_end] == ')')
+                        stack--;
+                }
+                if (stack > 0) {
+                    // Multiline. I ain't doing that.
+                    logger << "TODO Multiline unary operator" << ENDL;
+                    pos++;
+                    continue;
+                }
+            }
+            else {
+                param_end = line.find_first_not_of(ALPHANUMERIC, param_start);
+                // TODO function call
+            }
 
             line = line.substr(0, pos) + replacement + "(" + line.substr(param_start, param_end-param_start) + ")" + line.substr(param_end);
-            logger << "=> " << line << ENDL;
+            // logger << "=> " << line << ENDL;
+        }
+    }
+    return line;
+}
+
+std::map<std::string, std::string> binary_functions = {
+    {"|", "bor"},
+    {"&", "band"},
+    {"^^", "bxor"},
+    {">>>", "lshr"},
+    {"<<>", "rotl"},
+    {">><", "rotr"},
+    {"<<", "shl"},
+    {">>", "shr"}
+};
+
+std::string replace_binary_functions(std::string& line) {
+    for (auto pair = binary_functions.begin(); pair != binary_functions.end(); pair++) {
+        std::string token = (*pair).first;
+        std::string replacement = (*pair).second;
+
+        int pos = 0;
+        while ((pos = line.find(token, pos)) != std::string::npos) {
+            int param0_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
+            // If it's not alphanumeric, skip (e.g. don't want to change `value = 3 % 2`
+            if (param0_end == std::string::npos || !(
+                is_alphanumeric(line[param0_end]) ||
+                line[param0_end] == ')'
+            )) {
+                pos+=token.size();
+                continue;
+            }
+
+            // logger << line << ENDL;
+
+            int param0_start = param0_end;
+            param0_end++;
+
+            // If it's a parenthesis, just follow it
+            if (line[param0_start] == ')') {
+                int stack = 1;
+                for (param0_start = param0_start-1; stack > 0 && param0_start >= 0; param0_start--) {
+                    if (line[param0_start] == ')')
+                        stack++;
+                    else if (line[param0_start] == '(')
+                        stack--;
+                }
+                if (stack > 0) {
+                    // Multiline. I ain't doing that.
+                    logger << "TODO Multiline binary operator param0" << ENDL;
+                    pos += token.size();
+                    continue;
+                }
+                // undo the last -- of the loop, we want to target the closing (
+                param0_start++;
+                // We need to check whether the preceeding token is something that could be a function name (case `myFun0(12) >> 3`)
+                if (is_alphanumeric(line[param0_start - 1])) {
+                    param0_start = line.substr(0, param0_start).find_last_not_of(ALPHANUMERIC) + 1;
+                }
+            }
+            else {
+                param0_start = line.substr(0, param0_start).find_last_not_of(ALPHANUMERIC)+1;
+            }
+
+            int paramf_start = line.find_first_not_of(WHITESPACE, pos + token.size());
+            // That must be alphanumeric, otherwise skip
+            if (paramf_start == std::string::npos || !(
+                is_alphanumeric(line[paramf_start]) ||
+                line[paramf_start] == '('
+            )) {
+                // logger << "paramf not alphanumeric" << ENDL;
+                pos += token.size();
+                continue;
+            }
+            int paramf_end = paramf_start;
+
+            // If it's a parenthesis, just follow it
+            if (line[paramf_end] == '(') {
+                int stack = 1;
+                for (paramf_end = pos + 1; stack > 0 && paramf_end < line.size(); paramf_end++) {
+                    if (line[paramf_end] == '(')
+                        stack++;
+                    else if (line[paramf_end] == ')')
+                        stack--;
+                }
+                if (stack > 0) {
+                    // Multiline. I ain't doing that.
+                    logger << "TODO Multiline binary operator paramf" << ENDL;
+                    pos += token.size();
+                    continue;
+                }
+            }
+            else {
+                paramf_end = line.find_first_not_of(ALPHANUMERIC, paramf_end);
+                // TODO function call
+                if (paramf_end == std::string::npos) {
+                    paramf_end = line.size();
+                }
+            }
+
+            line = line.substr(0, param0_start) + " " + replacement + "(" +
+                line.substr(param0_start, param0_end - param0_start) + "," +
+                line.substr(paramf_start, paramf_end - paramf_start) + ")" + line.substr(paramf_end);
+            // logger << "=> " << line << ENDL;
         }
     }
     return line;
@@ -586,8 +716,8 @@ std::string p8lua_to_std_lua(std::string& s) {
             line = line.replace(pos, 0, " ");
         }
 
-        // @ % $
         line = replace_unary_functions(line);
+        line = replace_binary_functions(line);
 
         out << line << ENDL;
         line_num++;
