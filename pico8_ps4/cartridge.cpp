@@ -484,7 +484,7 @@ std::string p8lua_to_std_lua(std::string& s) {
 
                 std::string code_before_assignment = line.substr(0, pos);
                 std::string variable_name = line.substr(last_word_start, last_word_end - last_word_start + 1);
-                std::string code_after_assignment = line.substr(pos + 2);
+                std::string code_after_assignment = line.substr(pos + assignment.size());
 
                 pos = find_end_of_statement(code_after_assignment);
 
@@ -525,6 +525,13 @@ std::string p8lua_to_std_lua(std::string& s) {
         // WTF?!?
         if (((pos = line.find("then")) != std::string::npos) && pos > 0 &&
             line[pos-1] >= '0' && line[pos-1] <= '9') {
+            line = line.replace(pos, 0, " ");
+        }
+
+        // if for i=1,5do => for i=1,5 do
+        if (((pos = line.find("for")) != std::string::npos) &&
+            ((pos = line.find("do", pos)) != std::string::npos) &&
+            line[pos - 1] >= '0' && line[pos - 1] <= '9') {
             line = line.replace(pos, 0, " ");
         }
 

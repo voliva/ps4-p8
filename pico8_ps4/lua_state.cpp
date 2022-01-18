@@ -297,10 +297,12 @@ LuaState::LuaState()
 				end \n \
 				add(result, current) \
 			end \n \
-			for i=1,#result do \n \
-				local value = tonum(result[i]) \n \
-				if value ~= nil then \
-					result[i] = value \
+			if convert_numbers then \n \
+				for i=1,#result do \n \
+					local value = tonum(result[i]) \n \
+					if value ~= nil then \
+						result[i] = value \
+					end \
 				end \
 			end \
 			return result \
