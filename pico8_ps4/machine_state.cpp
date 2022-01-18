@@ -21,13 +21,7 @@ MachineState::MachineState()
 
 void MachineState::initialize()
 {
-	// RNG Seed => https://en.wikipedia.org/wiki/Linear_congruential_generator#m_a_power_of_2,_c_=_0
-	for (int i = 0; i < 8; i++) {
-		p8_memory[ADDR_HW_RAND_STATE+i] = rand() % 0xFF;
-	}
-	// The number must be odd => The last bit must be 1
-	unsigned long long seed = memory_read_long(ADDR_HW_RAND_STATE) | 0x01;
-	memory_write_long(ADDR_HW_RAND_STATE, seed);
+	this->setRndSeed(rand());
 
 	for (int i = 0; i < 8; i++) {
 		p8_memory[ADDR_HW_BTN_STATES] = 0;
@@ -112,4 +106,35 @@ float MachineState::getTime()
 {
 	auto timediff = getMillisecondsDiff(getTimestamp(), this->started);
 	return (float)timediff / 1000;
+}
+
+unsigned int MachineState::getRnd(unsigned int max)
+{
+	unsigned int low = memory_read_int(ADDR_HW_RAND_STATE);
+	unsigned int high = memory_read_int(ADDR_HW_RAND_STATE+4);
+
+	low = (low & 0xFF0000FF) |
+		((low & 0x00FF0000) >> 8) |
+		((low & 0x0000FF00) << 8);
+	low += high;
+	high += low;
+
+	return low;
+}
+
+void MachineState::setRndSeed(unsigned int n)
+{
+	n = n & 0x7FFFFFFF;
+	if (n == 0) {
+		n = 0xDEADBEEF;
+	}
+	unsigned int high = n;
+	unsigned int low = n ^ 0xBEAD29BA;
+	for (int i = 0; i < 0x20; i++) {
+		low = (low << 16) | (low >> 16);
+		low += high;
+		high += low;
+	}
+	memory_write_int(ADDR_HW_RAND_STATE, low);
+	memory_write_int(ADDR_HW_RAND_STATE+4, high);
 }

@@ -51,6 +51,9 @@ int oval(lua_State* L);
 int ovalfill(lua_State* L);
 int sfx(lua_State* L);
 int music(lua_State* L);
+int peek(lua_State* L);
+int peek2(lua_State* L);
+int peek4(lua_State* L);
 int poke(lua_State* L);
 int pal(lua_State* L);
 int palt(lua_State* L);
@@ -156,6 +159,12 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "oval");
 	lua_pushcfunction(this->state, ovalfill);
 	lua_setglobal(this->state, "ovalfill");
+	lua_pushcfunction(this->state, peek);
+	lua_setglobal(this->state, "peek");
+	lua_pushcfunction(this->state, peek2);
+	lua_setglobal(this->state, "peek2");
+	lua_pushcfunction(this->state, peek4);
+	lua_setglobal(this->state, "peek4");
 	lua_pushcfunction(this->state, poke);
 	lua_setglobal(this->state, "poke");
 	lua_pushcfunction(this->state, pal);
@@ -416,6 +425,46 @@ int music(lua_State* L) {
 	}
 
 	return 0;
+}
+
+int peek(lua_State* L)
+{
+	int addr = luaL_checkinteger(L, 1);
+	int n = luaL_optinteger(L, 2, 1);
+
+	for (int i = 0; i < n; i++) {
+		lua_pushinteger(L, p8_memory[addr + i]);
+	}
+
+	return n;
+}
+
+int peek2(lua_State* L)
+{
+	int addr = luaL_checkinteger(L, 1);
+	int n = luaL_optinteger(L, 2, 1);
+
+	for (int i = 0; i < n; i++) {
+		short value = memory_read_short(addr + i * 2);
+		lua_pushinteger(L, value);
+	}
+
+	return n;
+}
+
+int peek4(lua_State* L)
+{
+	int addr = luaL_checkinteger(L, 1);
+	int n = luaL_optinteger(L, 2, 1);
+
+	alert_todo("peek4 signed");
+	for (int i = 0; i < n; i++) {
+		int raw = memory_read_int(addr + i * 4);
+		double value = (double)raw / 0x10000;
+		lua_pushnumber(L, value);
+	}
+
+	return n;
 }
 
 int add(lua_State* L) {
@@ -713,9 +762,16 @@ int rnd(lua_State* L) {
 	} else {
 		max = luaL_optnumber(L, 1, 1);
 	}
-	double result = std::rand() * max / RAND_MAX;
+	int rnd = machineState->getRnd(max*0x10000);
+	double result = (double)rnd / 0x10000;
 	lua_pushnumber(L, result);
 	return 1;
+}
+
+int srand(lua_State* L) {
+	double num = luaL_checknumber(L, 1);
+	machineState->setRndSeed(num * 0x10000);
+	return 0;
 }
 
 int flr(lua_State* L) {
@@ -728,12 +784,6 @@ int ceil(lua_State* L) {
 	double num = luaL_checknumber(L, 1);
 	lua_pushinteger(L, ceil(num));
 	return 1;
-}
-
-int srand(lua_State* L) {
-	double num = luaL_checknumber(L, 1);
-	std::srand(num);
-	return 0;
 }
 
 // TODO https://pico-8.fandom.com/wiki/Tostr decimal hex?

@@ -625,6 +625,12 @@ std::string p8lua_to_std_lua(std::string& s) {
     while (std::getline(in, line)) {
         int pos;
 
+        // Remove trailing \0
+        int nilchar = line.find(std::string("\0", 1));
+        if (nilchar != std::string::npos) {
+            line = line.substr(0, nilchar);
+        }
+
         line = replace_escape_chars(line);
 
         if (line.find("btn(") != std::string::npos || line.find("btnp(") != std::string::npos) {
