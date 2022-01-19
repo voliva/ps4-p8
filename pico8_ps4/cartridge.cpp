@@ -306,6 +306,7 @@ std::map<unsigned char, P8_Key> button_to_key = {
 };
 
 const std::string WHITESPACE = " \n\r\t\f\v";
+const std::string WHITESPACE_CLOSEPARENS = " \n\r\t\f\v)";
 const std::string ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 #define AO_LENGTH 16
 const std::string assignmentOperators[] = { "-", "+", "/", "*", "..", "\\", "%", "^", "|", "&", "^^", "<<", ">>", ">>>", "<<>", ">><"};
@@ -396,7 +397,8 @@ std::string replace_assignment_operators(std::string& line) {
         int pos = 0;
         while ((pos = line.find(assignment)) != std::string::npos) {
             int last_word_end = line.substr(0, pos).find_last_not_of(WHITESPACE);
-            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE) + 1;
+            // CLOSEPARENS case: if(condition)x+=3
+            int last_word_start = line.substr(0, last_word_end).find_last_of(WHITESPACE_CLOSEPARENS) + 1;
 
             std::string code_before_assignment = line.substr(0, pos);
             std::string variable_name = line.substr(last_word_start, last_word_end - last_word_start + 1);
@@ -715,7 +717,9 @@ std::string p8lua_to_std_lua(std::string& s) {
             if (pos < line.length() && line.find_first_not_of(" ", pos) != std::string::npos &&
                 // We need to exclude if line ends with or or and
                 line.find(" or",  pos) == std::string::npos && line.find(" and", pos) == std::string::npos) {
+                logger << "NL: " << line;
                 line = line.replace(pos, 0, " then ") + " end";
+                logger << line << ENDL;
             }
         }
 
