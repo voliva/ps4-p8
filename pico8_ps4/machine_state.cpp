@@ -108,14 +108,6 @@ float MachineState::getTime()
 	return (float)timediff / 1000;
 }
 
-#include <sstream>
-std::string tohex(unsigned int v) {
-	std::ostringstream buf;
-
-	buf << std::hex << v;
-
-	return buf.str();
-}
 unsigned int MachineState::getRnd()
 {
 	unsigned int low = memory_read_int(ADDR_HW_RAND_STATE);
