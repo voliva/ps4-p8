@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClCompile Include="audio.cpp" />
     <ClCompile Include="cartridge.cpp" />
+    <ClCompile Include="cartridge_test.cpp" />
     <ClCompile Include="chrono.cpp" />
     <ClCompile Include="efla.e.cpp" />
     <ClCompile Include="events.cpp" />
