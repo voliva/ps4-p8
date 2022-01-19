@@ -29,7 +29,7 @@ A list of some playable cartridges can be found [here](https://github.com/voliva
 
 ## Building
 
-The project is cross-platform for Windows + PS4.
+The project is cross-platform for Windows + MacOS + PS4.
 
 You'll need [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) installed with its dependencies (.NET Core) and clang++.
 
