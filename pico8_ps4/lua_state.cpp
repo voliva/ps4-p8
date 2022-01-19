@@ -79,6 +79,8 @@ int clip(lua_State* L);
 int memset(lua_State* L);
 int stat(lua_State* L);
 int flip(lua_State* L);
+int ord(lua_State* L);
+int chr(lua_State* L);
 
 LuaState::LuaState()
 {
@@ -215,6 +217,10 @@ LuaState::LuaState()
 	lua_setglobal(this->state, "stat");
 	lua_pushcfunction(this->state, flip);
 	lua_setglobal(this->state, "flip");
+	lua_pushcfunction(this->state, ord);
+	lua_setglobal(this->state, "ord");
+	lua_pushcfunction(this->state, chr);
+	lua_setglobal(this->state, "chr");
 
 	// It needs to count from the end of the table in case the elements get removed in-between
 	std::string all =
@@ -1517,6 +1523,12 @@ int stat(lua_State* L) {
 		n += 30;
 	}
 
+	if (30 <= n && n <= 39) {
+		// Mouse + keyboard support not enabled on PS4
+		alert_todo("stat(mouse + keyboard)");
+		lua_pushinteger(L, 0);
+		return 1;
+	}
 	if (46 <= n && n <= 49) {
 		unsigned char c = n - 46;
 		// Get SFX playing on channel c
@@ -1543,6 +1555,28 @@ int stat(lua_State* L) {
 int flip(lua_State* L) {
 	renderer->present();
 	renderer->syncrhonize_30fps();
+
+	return 0;
+}
+
+int ord(lua_State* L) {
+	std::string str = luaL_checkstring(L, 1);
+	int idx = luaL_optinteger(L, 2, 1) - 1;
+	
+	lua_pushinteger(L, str[idx]);
+	
+	return 1;
+}
+
+int chr(lua_State* L) {
+	int len = lua_gettop(L);
+	std::vector<char> str(len);
+	for(int i=0; i<len; i++) {
+		str[i] = lua_tointeger(L, i+1);
+	}
+	
+	std::string result(str.begin(), str.end());
+	lua_pushstring(L, result.c_str());
 
 	return 0;
 }
