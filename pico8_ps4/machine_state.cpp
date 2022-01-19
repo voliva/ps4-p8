@@ -108,16 +108,25 @@ float MachineState::getTime()
 	return (float)timediff / 1000;
 }
 
-unsigned int MachineState::getRnd(unsigned int max)
+#include <sstream>
+std::string tohex(unsigned int v) {
+	std::ostringstream buf;
+
+	buf << std::hex << v;
+
+	return buf.str();
+}
+unsigned int MachineState::getRnd()
 {
 	unsigned int low = memory_read_int(ADDR_HW_RAND_STATE);
 	unsigned int high = memory_read_int(ADDR_HW_RAND_STATE+4);
 
-	low = (low & 0xFF0000FF) |
-		((low & 0x00FF0000) >> 8) |
-		((low & 0x0000FF00) << 8);
+	low = (low << 16) | (low >> 16);
 	low += high;
 	high += low;
+
+	memory_write_int(ADDR_HW_RAND_STATE, low);
+	memory_write_int(ADDR_HW_RAND_STATE + 4, high);
 
 	return low;
 }

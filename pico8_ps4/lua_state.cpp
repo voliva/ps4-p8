@@ -457,7 +457,6 @@ int peek4(lua_State* L)
 	int addr = luaL_checkinteger(L, 1);
 	int n = luaL_optinteger(L, 2, 1);
 
-	alert_todo("peek4 signed");
 	for (int i = 0; i < n; i++) {
 		int raw = memory_read_int(addr + i * 4);
 		double value = (double)raw / 0x10000;
@@ -762,8 +761,15 @@ int rnd(lua_State* L) {
 	} else {
 		max = luaL_optnumber(L, 1, 1);
 	}
-	int rnd = machineState->getRnd(max*0x10000);
-	double result = (double)rnd / 0x10000;
+	if (max < 0) {
+		max = MAX_RND + max + 1;
+	}
+
+	int rnd = machineState->getRnd();
+	double result = (double)rnd * max / MAX_RND / 0x10000;
+	if (result > 0x7FFFFFFF) {
+		result = result - 0x100000000;
+	}
 	lua_pushnumber(L, result);
 	return 1;
 }

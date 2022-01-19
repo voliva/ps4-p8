@@ -5,6 +5,7 @@
 #include "chrono.h"
 #include "events.h"
 
+#define MAX_RND ((unsigned int)0xffffffff)
 class MachineState
 {
 public:
@@ -19,7 +20,7 @@ public:
 	void registerFrame();
 	float getTime();
 
-	unsigned int getRnd(unsigned int max);
+	unsigned int getRnd();
 	void setRndSeed(unsigned int n);
 
 private:
