@@ -631,6 +631,14 @@ std::string p8lua_to_std_lua(std::string& s) {
             line = line.substr(0, nilchar);
         }
 
+        // Remove comments ( -- blah). They are not special, but sometimes they can break assumptions
+        // made on other mods (e.g. x+=3--5 should become x=x+(3)--5, but instead becomes x+=(3--5) which is invalid lua
+        // TODO improve - E.g. -- in a string
+        int comment = line.find("--");
+        if (comment != std::string::npos) {
+            line = line.substr(0, comment);
+        }
+
         line = replace_escape_chars(line);
 
         if (line.find("btn(") != std::string::npos || line.find("btnp(") != std::string::npos) {
@@ -690,6 +698,7 @@ std::string p8lua_to_std_lua(std::string& s) {
         // if (condition) something => if (condition) then something end
         if (((pos = line.find("if(")) != std::string::npos ||
             (pos = line.find("if (")) != std::string::npos) &&
+            (pos == 0 || line[pos-1] == ' ' || line[pos-1] == '\t') && // case value = someFn(iif(parameter, 1, 2))
             line.find("then", pos) == std::string::npos) {
             // Look for closing )
             int stack = 1;
@@ -703,7 +712,9 @@ std::string p8lua_to_std_lua(std::string& s) {
                 }
                 pos++;
             }
-            if (pos < line.length() && line.find_first_not_of(" ", pos) != std::string::npos) {
+            if (pos < line.length() && line.find_first_not_of(" ", pos) != std::string::npos &&
+                // We need to exclude if line ends with or or and
+                line.find(" or",  pos) == std::string::npos && line.find(" and", pos) == std::string::npos) {
                 line = line.replace(pos, 0, " then ") + " end";
             }
         }
