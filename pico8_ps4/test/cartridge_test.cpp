@@ -22,11 +22,15 @@ Test tests[] = { Test{
 	{1}
 } };
 
-void main() {
+int main() {
 	int n_tests = sizeof(tests) / sizeof(Test);
+	cout << "n_tests " << n_tests << " " << sizeof(tests) << " " << sizeof(Test) << endl;
 	for (int i = 0; i < n_tests; i++) {
 		run_test(tests[i].name, tests[i].p8lua, tests[i].expected);
 	}
+
+	system("pause");
+	return 0;
 }
 
 extern "C" {
@@ -87,6 +91,8 @@ bool run_test(string name, string p8lua, vector<char> &expected) {
 	for (int i = m; i < len; i++) {
 		cout << "element " << i << ": Extra " << (char)lua_tointeger(l, i + 1) << endl;
 	}
+
+	cout << "finished" << endl;
 
 	lua_close(l);
 	return result;
