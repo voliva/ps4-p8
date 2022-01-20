@@ -13,6 +13,8 @@ for file in *.cpp; do
   fi
 done
 
-echo "clang++ mac_build/*.o ../lua/mac_build/*.o -lSDL2 -lcurl -o \"$intdir/ps4-p8\""
-clang++ mac_build/*.o ../lua/mac_build/*.o -lSDL2 -lcurl -o "$intdir/ps4-p8"
-"./$intdir/ps4-p8"
+if [ "$1" != "skiprun" ]; then
+  echo "clang++ mac_build/*.o ../lua/mac_build/*.o -lSDL2 -lcurl -o \"$intdir/ps4-p8\""
+  clang++ mac_build/*.o ../lua/mac_build/*.o -lSDL2 -lcurl -o "$intdir/ps4-p8"
+  "./$intdir/ps4-p8"
+fi

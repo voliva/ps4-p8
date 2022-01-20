@@ -8,6 +8,7 @@
 #include <stb/stb_image.h>
 #include <sstream>
 #include <map>
+#include <algorithm>
 #include "events.h"
 #include "http.h"
 
@@ -309,7 +310,7 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 const std::string WHITESPACE_CLOSEPARENS = " \n\r\t\f\v)";
 const std::string ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 #define AO_LENGTH 16
-const std::string assignmentOperators[] = { "-", "+", "/", "*", "..", "\\", "%", "^", "|", "&", "^^", "<<", ">>", ">>>", "<<>", ">><"};
+const std::string assignmentOperators[] = { "-", "+", "/", "*", "..", "\\", "%", "^", "|", "&", "^^", ">>>", "<<>", ">><", "<<", ">>"};
 
 bool is_alphanumeric(char c) {
     return (c >= 'a' && c <= 'z') ||
@@ -436,14 +437,17 @@ std::string replace_unary_functions(std::string& line) {
         while ((pos = line.find(token, pos)) != std::string::npos) {
             int prev_char_pos = line.substr(0, pos).find_last_not_of(WHITESPACE);
 
-            // logger << line << ENDL;
             // If it's alphanumeric, skip (e.g. don't want to change `value = 3 % 2`
             if (prev_char_pos != std::string::npos && (
                 is_alphanumeric(line[prev_char_pos]) ||
                 line[prev_char_pos] == ')'
             )) {
-                pos++;
-                continue;
+                // Exclude if it's a keyword (e.g. return @123 => return peek(123))
+                int beginning_prev_word = line.substr(0, prev_char_pos).find_last_of(WHITESPACE);
+                if(line.substr(beginning_prev_word+1, prev_char_pos-beginning_prev_word) != "return") {
+                    pos++;
+                    continue;
+                }
             }
 
             int param_start = line.find_first_not_of(WHITESPACE, pos + token.size());
@@ -475,6 +479,9 @@ std::string replace_unary_functions(std::string& line) {
             }
             else {
                 param_end = line.find_first_not_of(ALPHANUMERIC, param_start);
+                if(param_end == std::string::npos) {
+                    param_end = line.length();
+                }
                 // TODO function call
             }
 
@@ -507,7 +514,8 @@ std::string replace_binary_functions(std::string& line) {
             // If it's not alphanumeric, skip (e.g. don't want to change `value = 3 % 2`
             if (param0_end == std::string::npos || !(
                 is_alphanumeric(line[param0_end]) ||
-                line[param0_end] == ')'
+                line[param0_end] == ')' ||
+                line[param0_end] == ']' // TODO col[2] % 3
             )) {
                 pos+=token.size();
                 continue;
@@ -559,7 +567,7 @@ std::string replace_binary_functions(std::string& line) {
             // If it's a parenthesis, just follow it
             if (line[paramf_end] == '(') {
                 int stack = 1;
-                for (paramf_end = pos + 1; stack > 0 && paramf_end < line.size(); paramf_end++) {
+                for (paramf_end = paramf_end + 1; stack > 0 && paramf_end < line.size(); paramf_end++) {
                     if (line[paramf_end] == '(')
                         stack++;
                     else if (line[paramf_end] == ')')
@@ -635,10 +643,14 @@ std::string p8lua_to_std_lua(std::string& s) {
 
         // Remove comments ( -- blah). They are not special, but sometimes they can break assumptions
         // made on other mods (e.g. x+=3--5 should become x=x+(3)--5, but instead becomes x+=(3--5) which is invalid lua
-        // TODO improve - E.g. -- in a string
         int comment = line.find("--");
-        if (comment != std::string::npos) {
-            line = line.substr(0, comment);
+        if (comment != std::string::npos && line.find("--[[") == std::string::npos && line.find("]]") == std::string::npos) {
+            // TODO improve
+            std::string prefix = line.substr(0, comment);
+            int quote_count = std::count(prefix.begin(), prefix.end(), '"');
+            if(quote_count % 2 == 0) {
+                line = prefix;
+            }
         }
 
         line = replace_escape_chars(line);
@@ -716,7 +728,7 @@ std::string p8lua_to_std_lua(std::string& s) {
             }
             if (pos < line.length() && line.find_first_not_of(" ", pos) != std::string::npos &&
                 // We need to exclude if line ends with or or and
-                line.find(" or",  pos) == std::string::npos && line.find(" and", pos) == std::string::npos) {
+                line.find(" or",  pos) != line.size()-3 && line.find(" and", pos) != line.size()-4) {
                 line = line.replace(pos, 0, " then ") + " end";
             }
         }
