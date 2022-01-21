@@ -421,77 +421,6 @@ std::string replace_assignment_operators(std::string& line) {
     return line;
 }
 
-std::map<std::string, std::string> unary_functions = {
-    {"@", "peek"},
-    {"%", "peek2"},
-    {"$", "peek4"},
-    {"~", "bnot"}
-};
-
-std::string replace_unary_functions(std::string& line) {
-    for (auto pair = unary_functions.begin(); pair != unary_functions.end(); pair++) {
-        std::string token = (*pair).first;
-        std::string replacement = (*pair).second;
-
-        int pos = 0;
-        while ((pos = line.find(token, pos)) != std::string::npos) {
-            int prev_char_pos = line.substr(0, pos).find_last_not_of(WHITESPACE);
-
-            // If it's alphanumeric, skip (e.g. don't want to change `value = 3 % 2`
-            if (prev_char_pos != std::string::npos && (
-                is_alphanumeric(line[prev_char_pos]) ||
-                line[prev_char_pos] == ')'
-            )) {
-                // Exclude if it's a keyword (e.g. return @123 => return peek(123))
-                int beginning_prev_word = line.substr(0, prev_char_pos).find_last_of(WHITESPACE);
-                if(line.substr(beginning_prev_word+1, prev_char_pos-beginning_prev_word) != "return") {
-                    pos++;
-                    continue;
-                }
-            }
-
-            int param_start = line.find_first_not_of(WHITESPACE, pos + token.size());
-            // That must be alphanumeric, otherwise skip
-            if (param_start == std::string::npos || !(
-                is_alphanumeric(line[param_start]) ||
-                line[param_start] == '('
-            )) {
-                pos++;
-                continue;
-            }
-            int param_end = param_start;
-
-            // If it's a parenthesis, just follow it
-            if (line[param_end] == '(') {
-                int stack = 1;
-                for (param_end = pos + 1; stack > 0 && param_end < line.size(); param_end++) {
-                    if (line[param_end] == '(')
-                        stack++;
-                    else if (line[param_end] == ')')
-                        stack--;
-                }
-                if (stack > 0) {
-                    // Multiline. I ain't doing that.
-                    logger << "TODO Multiline unary operator" << ENDL;
-                    pos++;
-                    continue;
-                }
-            }
-            else {
-                param_end = line.find_first_not_of(ALPHANUMERIC, param_start);
-                if(param_end == std::string::npos) {
-                    param_end = line.length();
-                }
-                // TODO function call
-            }
-
-            line = line.substr(0, pos) + replacement + "(" + line.substr(param_start, param_end-param_start) + ")" + line.substr(param_end);
-            // logger << "=> " << line << ENDL;
-        }
-    }
-    return line;
-}
-
 std::map<std::string, std::string> binary_functions = {
     {"|", "bor"},
     {"&", "band"},
@@ -747,7 +676,6 @@ std::string p8lua_to_std_lua(std::string& s) {
             line = line.replace(pos, 0, " ");
         }
 
-        // line = replace_unary_functions(line);
         line = replace_binary_functions(line);
 
         out << line << ENDL;

@@ -1185,11 +1185,12 @@ static UnOpr getunopr (int op) {
     case '-': return OPR_MINUS;
     case '~': return OPR_BNOT;
     case '#': return OPR_LEN;
+    case '@': return OPR_PEEK;
     case '%': return OPR_PEEK2;
+    case '$': return OPR_PEEK4;
     default: return OPR_NOUNOPR;
   }
 }
-
 
 static BinOpr getbinopr (int op) {
   switch (op) {
@@ -1241,6 +1242,24 @@ static const struct {
 #define UNARY_PRIORITY	12  /* priority for unary operators */
 
 /*
+* Get global function and put it in a register.
+* Register index it was put in is `v->u.info`
+*/
+static void reg_global_fn(LexState* ls, expdesc* v, const char* fn_name) {
+    FuncState* fs = ls->fs;
+    expdesc key;
+
+    singlevaraux(fs, ls->envn, v, 1);
+    TString* s = luaX_newstring(ls, fn_name, strlen(fn_name));
+    codestring(&key, s);
+    luaK_indexed(fs, v, &key);
+    luaK_exp2nextreg(fs, v);
+}
+
+// ORDER UNOPR
+const char* custom_unopr_fns[] = { "peek", "peek2", "peek4" };
+
+/*
 ** subexpr -> (simpleexp | unop subexpr) { binop subexpr }
 ** where 'binop' is any binary operator with a priority higher than 'limit'
 */
@@ -1249,24 +1268,22 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   UnOpr uop;
   enterlevel(ls);
   uop = getunopr(ls->t.token);
-  if (uop == OPR_PEEK2) {
-      //luaX_next(ls);  /* skip operator */
-      //subexpr(ls, v, limit);
+  if (uop >= OPR_PEEK && uop <= OPR_PEEK4) { // ORDER UNOPR
     FuncState* fs = ls->fs;
 
     // Get peek2 function
-    expdesc var, key;
-    singlevaraux(fs, ls->envn, &var, 1);
-    TString* s = luaX_newstring(ls, "peek2", sizeof("peek2")-1); // -1 to remove trailing \0
-    codestring(&key, s);
-    luaK_indexed(fs, &var, &key);
-    luaK_exp2nextreg(fs, &var);
-    luaX_next(ls);  /* skip operator */
-    expdesc arg;
+    expdesc var, arg;
+    reg_global_fn(ls, &var, custom_unopr_fns[uop - OPR_PEEK]); // ORDER UNOPR
+
+    luaX_next(ls);  // skip operator
     subexpr(ls, &arg, UNARY_PRIORITY);
-    luaK_exp2nextreg(fs, &arg);
+    luaK_exp2nextreg(fs, &arg); // Set it as an argument
+
+    // Call the function, set code output to `v`
     int nparams = 1;
     init_exp(v, VCALL, luaK_codeABC(fs, OP_CALL, var.u.info, nparams + 1, 2));
+
+    // It will leave the result in one register after the base one (not sure... but following same steps as in funcargs)
     fs->freereg = var.u.info + 1;
   }else if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
     int line = ls->linenumber;

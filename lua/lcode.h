@@ -47,7 +47,9 @@ typedef enum BinOpr {
 
 #define luaK_codeABC(fs,o,a,b,c)	luaK_codeABCk(fs,o,a,b,c,0)
 
-
+/*
+** grep "ORDER UNOPR" if you change these enums  (ORDER UNOPR)
+*/
 typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_PEEK, OPR_PEEK2, OPR_PEEK4, OPR_NOUNOPR } UnOpr;
 
 
