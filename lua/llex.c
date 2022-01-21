@@ -35,7 +35,7 @@
 
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
 
-
+// TK_AT, TK_PCT, TK_DOLLAR, TK_TILDE, TK_QUESTION
 /* ORDER RESERVED */
 static const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
@@ -43,7 +43,8 @@ static const char *const luaX_tokens [] = {
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
-    "<<", ">>", "::", "<eof>",
+    "<<", ">>", "::",
+    "<eof>",
     "<number>", "<integer>", "<name>", "<string>"
 };
 

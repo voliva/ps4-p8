@@ -1086,7 +1086,6 @@ static void primaryexp (LexState *ls, expdesc *v) {
   }
 }
 
-
 static void suffixedexp (LexState *ls, expdesc *v) {
   /* suffixedexp ->
        primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
@@ -1186,6 +1185,7 @@ static UnOpr getunopr (int op) {
     case '-': return OPR_MINUS;
     case '~': return OPR_BNOT;
     case '#': return OPR_LEN;
+    case '%': return OPR_PEEK2;
     default: return OPR_NOUNOPR;
   }
 }
@@ -1240,7 +1240,6 @@ static const struct {
 
 #define UNARY_PRIORITY	12  /* priority for unary operators */
 
-
 /*
 ** subexpr -> (simpleexp | unop subexpr) { binop subexpr }
 ** where 'binop' is any binary operator with a priority higher than 'limit'
@@ -1250,7 +1249,26 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   UnOpr uop;
   enterlevel(ls);
   uop = getunopr(ls->t.token);
-  if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
+  if (uop == OPR_PEEK2) {
+      //luaX_next(ls);  /* skip operator */
+      //subexpr(ls, v, limit);
+    FuncState* fs = ls->fs;
+
+    // Get peek2 function
+    expdesc var, key;
+    singlevaraux(fs, ls->envn, &var, 1);
+    TString* s = luaX_newstring(ls, "peek2", sizeof("peek2")-1); // -1 to remove trailing \0
+    codestring(&key, s);
+    luaK_indexed(fs, &var, &key);
+    luaK_exp2nextreg(fs, &var);
+    luaX_next(ls);  /* skip operator */
+    expdesc arg;
+    subexpr(ls, &arg, UNARY_PRIORITY);
+    luaK_exp2nextreg(fs, &arg);
+    int nparams = 1;
+    init_exp(v, VCALL, luaK_codeABC(fs, OP_CALL, var.u.info, nparams + 1, 2));
+    fs->freereg = var.u.info + 1;
+  }else if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
     int line = ls->linenumber;
     luaX_next(ls);  /* skip operator */
     subexpr(ls, v, UNARY_PRIORITY);

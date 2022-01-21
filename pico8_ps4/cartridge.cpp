@@ -747,7 +747,7 @@ std::string p8lua_to_std_lua(std::string& s) {
             line = line.replace(pos, 0, " ");
         }
 
-        line = replace_unary_functions(line);
+        // line = replace_unary_functions(line);
         line = replace_binary_functions(line);
 
         out << line << ENDL;
