@@ -605,12 +605,6 @@ std::string p8lua_to_std_lua(std::string& s) {
             }
         }
 
-        // ?"..." => print("...")
-        pos = line.find_first_not_of(WHITESPACE);
-        if (pos != std::string::npos && line[pos] == '?') {
-            line = line.substr(0, pos) + "print(" + line.substr(pos +1) + ")";
-        }
-
         // != => ~=
         pos = 0;
         while ((pos = line.find("!=", pos)) != std::string::npos) {

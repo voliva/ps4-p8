@@ -1086,9 +1086,54 @@ static void primaryexp (LexState *ls, expdesc *v) {
   }
 }
 
+/*
+* Get global function and put it in a register.
+* Register index it was put in is `v->u.info`
+*/
+static void reg_global_fn(LexState* ls, expdesc* v, const char* fn_name) {
+    FuncState* fs = ls->fs;
+    expdesc key;
+
+    singlevaraux(fs, ls->envn, v, 1);
+    TString* s = luaX_newstring(ls, fn_name, strlen(fn_name));
+    codestring(&key, s);
+    luaK_indexed(fs, v, &key);
+    luaK_exp2nextreg(fs, v);
+}
+
 static void suffixedexp (LexState *ls, expdesc *v) {
   /* suffixedexp ->
        primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
+
+    if (ls->t.token == '?') {
+        int line = ls->linenumber;
+
+        reg_global_fn(ls, v, "print");
+
+        luaX_next(ls);  // skip operator
+
+        FuncState* fs = ls->fs;
+        expdesc args;
+        int base, nparams;
+        explist(ls, &args);
+        if (hasmultret(args.k))
+            luaK_setmultret(fs, &args);
+        lua_assert(f->k == VNONRELOC);
+        base = v->u.info;  /* base register for call */
+        if (hasmultret(args.k))
+            nparams = LUA_MULTRET;  /* open call */
+        else {
+            if (args.k != VVOID)
+                luaK_exp2nextreg(fs, &args);  /* close last argument */
+            nparams = fs->freereg - (base + 1);
+        }
+        init_exp(v, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams + 1, 2));
+        luaK_fixline(fs, line);
+        fs->freereg = base + 1;  /* call remove function and arguments and leaves
+                                    (unless changed) one result */
+        return;
+    }
+
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
   primaryexp(ls, v);
@@ -1122,7 +1167,6 @@ static void suffixedexp (LexState *ls, expdesc *v) {
     }
   }
 }
-
 
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
@@ -1241,21 +1285,6 @@ static const struct {
 
 #define UNARY_PRIORITY	12  /* priority for unary operators */
 
-/*
-* Get global function and put it in a register.
-* Register index it was put in is `v->u.info`
-*/
-static void reg_global_fn(LexState* ls, expdesc* v, const char* fn_name) {
-    FuncState* fs = ls->fs;
-    expdesc key;
-
-    singlevaraux(fs, ls->envn, v, 1);
-    TString* s = luaX_newstring(ls, fn_name, strlen(fn_name));
-    codestring(&key, s);
-    luaK_indexed(fs, v, &key);
-    luaK_exp2nextreg(fs, v);
-}
-
 // ORDER UNOPR
 const char* custom_unopr_fns[] = { "peek", "peek2", "peek4" };
 
@@ -1285,7 +1314,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
 
     // It will leave the result in one register after the base one (not sure... but following same steps as in funcargs)
     fs->freereg = var.u.info + 1;
-  }else if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
+  } else if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
     int line = ls->linenumber;
     luaX_next(ls);  /* skip operator */
     subexpr(ls, v, UNARY_PRIORITY);
