@@ -145,6 +145,53 @@ static int isneg (const char **s) {
 }
 
 
+/*
+** {==================================================================
+** Lua's implementation for 'lua_strb2number'
+** ===================================================================
+*/
+
+#if !defined(lua_strb2number)
+
+static lua_Number lua_strb2number(const char* s, char** endptr) {
+    int dot = lua_getlocaledecpoint();
+    lua_Number r = 0.0;  /* result (accumulator) */
+    int sigdig = 0;  /* number of significant digits */
+    int nosigdig = 0;  /* number of non-significant digits */
+    int e = 0;  /* exponent correction */
+    int neg;  /* 1 if number is negative */
+    int hasdot = 0;  /* true after seen a dot */
+    *endptr = cast_charp(s);  /* nothing is valid yet */
+    while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
+    neg = isneg(&s);  /* check sign */
+    if (!(*s == '0' && (*(s + 1) == 'b' || *(s + 1) == 'B')))  /* check '0b' */
+        return 0.0;  /* invalid format (no '0b') */
+    for (s += 2; ; s++) {  /* skip '0b' and read numeral */
+        if (*s == dot) {
+            if (hasdot) break;  /* second dot? stop loop */
+            else hasdot = 1;
+        }
+        else if (lisxdigit(cast_uchar(*s))) {
+            if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
+                nosigdig++;
+            else {
+                sigdig++;
+                r = (r * cast_num(2.0)) + (*s - '0');
+            }
+            if (hasdot) e--; /* decimal digit? correct exponent */
+        }
+        else break;  /* neither a dot nor a digit */
+    }
+    if (nosigdig + sigdig == 0)  /* no digits? */
+        return 0.0;  /* invalid format */
+    *endptr = cast_charp(s);  /* valid up to here */
+    if (neg) r = -r;
+    return l_mathop(ldexp)(r, e);
+}
+
+#endif
+/* }====================================================== */
+
 
 /*
 ** {==================================================================
@@ -224,10 +271,12 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 ** Convert string 's' to a Lua number (put in 'result'). Return NULL on
 ** fail or the address of the ending '\0' on success. ('mode' == 'x')
 ** means a hexadecimal numeral.
+* mode == 'b' means a binary numeral
 */
 static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
   char *endptr;
   *result = (mode == 'x') ? lua_strx2number(s, &endptr)  /* try to convert */
+          : (mode == 'b') ? lua_strb2number(s, &endptr)
                           : lua_str2number(s, &endptr);
   if (endptr == s) return NULL;  /* nothing recognized? */
   while (lisspace(cast_uchar(*endptr))) endptr++;  /* skip trailing spaces */
@@ -246,11 +295,12 @@ static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
 ** The variable 'mode' checks for special characters in the string:
 ** - 'n' means 'inf' or 'nan' (which should be rejected)
 ** - 'x' means a hexadecimal numeral
+** - 'b' means a binary numeral
 ** - '.' just optimizes the search for the common case (no special chars)
 */
 static const char *l_str2d (const char *s, lua_Number *result) {
   const char *endptr;
-  const char *pmode = strpbrk(s, ".xXnN");  /* look for special chars */
+  const char *pmode = strpbrk(s, ".xXnNbB");  /* look for special chars */
   int mode = pmode ? ltolower(cast_uchar(*pmode)) : 0;
   if (mode == 'n')  /* reject 'inf' and 'nan' */
     return NULL;
@@ -284,6 +334,14 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
     s += 2;  /* skip '0x' */
     for (; lisxdigit(cast_uchar(*s)); s++) {
       a = a * 16 + luaO_hexavalue(*s);
+      empty = 0;
+    }
+  }
+  else if (s[0] == '0' &&
+    (s[1] == 'b' || s[1] == 'B')) {  /* binary? */
+    s += 2;  /* skip '0b' */
+    for (; lisxdigit(cast_uchar(*s)); s++) {
+      a = a * 2 + (*s - '0');
       empty = 0;
     }
   }

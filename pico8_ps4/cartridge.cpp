@@ -570,18 +570,6 @@ std::string p8lua_to_std_lua(std::string& s) {
             line = line.substr(0, nilchar);
         }
 
-        // Remove comments ( -- blah). They are not special, but sometimes they can break assumptions
-        // made on other mods (e.g. x+=3--5 should become x=x+(3)--5, but instead becomes x+=(3--5) which is invalid lua
-        int comment = line.find("--");
-        if (comment != std::string::npos && line.find("--[[") == std::string::npos && line.find("]]") == std::string::npos) {
-            // TODO improve
-            std::string prefix = line.substr(0, comment);
-            int quote_count = std::count(prefix.begin(), prefix.end(), '"');
-            if(quote_count % 2 == 0) {
-                line = prefix;
-            }
-        }
-
         line = replace_escape_chars(line);
 
         if (line.find("btn(") != std::string::npos || line.find("btnp(") != std::string::npos) {
@@ -603,31 +591,6 @@ std::string p8lua_to_std_lua(std::string& s) {
             if (char_to_pattern.count(line[pos]) > 0) {
                 line = line.substr(0, pos) + std::to_string(char_to_pattern[line[pos]]) + line.substr(pos+1);
             }
-        }
-
-        // != => ~=
-        pos = 0;
-        while ((pos = line.find("!=", pos)) != std::string::npos) {
-            line.replace(pos, 2, "~=");
-            pos += 2;
-        }
-
-        // This is all so very hacky... but I don't want to write a custom lua (yet) if I can get away with it
-        // binary literals
-        pos = 0;
-        while ((pos = line.find("0b", pos)) != std::string::npos) {
-            int p = pos + 2;
-            int number = 0;
-            while (p < line.length() && (line[p] == '0' || line[p] == '1')) {
-                number = number << 1;
-                if (line[p] == '1') {
-                    number = number | 1;
-                }
-                p++;
-            }
-
-            line.replace(pos, p-pos, std::to_string(number));
-            pos += 2;
         }
 
         line = replace_assignment_operators(line);
@@ -654,20 +617,6 @@ std::string p8lua_to_std_lua(std::string& s) {
                 line.find(" or",  pos) != line.size()-3 && line.find(" and", pos) != line.size()-4) {
                 line = line.replace(pos, 0, " then ") + " end";
             }
-        }
-
-        // if something > 3then => if something > 3 then
-        // WTF?!?
-        if (((pos = line.find("then")) != std::string::npos) && pos > 0 &&
-            line[pos-1] >= '0' && line[pos-1] <= '9') {
-            line = line.replace(pos, 0, " ");
-        }
-
-        // if for i=1,5do => for i=1,5 do
-        if (((pos = line.find("for")) != std::string::npos) &&
-            ((pos = line.find("do", pos)) != std::string::npos) &&
-            line[pos - 1] >= '0' && line[pos - 1] <= '9') {
-            line = line.replace(pos, 0, " ");
         }
 
         line = replace_binary_functions(line);

@@ -224,24 +224,24 @@ static int check_next2 (LexState *ls, const char *set) {
 ** mark, to avoid reading '3-4' or '0xe+1' as a single number.
 **
 ** The caller might have already read an initial dot.
+* 
+* Edit: Removed Exponential notation, added binary literals
 */
 static int read_numeral (LexState *ls, SemInfo *seminfo) {
   TValue obj;
-  const char *expo = "Ee";
   int first = ls->current;
   lua_assert(lisdigit(ls->current));
   save_and_next(ls);
-  if (first == '0' && check_next2(ls, "xX"))  /* hexadecimal? */
-    expo = "Pp";
+  if (first == '0') {
+      check_next2(ls, "xXbB");
+  }
   for (;;) {
-    if (check_next2(ls, expo))  /* exponent mark? */
-      check_next2(ls, "-+");  /* optional exponent sign */
-    else if (lisxdigit(ls->current) || ls->current == '.')  /* '%x|%.' */
+    if (lisxdigit(ls->current) || ls->current == '.')  /* '%x|%.' */
       save_and_next(ls);
     else break;
   }
-  if (lislalpha(ls->current))  /* is numeral touching a letter? */
-    save_and_next(ls);  /* force an error */
+  //if (lislalpha(ls->current))  /* is numeral touching a letter? */ => Commenting this out should solve the `if x = 3then` errors in pico-8
+  //  save_and_next(ls);  /* force an error */
   save(ls, '\0');
   if (luaO_str2num(luaZ_buffer(ls->buff), &obj) == 0)  /* format error? */
     lexerror(ls, "malformed number", TK_FLT);
@@ -510,6 +510,11 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         next(ls);
         if (check_next1(ls, '=')) return TK_NE;  /* '~=' */
         else return '~';
+      }
+      case '!': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_NE;
+        else return '!';
       }
       case ':': {
         next(ls);
