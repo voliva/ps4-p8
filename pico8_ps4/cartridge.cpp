@@ -595,30 +595,6 @@ std::string p8lua_to_std_lua(std::string& s) {
 
         line = replace_assignment_operators(line);
 
-        // if (condition) something => if (condition) then something end
-        if (((pos = line.find("if(")) != std::string::npos ||
-            (pos = line.find("if (")) != std::string::npos) &&
-            (pos == 0 || line[pos-1] == ' ' || line[pos-1] == '\t') && // case value = someFn(iif(parameter, 1, 2))
-            line.find("then", pos) == std::string::npos) {
-            // Look for closing )
-            int stack = 1;
-            pos += 4;
-            while (pos < line.length() && stack > 0) {
-                if (line[pos] == '(') {
-                    stack++;
-                }
-                if (line[pos] == ')') {
-                    stack--;
-                }
-                pos++;
-            }
-            if (pos < line.length() && line.find_first_not_of(" ", pos) != std::string::npos &&
-                // We need to exclude if line ends with or or and
-                line.find(" or",  pos) != line.size()-3 && line.find(" and", pos) != line.size()-4) {
-                line = line.replace(pos, 0, " then ") + " end";
-            }
-        }
-
         line = replace_binary_functions(line);
 
         out << line << ENDL;

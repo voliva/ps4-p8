@@ -1686,16 +1686,24 @@ static void forstat (LexState *ls, int line) {
   leaveblock(fs);  /* loop scope ('break' jumps to this point) */
 }
 
-
-static void test_then_block (LexState *ls, int *escapelist) {
+static char test_then_block (LexState *ls, int *escapelist) {
   /* test_then_block -> [IF | ELSEIF] cond THEN block */
   BlockCnt bl;
   FuncState *fs = ls->fs;
   expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
   luaX_next(ls);  /* skip IF or ELSEIF */
+  char is_shorthand = ls->t.token == '(';
   expr(ls, &v);  /* read condition */
-  checknext(ls, TK_THEN);
+  // p8-lua custom if: `if (cond) expr` => `if (cond) then expr end`
+  // This implementation is more permissive than p8's, but I don't know how to do it without refactoring all of this.
+  // This implementation will accept `if (cond) or (cond) expr`, whereas p8 doesn't.
+  if (is_shorthand) {
+      is_shorthand = ls->t.token != TK_THEN;
+  }
+  else {
+      checknext(ls, TK_THEN);
+  }
   if (ls->t.token == TK_BREAK) {  /* 'if x then break' ? */
     int line = ls->linenumber;
     luaK_goiffalse(ls->fs, &v);  /* will jump if condition is true */
@@ -1715,20 +1723,33 @@ static void test_then_block (LexState *ls, int *escapelist) {
     enterblock(fs, &bl, 0);
     jf = v.f;
   }
-  statlist(ls);  /* 'then' part */
-  leaveblock(fs);
-  if (ls->t.token == TK_ELSE ||
-      ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
-    luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
-  luaK_patchtohere(fs, jf);
-}
+  if (is_shorthand) {
+      statement(ls);
 
+      leaveblock(fs);
+      luaK_patchtohere(fs, jf);
+  }
+  else {
+      statlist(ls);  /* 'then' part */
+
+      leaveblock(fs);
+      if (ls->t.token == TK_ELSE ||
+          ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
+          luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
+      luaK_patchtohere(fs, jf);
+  }
+  return is_shorthand;
+}
 
 static void ifstat (LexState *ls, int line) {
   /* ifstat -> IF cond THEN block {ELSEIF cond THEN block} [ELSE block] END */
   FuncState *fs = ls->fs;
   int escapelist = NO_JUMP;  /* exit list for finished parts */
-  test_then_block(ls, &escapelist);  /* IF cond THEN block */
+  char is_shorthand = test_then_block(ls, &escapelist);  /* IF cond THEN block */
+  if (is_shorthand) {
+    luaK_patchtohere(fs, escapelist);  /* patch escape list to 'if' end */
+    return;
+  }
   while (ls->t.token == TK_ELSEIF)
     test_then_block(ls, &escapelist);  /* ELSEIF cond THEN block */
   if (testnext(ls, TK_ELSE))
