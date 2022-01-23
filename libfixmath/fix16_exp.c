@@ -100,7 +100,14 @@ fix16_t fix16_log(fix16_t inValue)
 	return guess + fix16_from_int(scaling);
 }
 
-
+fix16_t fix16_pow(fix16_t base, fix16_t exponent) {
+	// to calculate base^exponent = a^b we'll change base to `e`
+	// So we need to figure the balue of x for `e^x == a^b`
+	// We take ln on both sides: `x = ln(a^b)`
+	// We apply log rule for exponents: `x = b*ln(a)`
+	fix16_t x = fix16_mul(exponent, fix16_log(base));
+	return fix16_exp(x);
+}
 
 static inline fix16_t fix16_rs(fix16_t x)
 {
@@ -194,4 +201,8 @@ fix16_t fix16_slog2(fix16_t x)
 	if(retval == fix16_overflow)
 		return fix16_minimum;
 	return retval;
+}
+
+fix16_t fix16_ldexp(fix16_t x, int exponent) {
+	return fix16_mul(x, fix16_one << exponent);
 }

@@ -54,30 +54,7 @@
 ** can be converted to a float without rounding. Used in comparisons.
 */
 
-/* number of bits in the mantissa of a float */
-#define NBM		(l_floatatt(MANT_DIG))
-
-/*
-** Check whether some integers may not fit in a float, testing whether
-** (maxinteger >> NBM) > 0. (That implies (1 << NBM) <= maxinteger.)
-** (The shifts are done in parts, to avoid shifting by more than the size
-** of an integer. In a worst case, NBM == 113 for long double and
-** sizeof(long) == 32.)
-*/
-#if ((((LUA_MAXINTEGER >> (NBM / 4)) >> (NBM / 4)) >> (NBM / 4)) \
-	>> (NBM - (3 * (NBM / 4))))  >  0
-
-/* limit for integers that fit in a float */
-#define MAXINTFITSF	((lua_Unsigned)1 << NBM)
-
-/* check whether 'i' is in the interval [-MAXINTFITSF, MAXINTFITSF] */
-#define l_intfitsf(i)	((MAXINTFITSF + l_castS2U(i)) <= (2 * MAXINTFITSF))
-
-#else  /* all integers fit in a float precisely */
-
-#define l_intfitsf(i)	1
-
-#endif
+#define l_intfitsf(i)	((unsigned int)i < 0x10000)
 
 
 /*

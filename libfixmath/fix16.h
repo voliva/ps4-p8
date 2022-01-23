@@ -209,6 +209,8 @@ extern fix16_t fix16_exp(fix16_t inValue) FIXMATH_FUNC_ATTRS;
  */
 extern fix16_t fix16_log(fix16_t inValue) FIXMATH_FUNC_ATTRS;
 
+extern fix16_t fix16_pow(fix16_t base, fix16_t exponent) FIXMATH_FUNC_ATTRS;
+
 /*! Returns the base 2 logarithm of the given fix16_t.
  */
 extern fix16_t fix16_log2(fix16_t x) FIXMATH_FUNC_ATTRS;
@@ -216,6 +218,8 @@ extern fix16_t fix16_log2(fix16_t x) FIXMATH_FUNC_ATTRS;
 /*! Returns the saturated base 2 logarithm of the given fix16_t.
  */
 extern fix16_t fix16_slog2(fix16_t x) FIXMATH_FUNC_ATTRS;
+
+extern fix16_t fix16_ldexp(fix16_t x, int exponent) FIXMATH_FUNC_ATTRS;
 
 /*! Convert fix16_t value to a string.
  * Required buffer length for largest values is 13 bytes.

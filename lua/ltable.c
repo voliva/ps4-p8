@@ -101,33 +101,9 @@ static const Node dummynode_ = {
 static const TValue absentkey = {ABSTKEYCONSTANT};
 
 
-
-/*
-** Hash for floating-point numbers.
-** The main computation should be just
-**     n = frexp(n, &i); return (n * INT_MAX) + i
-** but there are some numerical subtleties.
-** In a two-complement representation, INT_MAX does not has an exact
-** representation as a float, but INT_MIN does; because the absolute
-** value of 'frexp' is smaller than 1 (unless 'n' is inf/NaN), the
-** absolute value of the product 'frexp * -INT_MIN' is smaller or equal
-** to INT_MAX. Next, the use of 'unsigned int' avoids overflows when
-** adding 'i'; the use of '~u' (instead of '-u') avoids problems with
-** INT_MIN.
-*/
 #if !defined(l_hashfloat)
 static int l_hashfloat (lua_Number n) {
-  int i;
-  lua_Integer ni;
-  n = l_mathop(frexp)(n, &i) * -cast_num(INT_MIN);
-  if (!lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
-    lua_assert(luai_numisnan(n) || l_mathop(fabs)(n) == cast_num(HUGE_VAL));
-    return 0;
-  }
-  else {  /* normal case */
-    unsigned int u = cast_uint(i) + cast_uint(ni);
-    return cast_int(u <= cast_uint(INT_MAX) ? u : ~u);
-  }
+  return (int)(n);
 }
 #endif
 

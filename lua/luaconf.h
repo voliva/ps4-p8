@@ -629,21 +629,6 @@
 	((void)L, l_sprintf(b,sz,f,(LUAI_UACNUMBER)(n)))
 #endif
 
-
-/*
-** 'strtof' and 'opf' variants for math functions are not valid in
-** C89. Otherwise, the macro 'HUGE_VALF' is a good proxy for testing the
-** availability of these variants. ('math.h' is already included in
-** all files that use these macros.)
-*/
-#if defined(LUA_USE_C89) || (defined(HUGE_VAL) && !defined(HUGE_VALF))
-#undef l_mathop  /* variants not available */
-#undef lua_str2number
-#define l_mathop(op)		(lua_Number)op  /* no variant */
-#define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
-#endif
-
-
 /*
 @@ LUA_KCONTEXT is the type of the context ('ctx') for continuation
 ** functions.  It must be a numerical type; Lua will use 'intptr_t' if
