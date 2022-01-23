@@ -89,7 +89,7 @@ static inline fix16_t fix16_from_dbl(double a)
 #define F16(x) ((fix16_t)(((x) >= 0) ? ((x) * 65536.0 + 0.5) : ((x) * 65536.0 - 0.5)))
 
 static inline fix16_t fix16_abs(fix16_t x)
-    { return (fix16_t)(x < 0 ? -(uint32_t)x : (uint32_t)x); }
+    { return (fix16_t)(x < 0 ? -x : x); }
 static inline fix16_t fix16_floor(fix16_t x)
 	{ return (x & 0xFFFF0000UL); }
 static inline fix16_t fix16_ceil(fix16_t x)
@@ -220,13 +220,13 @@ extern fix16_t fix16_slog2(fix16_t x) FIXMATH_FUNC_ATTRS;
 /*! Convert fix16_t value to a string.
  * Required buffer length for largest values is 13 bytes.
  */
-extern void fix16_to_str(fix16_t value, char *buf, int decimals);
+extern size_t fix16_to_str(fix16_t value, char *buf, int decimals);
 
 /*! Convert string to a fix16_t value
  * Ignores spaces at beginning and end. Returns fix16_overflow if
  * value is too large or there were garbage characters.
  */
-extern fix16_t fix16_from_str(const char *buf);
+extern fix16_t fix16_from_str(const char *buf, char **end);
 
 static inline uint32_t fix_abs(fix16_t in)
 {

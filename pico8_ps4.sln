@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "lua\lua.vcxproj", "{98C370D4-4DE8-46A1-8DA0-4DBB02122F86}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A} = {F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pico8_ps4", "pico8_ps4\pico8_ps4.vcxproj", "{8BF815EC-5349-47AD-A377-730BE2CF26B4}"
 EndProject

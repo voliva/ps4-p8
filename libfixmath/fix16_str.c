@@ -37,8 +37,9 @@ static char *itoa_loop(char *buf, uint32_t scale, uint32_t value, bool skip)
     return buf;
 }
 
-void fix16_to_str(fix16_t value, char *buf, int decimals)
+size_t fix16_to_str(fix16_t value, char *buf, int decimals)
 {
+    size_t start = (size_t)buf;
     uint32_t uvalue = (value >= 0) ? value : -value;
     if (value < 0)
         *buf++ = '-';
@@ -67,9 +68,10 @@ void fix16_to_str(fix16_t value, char *buf, int decimals)
     }
     
     *buf = '\0';
+    return buf - start;
 }
 
-fix16_t fix16_from_str(const char *buf)
+fix16_t fix16_from_str(const char *buf, char** end)
 {
     while (isspace(*buf))
         buf++;
@@ -88,6 +90,7 @@ fix16_t fix16_from_str(const char *buf)
         intpart += *buf++ - '0';
         count++;
     }
+    if (end) *end = buf;
     
     if (count == 0 || count > 5
         || intpart > 32768 || (!negative && intpart > 32767))
@@ -111,16 +114,9 @@ fix16_t fix16_from_str(const char *buf)
         
         value += fix16_div(fracpart, scale);
     }
-    
-    /* Verify that there is no garbage left over */
-    while (*buf != '\0')
-    {
-        if (!isdigit(*buf) && !isspace(*buf))
-            return fix16_overflow;
-        
-        buf++;
-    }
-    
+
+    if (end) *end = buf;
+
     return negative ? -value : value;
 }
 

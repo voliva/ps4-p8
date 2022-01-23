@@ -80,7 +80,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\lib\include;..\lua;$(IncludePath)</IncludePath>
+    <IncludePath>..\lib\include;..\lua;..\libfixmath;$(IncludePath)</IncludePath>
     <LibraryPath>..\lib\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

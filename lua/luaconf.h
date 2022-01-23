@@ -10,7 +10,7 @@
 
 #include <limits.h>
 #include <stddef.h>
-
+#include <fix16.h>
 
 /*
 ** ===================================================================
@@ -106,12 +106,11 @@
 #define LUA_FLOAT_FLOAT		1
 #define LUA_FLOAT_DOUBLE	2
 #define LUA_FLOAT_LONGDOUBLE	3
-
+#define LUA_FIXED_16	4
 
 /* Default configuration ('long long' and 'double', for 64-bit Lua) */
 #define LUA_INT_DEFAULT		LUA_INT_LONGLONG
-#define LUA_FLOAT_DEFAULT	LUA_FLOAT_DOUBLE
-
+#define LUA_FLOAT_DEFAULT	LUA_FIXED_16
 
 /*
 @@ LUA_32BITS enables Lua with 32-bit integers and 32-bit floats.
@@ -404,7 +403,7 @@
 #define l_floor(x)		(l_mathop(floor)(x))
 
 #define lua_number2str(s,sz,n)  \
-	l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
+	fix16_to_str(n, s, 4)
 
 /*
 @@ lua_numbertointeger converts a float number with an integral value
@@ -416,10 +415,7 @@
 ** may have an ill-defined value.)
 */
 #define lua_numbertointeger(n,p) \
-  ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
-   (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
-      (*(p) = (LUA_INTEGER)(n), 1))
-
+  (*(p) = (LUA_INTEGER) fix16_to_int(n))
 
 /* now the variable definitions */
 
@@ -468,6 +464,20 @@
 #define l_mathop(op)		op
 
 #define lua_str2number(s,p)	strtod((s), (p))
+
+#elif LUA_FLOAT_TYPE == LUA_FIXED_16
+
+#define LUA_NUMBER	fix16_t
+
+#define LUAI_UACNUMBER	fix16_t
+
+#define LUA_NUMBER_FRMLEN	""
+#define LUA_NUMBER_FMT		"%i.%i"
+
+#define l_mathop(op)		fix16_##op
+
+#define l_floatatt(n)		(DBL_##n)
+#define lua_str2number(s,p)	fix16_from_str((s), (p))
 
 #else						/* }{ */
 
