@@ -102,8 +102,40 @@ static const TValue absentkey = {ABSTKEYCONSTANT};
 
 
 #if !defined(l_hashfloat)
+#define orig_lua_numbertointeger(n,p) \
+  ((n) >= (float)(LUA_MININTEGER) && \
+   (n) < -(float)(LUA_MININTEGER) && \
+      (*(p) = (int)(n), 1))
+
+/*
+** Hash for floating-point numbers.
+** The main computation should be just
+**     n = frexp(n, &i); return (n * INT_MAX) + i
+** but there are some numerical subtleties.
+** In a two-complement representation, INT_MAX does not has an exact
+** representation as a float, but INT_MIN does; because the absolute
+** value of 'frexp' is smaller than 1 (unless 'n' is inf/NaN), the
+** absolute value of the product 'frexp * -INT_MIN' is smaller or equal
+** to INT_MAX. Next, the use of 'unsigned int' avoids overflows when
+** adding 'i'; the use of '~u' (instead of '-u') avoids problems with
+** INT_MIN.
+*/
+static int l_orighashfloat(float n) {
+    int i;
+    lua_Integer ni;
+    n = frexp(n, &i) * -INT_MIN;
+    if (!orig_lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
+        return 0;
+    }
+    else {  /* normal case */
+        unsigned int u = cast_uint(i) + cast_uint(ni);
+        return cast_int(u <= cast_uint(INT_MAX) ? u : ~u);
+    }
+}
+
 static int l_hashfloat (lua_Number n) {
-  return (int)(n);
+    int hash = l_orighashfloat(fix16_to_float(n));
+    return hash;
 }
 #endif
 
