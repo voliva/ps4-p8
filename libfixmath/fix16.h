@@ -61,19 +61,12 @@ static inline int fix16_to_int(fix16_t a)
 static inline fix16_t fix16_from_float(float a)
 {
 	float temp = a * fix16_one;
-#ifndef FIXMATH_NO_ROUNDING
-	temp += (temp >= 0) ? 0.5f : -0.5f;
-#endif
 	return (fix16_t)temp;
 }
 
 static inline fix16_t fix16_from_dbl(double a)
 {
 	double temp = a * fix16_one;
-    /* F16() and F16C() are both rounding allways, so this should as well */
-//#ifndef FIXMATH_NO_ROUNDING
-	temp += (double)((temp >= 0) ? 0.5f : -0.5f);
-//#endif
 	return (fix16_t)temp;
 }
 

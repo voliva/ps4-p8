@@ -341,11 +341,6 @@ fix16_t fix16_div(fix16_t a, fix16_t b)
 		bit_pos--;
 	}
 	
-	#ifndef FIXMATH_NO_ROUNDING
-	// Quotient is always positive so rounding is easy
-	quotient++;
-	#endif
-	
 	fix16_t result = quotient >> 1;
 	
 	// Figure out the sign of the result
