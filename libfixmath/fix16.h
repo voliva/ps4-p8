@@ -83,6 +83,8 @@ static inline fix16_t fix16_from_dbl(double a)
 
 static inline fix16_t fix16_abs(fix16_t x)
     { return (fix16_t)(x < 0 ? -x : x); }
+static inline fix16_t fix16_fabs(fix16_t x)
+    { return fix16_abs(x); }
 static inline fix16_t fix16_floor(fix16_t x)
 	{ return (x & 0xFFFF0000UL); }
 static inline fix16_t fix16_ceil(fix16_t x)
@@ -203,6 +205,8 @@ extern fix16_t fix16_exp(fix16_t inValue) FIXMATH_FUNC_ATTRS;
 extern fix16_t fix16_log(fix16_t inValue) FIXMATH_FUNC_ATTRS;
 
 extern fix16_t fix16_pow(fix16_t base, fix16_t exponent) FIXMATH_FUNC_ATTRS;
+
+extern fix16_t fix16_log10(fix16_t inValue) FIXMATH_FUNC_ATTRS;
 
 /*! Returns the base 2 logarithm of the given fix16_t.
  */

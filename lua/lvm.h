@@ -33,7 +33,7 @@
 ** integral values)
 */
 #if !defined(LUA_FLOORN2I)
-#define LUA_FLOORN2I		F2Ieq
+#define LUA_FLOORN2I		F2Ifloor
 #endif
 
 

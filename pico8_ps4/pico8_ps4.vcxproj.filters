@@ -72,6 +72,21 @@
     <ClCompile Include="saves.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="lua_draw_fns.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lua_lang_fns.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lua_sound_fns.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lua_machine_fns.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lua_math_fns.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -132,6 +147,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="saves.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lua_fns.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -160,6 +160,11 @@
     <ClCompile Include="font.cpp" />
     <ClCompile Include="http.cpp" />
     <ClCompile Include="log.cpp" />
+    <ClCompile Include="lua_draw_fns.cpp" />
+    <ClCompile Include="lua_lang_fns.cpp" />
+    <ClCompile Include="lua_machine_fns.cpp" />
+    <ClCompile Include="lua_math_fns.cpp" />
+    <ClCompile Include="lua_sound_fns.cpp" />
     <ClCompile Include="lua_state.cpp" />
     <ClCompile Include="machine_state.cpp" />
     <ClCompile Include="main.cpp" />
@@ -183,6 +188,7 @@
     <ClInclude Include="font.h" />
     <ClInclude Include="http.h" />
     <ClInclude Include="log.h" />
+    <ClInclude Include="lua_fns.h" />
     <ClInclude Include="lua_state.h" />
     <ClInclude Include="machine_state.h" />
     <ClInclude Include="memory.h" />

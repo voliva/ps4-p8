@@ -1694,6 +1694,8 @@ static char test_then_block (LexState *ls, int *escapelist) {
   int jf;  /* instruction to skip 'then' code (if condition is false) */
   luaX_next(ls);  /* skip IF or ELSEIF */
   char is_shorthand = ls->t.token == '(';
+  int line_num = ls->linenumber; // On the same line of shorthand we can have an else block
+
   expr(ls, &v);  /* read condition */
   // p8-lua custom if: `if (cond) expr` => `if (cond) then expr end`
   // This implementation is more permissive than p8's, but I don't know how to do it without refactoring all of this.
@@ -1727,6 +1729,8 @@ static char test_then_block (LexState *ls, int *escapelist) {
       statement(ls);
 
       leaveblock(fs);
+      if (ls->t.token == TK_ELSE && ls->linenumber == line_num)
+          luaK_concat(fs, escapelist, luaK_jump(fs));
       luaK_patchtohere(fs, jf);
   }
   else {
@@ -1745,8 +1749,11 @@ static void ifstat (LexState *ls, int line) {
   /* ifstat -> IF cond THEN block {ELSEIF cond THEN block} [ELSE block] END */
   FuncState *fs = ls->fs;
   int escapelist = NO_JUMP;  /* exit list for finished parts */
+  int line_num = ls->linenumber; // On the same line of shorthand we can have an else block
   char is_shorthand = test_then_block(ls, &escapelist);  /* IF cond THEN block */
   if (is_shorthand) {
+    if (ls->linenumber == line_num && testnext(ls, TK_ELSE))
+        statement(ls);  /* 'else' part */
     luaK_patchtohere(fs, escapelist);  /* patch escape list to 'if' end */
     return;
   }

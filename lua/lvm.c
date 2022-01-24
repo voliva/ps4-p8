@@ -54,7 +54,7 @@
 ** can be converted to a float without rounding. Used in comparisons.
 */
 
-#define l_intfitsf(i)	((unsigned int)i < 0x10000)
+#define l_intfitsf(i)	(i >= fix16_minimum && i <= fix16_maximum)
 
 
 /*

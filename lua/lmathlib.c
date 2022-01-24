@@ -20,7 +20,7 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
-
+#include "llimits.h"
 
 #undef PI
 #define PI	(cast_num(3.141592653589793238462643383279502884))

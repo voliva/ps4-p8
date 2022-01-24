@@ -109,6 +109,10 @@ fix16_t fix16_pow(fix16_t base, fix16_t exponent) {
 	return fix16_exp(x);
 }
 
+fix16_t fix16_log10(fix16_t inValue) {
+	return fix16_div(fix16_log(inValue), fix16_log(10));
+}
+
 static inline fix16_t fix16_rs(fix16_t x)
 {
 	#ifdef FIXMATH_NO_ROUNDING
