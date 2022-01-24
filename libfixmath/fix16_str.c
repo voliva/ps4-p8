@@ -83,18 +83,20 @@ fix16_t fix16_from_str(const char *buf, char** end)
 
     /* Decode the integer part */
     uint32_t intpart = 0;
-    int count = 0;
-    while (isdigit(*buf))
-    {
-        intpart *= 10;
-        intpart += *buf++ - '0';
-        count++;
+    if (*buf != '.' && *buf != ',') {
+        int count = 0;
+        while (isdigit(*buf))
+        {
+            intpart *= 10;
+            intpart += *buf++ - '0';
+            count++;
+        }
+        if (end) *end = buf;
+
+        if (count == 0 || count > 5
+            || intpart > 32768 || (!negative && intpart > 32767))
+            return fix16_overflow;
     }
-    if (end) *end = buf;
-    
-    if (count == 0 || count > 5
-        || intpart > 32768 || (!negative && intpart > 32767))
-        return fix16_overflow;
     
     fix16_t value = intpart << 16;
     
