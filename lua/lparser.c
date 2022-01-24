@@ -1701,7 +1701,7 @@ static char test_then_block (LexState *ls, int *escapelist) {
   if (is_shorthand) {
       is_shorthand = ls->t.token != TK_THEN;
   }
-  else {
+  if(!is_shorthand) {
       checknext(ls, TK_THEN);
   }
   if (ls->t.token == TK_BREAK) {  /* 'if x then break' ? */
