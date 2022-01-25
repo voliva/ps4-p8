@@ -37,7 +37,8 @@ static char *itoa_loop(char *buf, uint32_t scale, uint32_t value, bool skip)
     return buf;
 }
 
-size_t fix16_to_str(fix16_t value, char *buf, int decimals)
+#define MAX_DECIMALS 4
+size_t fix16_to_str(fix16_t value, char *buf)
 {
     size_t start = (size_t)buf;
     uint32_t uvalue = (value >= 0) ? value : -value;
@@ -47,9 +48,9 @@ size_t fix16_to_str(fix16_t value, char *buf, int decimals)
     /* Separate the integer and decimal parts of the value */
     unsigned intpart = uvalue >> 16;
     uint32_t fracpart = uvalue & 0xFFFF;
-    uint32_t scale = scales[decimals & 7];
+    uint32_t scale = scales[MAX_DECIMALS & 7];
     fracpart = fix16_mul(fracpart, scale);
-    
+
     if (fracpart >= scale)
     {
         /* Handle carry from decimal part */
@@ -65,9 +66,18 @@ size_t fix16_to_str(fix16_t value, char *buf, int decimals)
     {
         *buf++ = '.';
         buf = itoa_loop(buf, scale / 10, fracpart, false);
+
+        // Remove trailing 0's
+        while (*(buf - 1) == '0') {
+            buf--;
+        }
+        if (*(buf - 1) == '.') {
+            buf--;
+        }
     }
-    
+
     *buf = '\0';
+
     return buf - start;
 }
 
