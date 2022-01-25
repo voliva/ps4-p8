@@ -101,12 +101,25 @@ fix16_t fix16_log(fix16_t inValue)
 }
 
 fix16_t fix16_pow(fix16_t base, fix16_t exponent) {
+	int sign = 1;
+	if (base < 0) {
+		if ((exponent & 0x0FFFF) > 0) { // If the exponent has decimals, then quit (it's NaN, on p8 it returns 0)
+			return 0;
+		}
+		base = -base;
+
+		if ((exponent & 0x10000) > 0) {
+			// If the exponent is odd, then we'll have to swap the result sign.
+			sign = -1;
+		}
+	}
+
 	// to calculate base^exponent = a^b we'll change base to `e`
 	// So we need to figure the balue of x for `e^x == a^b`
 	// We take ln on both sides: `x = ln(a^b)`
 	// We apply log rule for exponents: `x = b*ln(a)`
 	fix16_t x = fix16_mul(exponent, fix16_log(base));
-	return fix16_exp(x);
+	return fix16_exp(x) * sign;
 }
 
 fix16_t fix16_log10(fix16_t inValue) {

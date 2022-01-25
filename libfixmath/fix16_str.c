@@ -116,6 +116,11 @@ fix16_t fix16_from_str(const char *buf, char** end)
         
         value += fix16_div(fracpart, scale);
     }
+    
+    // Consume rest of digits
+    while (isdigit(*buf)) {
+        buf++;
+    }
 
     if (end) *end = buf;
 

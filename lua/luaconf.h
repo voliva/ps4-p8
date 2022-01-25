@@ -415,7 +415,7 @@
 ** may have an ill-defined value.)
 */
 #define lua_numbertointeger(n,p) \
-  (*(p) = (LUA_INTEGER) fix16_to_int(n))
+  (*(p) = (LUA_INTEGER)fix16_to_int(n), 1)
 
 /* now the variable definitions */
 

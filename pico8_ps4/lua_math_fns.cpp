@@ -117,7 +117,7 @@ int band(lua_State* L) {
 	fix16_t a = lua_tonumber(L, 1);
 	fix16_t b = lua_tonumber(L, 2);
 
-	lua_pushinteger(L, a & b);
+	lua_pushnumber(L, a & b);
 
 	return 1;
 }
@@ -126,7 +126,7 @@ int bor(lua_State* L) {
 	fix16_t a = lua_tonumber(L, 1);
 	fix16_t b = lua_tonumber(L, 2);
 
-	lua_pushinteger(L, a | b);
+	lua_pushnumber(L, a | b);
 
 	return 1;
 }

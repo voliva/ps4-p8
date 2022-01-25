@@ -155,10 +155,10 @@ static int isneg (const char **s) {
 
 static lua_Number lua_strb2number(const char* s, char** endptr) {
     int dot = lua_getlocaledecpoint();
-    double r = 0.0;  /* result (accumulator) */
+    fix16_t r = 0;  /* result (accumulator) */
     int sigdig = 0;  /* number of significant digits */
     int nosigdig = 0;  /* number of non-significant digits */
-    int e = 0;  /* exponent correction */
+    int e = 16;  /* exponent correction */
     int neg;  /* 1 if number is negative */
     int hasdot = 0;  /* true after seen a dot */
     *endptr = cast_charp(s);  /* nothing is valid yet */
@@ -176,7 +176,7 @@ static lua_Number lua_strb2number(const char* s, char** endptr) {
                 nosigdig++;
             else {
                 sigdig++;
-                r = (r * 2.0) + (*s - '0');
+                r = (r << 1) + (*s - '0');
             }
             if (hasdot) e--; /* decimal digit? correct exponent */
         }
@@ -211,10 +211,10 @@ static lua_Number lua_strb2number(const char* s, char** endptr) {
 */
 static lua_Number lua_strx2number (const char *s, char **endptr) {
   int dot = lua_getlocaledecpoint();
-  double r = 0.0;  /* result (accumulator) */
+  fix16_t r = 0.0;  /* result (accumulator) */
   int sigdig = 0;  /* number of significant digits */
   int nosigdig = 0;  /* number of non-significant digits */
-  int e = 0;  /* exponent correction */
+  int e = 4;  /* exponent correction */
   int neg;  /* 1 if number is negative */
   int hasdot = 0;  /* true after seen a dot */
   *endptr = cast_charp(s);  /* nothing is valid yet */
@@ -231,7 +231,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
       if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
         nosigdig++;
       else if (++sigdig <= MAXSIGDIG)  /* can read it without overflow? */
-        r = (r * 16.0) + luaO_hexavalue(*s);
+        r = (r << 8) + luaO_hexavalue(*s);
       else e++; /* too many digits; ignore, but still count for exponent */
       if (hasdot) e--;  /* decimal digit? correct exponent */
     }

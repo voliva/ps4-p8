@@ -44,7 +44,7 @@ void SaveManager::open(std::string name)
 
 int SaveManager::read(int index)
 {
-	DEBUGLOG << "read " << index << ": " << memory_read_int(ADDR_PERSISTENT + index * 4) << ENDL;
+	// DEBUGLOG << "read " << index << ": " << memory_read_int(ADDR_PERSISTENT + index * 4) << ENDL;
 	return memory_read_int(ADDR_PERSISTENT + index * 4);
 }
 
