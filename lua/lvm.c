@@ -738,21 +738,21 @@ lua_Number luaV_modf (lua_State *L, lua_Number m, lua_Number n) {
 
 
 /* number of bits in an integer */
-#define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
+#define NBITS	cast_int(sizeof(lua_Number) * CHAR_BIT)
 
 /*
 ** Shift left operation. (Shift right just negates 'y'.)
 */
 #define luaV_shiftr(x,y)	luaV_shiftl(x,-(y))
 
-lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
+lua_Number luaV_shiftl (lua_Number x, lua_Integer y) {
   if (y < 0) {  /* shift right? */
     if (y <= -NBITS) return 0;
-    else return intop(>>, x, -y);
+    else return x >> -y;
   }
   else {  /* shift left */
     if (y >= NBITS) return 0;
-    else return intop(<<, x, y);
+    else return x << y;
   }
 }
 
@@ -850,9 +850,9 @@ void luaV_finishOp (lua_State *L) {
 #define l_addi(L,a,b)	intop(+, a, b)
 #define l_subi(L,a,b)	intop(-, a, b)
 #define l_muli(L,a,b)	intop(*, a, b)
-#define l_band(a,b)	intop(&, a, b)
-#define l_bor(a,b)	intop(|, a, b)
-#define l_bxor(a,b)	intop(^, a, b)
+#define l_band(a,b) a&b
+#define l_bor(a,b)	a|b
+#define l_bxor(a,b)	a^b
 
 #define l_lti(a,b)	(a < b)
 #define l_lei(a,b)	(a <= b)
@@ -942,10 +942,10 @@ void luaV_finishOp (lua_State *L) {
 #define op_bitwiseK(L,op) {  \
   TValue *v1 = vRB(i);  \
   TValue *v2 = KC(i);  \
-  lua_Integer i1;  \
-  lua_Integer i2 = ivalue(v2);  \
-  if (tointegerns(v1, &i1)) {  \
-    pc++; setivalue(s2v(ra), op(i1, i2));  \
+  lua_Number i1;  \
+  lua_Number i2 = fltvalue(v2);  \
+  if (tonumberns(v1, i1)) {  \
+    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
   }}
 
 
@@ -955,11 +955,21 @@ void luaV_finishOp (lua_State *L) {
 #define op_bitwise(L,op) {  \
   TValue *v1 = vRB(i);  \
   TValue *v2 = vRC(i);  \
-  lua_Integer i1; lua_Integer i2;  \
-  if (tointegerns(v1, &i1) && tointegerns(v2, &i2)) {  \
-    pc++; setivalue(s2v(ra), op(i1, i2));  \
+  lua_Number i1; lua_Number i2;  \
+  if (tonumberns(v1, i1) && tonumberns(v2, i2)) {  \
+    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
   }}
 
+/*
+** Bitwise int operations with register operands.
+*/
+#define op_bitwiseI(L,op) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = vRC(i);  \
+  lua_Number i1; lua_Integer i2;  \
+  if (tonumberns(v1, i1) && tointegerns(v2, &i2)) {  \
+    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
+  }}
 
 /*
 ** Order operations with register operands. 'opn' actually works
@@ -1379,8 +1389,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_SHRI) {
         TValue *rb = vRB(i);
         int ic = GETARG_sC(i);
-        lua_Integer ib;
-        if (tointegerns(rb, &ib)) {
+        lua_Number ib;
+        if (tonumberns(rb, ib)) {
           pc++; setivalue(s2v(ra), luaV_shiftl(ib, -ic));
         }
         vmbreak;
@@ -1388,8 +1398,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_SHLI) {
         TValue *rb = vRB(i);
         int ic = GETARG_sC(i);
-        lua_Integer ib;
-        if (tointegerns(rb, &ib)) {
+        lua_Number ib;
+        if (tonumberns(rb, ib)) {
           pc++; setivalue(s2v(ra), luaV_shiftl(ic, ib));
         }
         vmbreak;
@@ -1435,11 +1445,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_SHR) {
-        op_bitwise(L, luaV_shiftr);
+        op_bitwiseI(L, luaV_shiftr);
         vmbreak;
       }
       vmcase(OP_SHL) {
-        op_bitwise(L, luaV_shiftl);
+        op_bitwiseI(L, luaV_shiftl);
         vmbreak;
       }
       vmcase(OP_MMBIN) {

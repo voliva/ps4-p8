@@ -595,7 +595,7 @@ std::string p8lua_to_std_lua(std::string& s) {
 
         // line = replace_assignment_operators(line);
 
-        line = replace_binary_functions(line);
+        // line = replace_binary_functions(line);
 
         out << line << ENDL;
         line_num++;
