@@ -403,7 +403,7 @@
 #define l_floor(x)		(l_mathop(floor)(x))
 
 #define lua_number2str(s,sz,n)  \
-	fix16_to_str(n, s, 4)
+	fix16_to_str(n, s)
 
 /*
 @@ lua_numbertointeger converts a float number with an integral value

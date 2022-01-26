@@ -22,6 +22,7 @@ extern "C"
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef int32_t fix16_t;
 
@@ -221,7 +222,7 @@ extern fix16_t fix16_ldexp(fix16_t x, int exponent) FIXMATH_FUNC_ATTRS;
 /*! Convert fix16_t value to a string.
  * Required buffer length for largest values is 13 bytes.
  */
-extern size_t fix16_to_str(fix16_t value, char *buf, int decimals);
+extern size_t fix16_to_str(fix16_t value, char *buf);
 
 /*! Convert string to a fix16_t value
  * Ignores spaces at beginning and end. Returns fix16_overflow if

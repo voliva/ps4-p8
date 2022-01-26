@@ -4,6 +4,9 @@ mkdir $intdir
 
 for file in *.c; do
   filename="${file%.*}"
-  echo "clang -c -o \"$intdir/$filename.o\" $file"
-  clang -c -o "$intdir/$filename.o" $file
+  if [ "$file" -nt "$intdir/$filename.o" ]
+  then
+    echo "clang -I\"../libfixmath\" -c -o \"$intdir/$filename.o\" $file"
+    clang -I"../libfixmath" -c -o "$intdir/$filename.o" $file
+  fi
 done

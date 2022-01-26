@@ -40,6 +40,11 @@ typedef enum BinOpr {
   OPR_NOBINOPR
 } BinOpr;
 
+// ORDER RESERVED
+// Maps TK_ASSIGN_* => BinOpr
+static BinOpr assignment_to_opr[] = {
+  OPR_ADD
+};
 
 /* true if operation is foldable (that is, it is arithmetic or bitwise) */
 #define foldbinop(op)	((op) <= OPR_SHR)

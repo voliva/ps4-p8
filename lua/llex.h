@@ -39,9 +39,14 @@ enum RESERVED {
   TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
   TK_SHL, TK_SHR,
   TK_DBCOLON,
+  TK_ASSIGN_ADD,
   TK_EOS,
   TK_FLT, TK_INT, TK_NAME, TK_STRING
 };
+
+static int tk_is_assignment(int token) {
+  return token == '=' || token == TK_ASSIGN_ADD;
+}
 
 /* number of reserved words */
 #define NUM_RESERVED	(cast_int(TK_WHILE-FIRST_RESERVED + 1))

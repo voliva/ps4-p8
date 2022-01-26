@@ -100,7 +100,6 @@ static int testnext (LexState *ls, int c) {
   else return 0;
 }
 
-
 /*
 ** Check that next token is 'c'.
 */
@@ -118,8 +117,11 @@ static void checknext (LexState *ls, int c) {
   luaX_next(ls);
 }
 
-
 #define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
+
+static void check_assignment (LexState *ls) {
+  check_condition(ls, tk_is_assignment(ls->t.token), "expected assignment operator")
+}
 
 
 /*
@@ -1429,6 +1431,7 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   }
 }
 
+#include <stdio.h>
 /*
 ** Parse and compile a multiple assignment. The first "variable"
 ** (a 'suffixedexp') was already read by the caller.
@@ -1440,6 +1443,8 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
   check_condition(ls, vkisvar(lh->v.k), "syntax error");
   check_readonly(ls, &lh->v);
+  int line = ls->linenumber;
+  BinOpr operator = OPR_NOBINOPR;
   if (testnext(ls, ',')) {  /* restassign -> ',' suffixedexp restassign */
     struct LHS_assign nv;
     nv.prev = lh;
@@ -1452,16 +1457,53 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
   }
   else {  /* restassign -> '=' explist */
     int nexps;
-    checknext(ls, '=');
+
+    check_assignment(ls);
+    if(ls->t.token != '=') {
+      operator = assignment_to_opr[ls->t.token];
+    }
+    luaX_next(ls);
+
     nexps = explist(ls, &e);
+    if (operator != OPR_NOBINOPR && (nexps > 1 || nvars > 1)) {
+      /**
+      On Pico8, this:
+      x,y,z += 2,3,4
+
+      is the same as:
+      x,y,z = (z+2),3,4
+
+      or (written differently)
+      x = z+2
+      y,z = 3,4
+
+      =========
+      It's hard to make this work in here, I don't know how to work with exprlists.
+      What the current version will do is:
+      x,y,z = 2,3,(z+4)
+      */
+      printf("TODO assignment operator with more than one var\n");
+    }
     if (nexps != nvars)
       adjust_assign(ls, nvars, nexps, &e);
     else {
       luaK_setoneret(ls->fs, &e);  /* close last expression */
+      if (operator != OPR_NOBINOPR) {
+        // On `e` we have the RHS
+        // On lh->v we have the LHS
+        // We need to change `e` to become `lh->v [OP] e` without modifying lh->v
+        expdesc tmp;
+        memcpy(&tmp, &lh->v, sizeof(expdesc));
+
+        luaK_infix(ls->fs, operator, &tmp);
+        luaK_posfix(ls->fs, operator, &tmp, &e, line);
+        e = tmp;
+      }
       luaK_storevar(ls->fs, &lh->v, &e);
       return;  /* avoid default */
     }
   }
+
   init_exp(&e, VNONRELOC, ls->fs->freereg-1);  /* default assignment */
   luaK_storevar(ls->fs, &lh->v, &e);
 }
@@ -1727,7 +1769,7 @@ static char test_then_block (LexState *ls, int *escapelist) {
     while (testnext(ls, ';')) {}  /* skip semicolons */
     if (block_follow(ls, 0)) {  /* jump is the entire block? */
       leaveblock(fs);
-      return;  /* and that is it */
+      return is_shorthand;  /* and that is it */
     }
     else  /* must skip over 'then' part if condition is false */
       jf = luaK_jump(fs);
@@ -1884,13 +1926,12 @@ static void funcstat (LexState *ls, int line) {
   luaK_fixline(ls->fs, line);  /* definition "happens" in the first line */
 }
 
-
 static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   struct LHS_assign v;
   suffixedexp(ls, &v.v);
-  if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
+  if (tk_is_assignment(ls->t.token) || ls->t.token == ',') { /* stat -> assignment ? */
     v.prev = NULL;
     restassign(ls, &v, 1);
   }
