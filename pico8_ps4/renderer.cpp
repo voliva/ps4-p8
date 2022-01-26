@@ -289,6 +289,13 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 	double mid_x = x0 + (double)width / 2;
 	double mid_y = y0 + (double)height / 2;
 
+	if (width == 0 && height == 0) {
+		return this->draw_point(x0, y0);
+	}
+	if (width == 0 || height == 0) {
+		return this->draw_line(x0, y0, x1, y1);
+	}
+
 	std::function<void(double, double)> draw_all = [width, height, mid_x, mid_y, this](double x_t, double y_t) {
 		int x2 = round(mid_x + x_t * width / 2);
 		int x3 = round(mid_x - x_t * width / 2);

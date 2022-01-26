@@ -10,27 +10,15 @@ int rnd(lua_State* L) {
 	else {
 		max = luaL_optnumber(L, 1, fix16_one);
 	}
-	unsigned short high_max = max >> 16;;
-	unsigned short low_max = max & 0x0FFFF;
+
+	if (max == 0) {
+		lua_pushnumber(L, 0);
+		return 1;
+	}
 
 	unsigned int rnd = machineState->getRnd();
-	unsigned short high_rnd = rnd >> 16;
-	unsigned short low_rnd = rnd & 0x0FFFF;
 
-	short high = high_rnd;
-	if (high_max > 0) {
-		high = high_rnd % high_max;
-	}
-	else if (low_max > 0) {
-		high = 0;
-	}
-
-	unsigned short low = low_rnd;
-	if (low_max > 0) {
-		low = low_rnd % low_max;
-	}
-
-	fix16_t result = high << 16 | low;
+	fix16_t result = rnd % (unsigned int)max;
 
 	lua_pushnumber(L, result);
 	return 1;
