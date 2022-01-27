@@ -86,6 +86,9 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
     case LUA_OPBXOR: return v1 ^ v2;
     case LUA_OPSHL: return luaV_shiftl(v1, (v2 >> 16));
     case LUA_OPSHR: return luaV_shiftl(v1, -(v2 >> 16));
+    case LUA_OPLSHR: return luaV_lshiftr(v1, v2 >> 16);
+    case LUA_OPROTR: return luaV_rotr(v1, v2 >> 16);
+    case LUA_OPROTL: return luaV_rotl(v1, v2 >> 16);
     default: lua_assert(0); return 0;
   }
 }
@@ -95,6 +98,7 @@ int luaO_rawarith (lua_State *L, int op, const TValue *p1, const TValue *p2,
                    TValue *res) {
   switch (op) {
     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
+    case LUA_OPROTL: case LUA_OPROTR: case LUA_OPLSHR:
     case LUA_OPSHL: case LUA_OPSHR:
     case LUA_OPBNOT:
     case LUA_OPDIV: case LUA_OPPOW: {  /* operate only on floats */
@@ -209,7 +213,7 @@ static lua_Number lua_strb2number(const char* s, char** endptr) {
 */
 static lua_Number lua_strx2number (const char *s, char **endptr) {
   int dot = lua_getlocaledecpoint();
-  fix16_t r = 0.0;  /* result (accumulator) */
+  fix16_t r = 0;  /* result (accumulator) */
   int sigdig = 0;  /* number of significant digits */
   int nosigdig = 0;  /* number of non-significant digits */
   int e = 4;  /* exponent correction */
@@ -219,7 +223,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
   neg = isneg(&s);  /* check sign */
   if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
-    return 0.0;  /* invalid format (no '0x') */
+    return 0;  /* invalid format (no '0x') */
   for (s += 2; ; s++) {  /* skip '0x' and read numeral */
     if (*s == dot) {
       if (hasdot) break;  /* second dot? stop loop */
@@ -229,14 +233,14 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
       if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
         nosigdig++;
       else if (++sigdig <= MAXSIGDIG)  /* can read it without overflow? */
-        r = (r << 8) + luaO_hexavalue(*s);
+        r = (r << 4) + luaO_hexavalue(*s);
       else e++; /* too many digits; ignore, but still count for exponent */
       if (hasdot) e--;  /* decimal digit? correct exponent */
     }
     else break;  /* neither a dot nor a digit */
   }
   if (nosigdig + sigdig == 0)  /* no digits? */
-    return 0.0;  /* invalid format */
+    return 0;  /* invalid format */
   *endptr = cast_charp(s);  /* valid up to here */
   e *= 4;  /* each digit multiplies/divides value by 2^4 */
   if (*s == 'p' || *s == 'P') {  /* exponent part? */

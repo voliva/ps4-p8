@@ -1556,7 +1556,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   luaK_dischargevars(fs, e);
   switch (op) {
     case OPR_MINUS: case OPR_BNOT:  /* use 'ef' as fake 2nd operand */
-      if (constfolding(fs, op + LUA_OPUNM, e, &ef))
+      if (constfolding(fs, op + LUA_OPUNM, e, &ef)) // ORDER UNOPR
         break;
       /* else */ /* FALLTHROUGH */
     case OPR_LEN:

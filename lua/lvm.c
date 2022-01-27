@@ -756,6 +756,33 @@ lua_Number luaV_shiftl (lua_Number x, lua_Integer y) {
   }
 }
 
+LUAI_FUNC lua_Number luaV_lshiftr(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_shiftr(x, y);
+    }
+    return (lua_Number)((unsigned int)x >> y);
+}
+
+LUAI_FUNC lua_Number luaV_rotl(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_rotr(x, -y);
+    }
+    unsigned int shifted = x << y;
+    unsigned int rotated = (unsigned int)x >> (32 - y);
+    return (lua_Number)(shifted | rotated);
+}
+
+LUAI_FUNC lua_Number luaV_rotr(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_rotl(x, -y);
+    }
+    unsigned int shifted = (unsigned int)x >> y;
+    unsigned int rotated = (unsigned int)x << (32 - y);
+    return (lua_Number)(shifted | rotated);
+}
 
 /*
 ** create a new Lua closure, push it in the stack, and initialize

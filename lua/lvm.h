@@ -131,6 +131,9 @@ LUAI_FUNC lua_Integer luaV_idiv (lua_State *L, lua_Integer x, lua_Integer y);
 LUAI_FUNC lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y);
 LUAI_FUNC lua_Number luaV_modf (lua_State *L, lua_Number x, lua_Number y);
 LUAI_FUNC lua_Number luaV_shiftl (lua_Number x, lua_Integer y);
+LUAI_FUNC lua_Number luaV_lshiftr(lua_Number x, lua_Integer y);
+LUAI_FUNC lua_Number luaV_rotl(lua_Number x, lua_Integer y);
+LUAI_FUNC lua_Number luaV_rotr(lua_Number x, lua_Integer y);
 LUAI_FUNC void luaV_objlen (lua_State *L, StkId ra, const TValue *rb);
 
 #endif
