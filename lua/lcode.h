@@ -44,7 +44,22 @@ typedef enum BinOpr {
 // ORDER RESERVED
 // Maps TK_ASSIGN_* => BinOpr
 static BinOpr assignment_to_opr[] = {
-  OPR_ADD
+  OPR_ADD,
+  OPR_SUB,
+  OPR_MUL,
+  OPR_DIV,
+  OPR_IDIV,
+  OPR_MOD,
+  OPR_POW,
+  OPR_CONCAT,
+  OPR_BOR,
+  OPR_BAND,
+  OPR_BXOR,
+  OPR_SHL,
+  OPR_SHR,
+  OPR_LSHR,
+  OPR_ROTL,
+  OPR_ROTR
 };
 
 /* true if operation is foldable (that is, it is arithmetic or bitwise) */

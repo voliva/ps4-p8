@@ -44,7 +44,10 @@ static const char *const luaX_tokens [] = {
     "//", "..", "...", "==", ">=", "<=", "~=",
     "^^", "<<>", ">><", ">>>",
     "<<", ">>", "::",
-    "+=", // -=, *=, /=, \=, %=, ^=, ..=, |=, &=, ^^=, <<=, >>=, >>>=, <<>=, >><=
+    "+=", "-=", "*=", "/=", "\\=",
+    "%=", "^=", "..=", "|=", "&=",
+    "^^=", "<<=", ">>=", ">>>=", "<<>=",
+    ">><=",
     "<eof>",
     "<number>", "<integer>", "<name>", "<string>"
 };
@@ -458,6 +461,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '-': {  /* '-' or '--' (comment) */
         next(ls);
+        if (check_next1(ls, '=')) return TK_ASSIGN_SUB;
         if (ls->current != '-') return '-';
         /* else is a comment */
         next(ls);
@@ -492,14 +496,22 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '^': { // ^ or ^^
         next(ls);
-        if (check_next1(ls, '^')) return TK_XOR;
+        if (check_next1(ls, '^')) {
+            if (check_next1(ls, '=')) return TK_ASSIGN_BXOR;
+            return TK_XOR;
+        }
+        if (check_next1(ls, '=')) return TK_ASSIGN_POW;
         else return '^';
       }
       case '<': {
         next(ls);
         if (check_next1(ls, '=')) return TK_LE;  /* '<=' */
         else if (check_next1(ls, '<')) { /* '<<' */
-          if (check_next1(ls, '>')) return TK_ROTL;
+          if (check_next1(ls, '>')) {
+            if (check_next1(ls, '=')) return TK_ASSIGN_ROTL;
+            return TK_ROTL;
+          }
+          if (check_next1(ls, '=')) return TK_ASSIGN_SHL;
           return TK_SHL;
         } else return '<';
       }
@@ -507,8 +519,15 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         next(ls);
         if (check_next1(ls, '=')) return TK_GE;  /* '>=' */
         else if (check_next1(ls, '>')) { /* '>>' */
-          if (check_next1(ls, '>')) return TK_LSHR;
-          if (check_next1(ls, '<')) return TK_ROTR;
+          if (check_next1(ls, '>')) {
+            if (check_next1(ls, '=')) return TK_ASSIGN_LSHR;
+            return TK_LSHR;
+          }
+          if (check_next1(ls, '<')) {
+            if (check_next1(ls, '=')) return TK_ASSIGN_ROTR;
+            return TK_ROTR;
+          }
+          if (check_next1(ls, '=')) return TK_ASSIGN_SHR;
           return TK_SHR;
         }
         else return '>';
@@ -516,6 +535,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '/': {
         next(ls);
         if (check_next1(ls, '/')) return TK_IDIV;  /* '//' */
+        if (check_next1(ls, '=')) return TK_ASSIGN_DIV;
         else return '/';
       }
       case '~': {
@@ -540,9 +560,9 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '.': {  /* '.', '..', '...', or number */
         save_and_next(ls);
         if (check_next1(ls, '.')) {
-          if (check_next1(ls, '.'))
-            return TK_DOTS;   /* '...' */
-          else return TK_CONCAT;   /* '..' */
+          if (check_next1(ls, '.')) return TK_DOTS;   /* '...' */
+          if (check_next1(ls, '=')) return TK_ASSIGN_CONCAT;
+          return TK_CONCAT;   /* '..' */
         }
         else if (!lisdigit(ls->current)) return '.';
         else return read_numeral(ls, seminfo);
@@ -555,6 +575,31 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         next(ls);
         if (check_next1(ls, '=')) return TK_ASSIGN_ADD;
         return '+';
+      }
+      case '*': {
+          next(ls);
+          if (check_next1(ls, '=')) return TK_ASSIGN_MUL;
+          return '*';
+      }
+      case '\\': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_ASSIGN_IDIV;
+        return '\\';
+      }
+      case '%': {
+          next(ls);
+          if (check_next1(ls, '=')) return TK_ASSIGN_MOD;
+          return '%';
+      }
+      case '|': {
+          next(ls);
+          if (check_next1(ls, '|')) return TK_ASSIGN_BOR;
+          return '|';
+      }
+      case '&': {
+          next(ls);
+          if (check_next1(ls, '&')) return TK_ASSIGN_BAND;
+          return '&';
       }
       case EOZ: {
         return TK_EOS;
