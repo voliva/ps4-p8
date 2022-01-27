@@ -221,5 +221,5 @@ fix16_t fix16_slog2(fix16_t x)
 }
 
 fix16_t fix16_ldexp(fix16_t x, int exponent) {
-	return fix16_mul(x, fix16_one << exponent);
+	return x << exponent;
 }
