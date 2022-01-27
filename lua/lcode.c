@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "lua.h"
 
@@ -1324,7 +1325,7 @@ static int constfolding (FuncState *fs, int op, expdesc *e1,
   }
   else {  /* folds neither NaN nor 0.0 (to avoid problems with -0.0) */
     lua_Number n = fltvalue(&res);
-    if (luai_numisnan(n) || n == 0)
+    if (luai_numisnan(n))
       return 0;
     e1->k = VKFLT;
     e1->u.nval = n;

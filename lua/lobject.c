@@ -81,6 +81,11 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
     case LUA_OPIDIV: return luai_numidiv(L, v1, v2);
     case LUA_OPUNM: return luai_numunm(L, v1);
     case LUA_OPMOD: return luaV_modf(L, v1, v2);
+    case LUA_OPBAND: return v1 & v2;
+    case LUA_OPBOR: return v1 | v2;
+    case LUA_OPBXOR: return v1 ^ v2;
+    case LUA_OPSHL: return luaV_shiftl(v1, (v2 >> 16));
+    case LUA_OPSHR: return luaV_shiftl(v1, -(v2 >> 16));
     default: lua_assert(0); return 0;
   }
 }
@@ -91,21 +96,14 @@ int luaO_rawarith (lua_State *L, int op, const TValue *p1, const TValue *p2,
   switch (op) {
     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
     case LUA_OPSHL: case LUA_OPSHR:
-    case LUA_OPBNOT: {  /* operate only on integers */
-      lua_Integer i1; lua_Integer i2;
-      if (tointegerns(p1, &i1) && tointegerns(p2, &i2)) {
-        setivalue(res, intarith(L, op, i1, i2));
-        return 1;
-      }
-      else return 0;  /* fail */
-    }
+    case LUA_OPBNOT:
     case LUA_OPDIV: case LUA_OPPOW: {  /* operate only on floats */
       lua_Number n1; lua_Number n2;
       if (tonumberns(p1, n1) && tonumberns(p2, n2)) {
         setfltvalue(res, numarith(L, op, n1, n2));
         return 1;
       }
-      else return 0;  /* fail */
+      return 0;  /* fail */
     }
     default: {  /* other operations */
       lua_Number n1; lua_Number n2;
@@ -117,7 +115,7 @@ int luaO_rawarith (lua_State *L, int op, const TValue *p1, const TValue *p2,
         setfltvalue(res, numarith(L, op, n1, n2));
         return 1;
       }
-      else return 0;  /* fail */
+      return 0;  /* fail */
     }
   }
 }
@@ -165,7 +163,7 @@ static lua_Number lua_strb2number(const char* s, char** endptr) {
     while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
     neg = isneg(&s);  /* check sign */
     if (!(*s == '0' && (*(s + 1) == 'b' || *(s + 1) == 'B')))  /* check '0b' */
-        return 0.0;  /* invalid format (no '0b') */
+        return 0;  /* invalid format (no '0b') */
     for (s += 2; ; s++) {  /* skip '0b' and read numeral */
         if (*s == dot) {
             if (hasdot) break;  /* second dot? stop loop */

@@ -48,15 +48,10 @@ static inline fix16_t fix16_from_int(int a)     { return a * fix16_one; }
 static inline float   fix16_to_float(fix16_t a) { return (float)a / fix16_one; }
 static inline double  fix16_to_dbl(fix16_t a)   { return (double)a / fix16_one; }
 
+#include <stdio.h>
 static inline int fix16_to_int(fix16_t a)
 {
-#ifdef FIXMATH_NO_ROUNDING
     return (a >> 16);
-#else
-	if (a >= 0)
-		return (a + (fix16_one >> 1)) / fix16_one;
-	return (a - (fix16_one >> 1)) / fix16_one;
-#endif
 }
 
 static inline fix16_t fix16_from_float(float a)
