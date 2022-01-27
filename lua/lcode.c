@@ -1681,23 +1681,24 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
       break;
     }
     case OPR_SHL: {
-      if (isSCint(e1)) {
-        swapexps(e1, e2);
-        codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);  /* I << r2 */
-      }
-      else if (finishbinexpneg(fs, e1, e2, OP_SHRI, line, TM_SHL)) {
-        /* coded as (r1 >> -I) */;
-      }
-      else  /* regular case (two registers) */
-       codebinexpval(fs, OP_SHL, e1, e2, line);
+      codebinexpval(fs, OP_SHL, e1, e2, line);
       break;
     }
     case OPR_SHR: {
-      if (isSCint(e2))
-        codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);  /* r1 >> I */
-      else  /* regular case (two registers) */
-        codebinexpval(fs, OP_SHR, e1, e2, line);
+      codebinexpval(fs, OP_SHR, e1, e2, line);
       break;
+    }
+    case OPR_LSHR: {
+        codebinexpval(fs, OP_LSHR, e1, e2, line);
+        break;
+    }
+    case OPR_ROTL: {
+        codebinexpval(fs, OP_ROTL, e1, e2, line);
+        break;
+    }
+    case OPR_ROTR: {
+        codebinexpval(fs, OP_ROTR, e1, e2, line);
+        break;
     }
     case OPR_EQ: case OPR_NE: {
       codeeq(fs, opr, e1, e2);

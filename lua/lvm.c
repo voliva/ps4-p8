@@ -1479,6 +1479,18 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         op_bitwiseI(L, luaV_shiftl);
         vmbreak;
       }
+      vmcase(OP_LSHR) {
+          op_bitwiseI(L, luaV_lshiftr);
+          vmbreak;
+      }
+      vmcase(OP_ROTR) {
+          op_bitwiseI(L, luaV_rotr);
+          vmbreak;
+      }
+      vmcase(OP_ROTL) {
+          op_bitwiseI(L, luaV_rotl);
+          vmbreak;
+      }
       vmcase(OP_MMBIN) {
         Instruction pi = *(pc - 2);  /* original arith. expression */
         TValue *rb = vRB(i);
