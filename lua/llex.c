@@ -35,7 +35,6 @@
 
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
 
-// TK_AT, TK_PCT, TK_DOLLAR, TK_TILDE, TK_QUESTION
 /* ORDER RESERVED */
 static const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
@@ -43,8 +42,9 @@ static const char *const luaX_tokens [] = {
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
+    "^^", "<<>", ">><", ">>>",
     "<<", ">>", "::",
-    "+=",
+    "+=", // -=, *=, /=, \=, %=, ^=, ..=, |=, &=, ^^=, <<=, >>=, >>>=, <<>=, >><=
     "<eof>",
     "<number>", "<integer>", "<name>", "<string>"
 };
@@ -490,16 +490,27 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (check_next1(ls, '=')) return TK_EQ;  /* '==' */
         else return '=';
       }
+      case '^': { // ^ or ^^
+        next(ls);
+        if (check_next1(ls, '^')) return TK_XOR;
+        else return '^';
+      }
       case '<': {
         next(ls);
         if (check_next1(ls, '=')) return TK_LE;  /* '<=' */
-        else if (check_next1(ls, '<')) return TK_SHL;  /* '<<' */
-        else return '<';
+        else if (check_next1(ls, '<')) { /* '<<' */
+          if (check_next1(ls, '>')) return TK_ROTL;
+          return TK_SHL;
+        } else return '<';
       }
       case '>': {
         next(ls);
         if (check_next1(ls, '=')) return TK_GE;  /* '>=' */
-        else if (check_next1(ls, '>')) return TK_SHR;  /* '>>' */
+        else if (check_next1(ls, '>')) { /* '>>' */
+          if (check_next1(ls, '>')) return TK_LSHR;
+          if (check_next1(ls, '<')) return TK_ROTR;
+          return TK_SHR;
+        }
         else return '>';
       }
       case '/': {

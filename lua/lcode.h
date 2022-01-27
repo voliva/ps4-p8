@@ -21,7 +21,7 @@
 
 
 /*
-** grep "ORDER OPR" if you change these enums  (ORDER OP)
+** grep "ORDER OP" if you change these enums  (ORDER OP)
 */
 typedef enum BinOpr {
   /* arithmetic operators */
@@ -29,6 +29,7 @@ typedef enum BinOpr {
   OPR_DIV, OPR_IDIV,
   /* bitwise operators */
   OPR_BAND, OPR_BOR, OPR_BXOR,
+  OPR_ROTL, OPR_ROTR, OPR_LSHR,
   OPR_SHL, OPR_SHR,
   /* string operator */
   OPR_CONCAT,

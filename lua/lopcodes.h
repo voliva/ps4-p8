@@ -251,6 +251,7 @@ OP_IDIV,/*	A B C	R[A] := R[B] // R[C]				*/
 OP_BAND,/*	A B C	R[A] := R[B] & R[C]			41	*/
 OP_BOR,/*	A B C	R[A] := R[B] | R[C]				*/
 OP_BXOR,/*	A B C	R[A] := R[B] ~ R[C]				*/
+OP_ROTL, OP_ROTR, OP_LSHR,
 OP_SHL,/*	A B C	R[A] := R[B] << R[C]				*/
 OP_SHR,/*	A B C	R[A] := R[B] >> R[C]				*/
 
