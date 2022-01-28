@@ -1030,25 +1030,8 @@ static int num2straux (char *buff, int sz, lua_Number x) {
     return l_sprintf(buff, sz, LUA_NUMBER_FMT "x0p+0", (LUAI_UACNUMBER)x);
   }
   else {
-    int e;
-    lua_Number m = l_mathop(frexp)(x, &e);  /* 'x' fraction and exponent */
-    int n = 0;  /* character count */
-    if (m < 0) {  /* is number negative? */
-      buff[n++] = '-';  /* add sign */
-      m = -m;  /* make it positive */
-    }
-    buff[n++] = '0'; buff[n++] = 'x';  /* add "0x" */
-    m = adddigit(buff, n++, m * (1 << L_NBFD));  /* add first digit */
-    e -= L_NBFD;  /* this digit goes before the radix point */
-    if (m > 0) {  /* more digits? */
-      buff[n++] = lua_getlocaledecpoint();  /* add radix point */
-      do {  /* add as many digits as needed */
-        m = adddigit(buff, n++, m * 16);
-      } while (m > 0);
-    }
-    n += l_sprintf(buff + n, sz - n, "p%+d", e);  /* add exponent */
-    lua_assert(n < sz);
-    return n;
+    printf("lstrlib: Float formatting disabled");
+    return 0;
   }
 }
 

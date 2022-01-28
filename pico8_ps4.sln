@@ -4,8 +4,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "lua\lua.vcxproj", "{98C370D4-4DE8-46A1-8DA0-4DBB02122F86}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A} = {F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pico8_ps4", "pico8_ps4\pico8_ps4.vcxproj", "{8BF815EC-5349-47AD-A377-730BE2CF26B4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A} = {F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libfixmath", "libfixmath\libfixmath.vcxproj", "{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,6 +37,14 @@ Global
 		{8BF815EC-5349-47AD-A377-730BE2CF26B4}.Release|x64.Build.0 = Release|x64
 		{8BF815EC-5349-47AD-A377-730BE2CF26B4}.Release|x86.ActiveCfg = Release|Win32
 		{8BF815EC-5349-47AD-A377-730BE2CF26B4}.Release|x86.Build.0 = Release|Win32
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}.Debug|x64.ActiveCfg = Debug|x64
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}.Debug|x64.Build.0 = Debug|x64
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}.Debug|x86.ActiveCfg = Debug|Win32
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}.Debug|x86.Build.0 = Debug|Win32
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}.Release|x64.ActiveCfg = Release|x64
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}.Release|x64.Build.0 = Release|x64
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}.Release|x86.ActiveCfg = Release|Win32
+		{F5E5BB9E-C7B8-4B93-AC74-02EF4D3F3C6A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

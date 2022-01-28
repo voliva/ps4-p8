@@ -101,6 +101,11 @@ static const Node dummynode_ = {
 static const TValue absentkey = {ABSTKEYCONSTANT};
 
 
+#if !defined(l_hashfloat)
+#define orig_lua_numbertointeger(n,p) \
+  ((n) >= (float)(LUA_MININTEGER) && \
+   (n) < -(float)(LUA_MININTEGER) && \
+      (*(p) = (int)(n), 1))
 
 /*
 ** Hash for floating-point numbers.
@@ -115,19 +120,22 @@ static const TValue absentkey = {ABSTKEYCONSTANT};
 ** adding 'i'; the use of '~u' (instead of '-u') avoids problems with
 ** INT_MIN.
 */
-#if !defined(l_hashfloat)
+static int l_orighashfloat(float n) {
+    int i;
+    lua_Integer ni;
+    n = frexp(n, &i) * -INT_MIN;
+    if (!orig_lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
+        return 0;
+    }
+    else {  /* normal case */
+        unsigned int u = cast_uint(i) + cast_uint(ni);
+        return cast_int(u <= cast_uint(INT_MAX) ? u : ~u);
+    }
+}
+
 static int l_hashfloat (lua_Number n) {
-  int i;
-  lua_Integer ni;
-  n = l_mathop(frexp)(n, &i) * -cast_num(INT_MIN);
-  if (!lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
-    lua_assert(luai_numisnan(n) || l_mathop(fabs)(n) == cast_num(HUGE_VAL));
-    return 0;
-  }
-  else {  /* normal case */
-    unsigned int u = cast_uint(i) + cast_uint(ni);
-    return cast_int(u <= cast_uint(INT_MAX) ? u : ~u);
-  }
+    int hash = l_orighashfloat(fix16_to_float(n));
+    return hash;
 }
 #endif
 

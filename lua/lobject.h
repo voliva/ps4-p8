@@ -317,7 +317,7 @@ typedef struct GCObject {
 #define nvalue(o)	check_exp(ttisnumber(o), \
 	(ttisinteger(o) ? cast_num(ivalue(o)) : fltvalue(o)))
 #define fltvalue(o)	check_exp(ttisfloat(o), val_(o).n)
-#define ivalue(o)	check_exp(ttisinteger(o), val_(o).i)
+#define ivalue(o)	check_exp(ttisinteger(o), (int16_t)val_(o).i)
 
 #define fltvalueraw(v)	((v).n)
 #define ivalueraw(v)	((v).i)

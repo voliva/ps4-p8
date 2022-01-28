@@ -5,8 +5,11 @@ This is a list of some of the cartridges that have been tested and they are play
 - [Mine Walker](https://www.lexaloffle.com/bbs/?tid=42395)
 - [Celeste](https://www.lexaloffle.com/bbs/?tid=2145)
 - [To a Starling](https://www.lexaloffle.com/bbs/?tid=45958)
+- [Harold's Bad Day](https://www.lexaloffle.com/bbs/?pid=100973)
+- [Nest 2](https://www.lexaloffle.com/bbs/?tid=37753): performance to be improved
 - [Dominion X](https://www.lexaloffle.com/bbs/?pid=73231)
 - [Tiny golf puzzles](https://www.lexaloffle.com/bbs/?pid=79680)
+- [Pengo](https://www.lexaloffle.com/bbs/?tid=45605)
 - [Frog adventure](https://www.lexaloffle.com/bbs/?pid=104185)
 - [Alpine Ascent](https://www.lexaloffle.com/bbs/?tid=40791)
 - [Fruits Catcher](https://www.lexaloffle.com/bbs/?tid=45946)

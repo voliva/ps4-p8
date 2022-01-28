@@ -54,30 +54,7 @@
 ** can be converted to a float without rounding. Used in comparisons.
 */
 
-/* number of bits in the mantissa of a float */
-#define NBM		(l_floatatt(MANT_DIG))
-
-/*
-** Check whether some integers may not fit in a float, testing whether
-** (maxinteger >> NBM) > 0. (That implies (1 << NBM) <= maxinteger.)
-** (The shifts are done in parts, to avoid shifting by more than the size
-** of an integer. In a worst case, NBM == 113 for long double and
-** sizeof(long) == 32.)
-*/
-#if ((((LUA_MAXINTEGER >> (NBM / 4)) >> (NBM / 4)) >> (NBM / 4)) \
-	>> (NBM - (3 * (NBM / 4))))  >  0
-
-/* limit for integers that fit in a float */
-#define MAXINTFITSF	((lua_Unsigned)1 << NBM)
-
-/* check whether 'i' is in the interval [-MAXINTFITSF, MAXINTFITSF] */
-#define l_intfitsf(i)	((MAXINTFITSF + l_castS2U(i)) <= (2 * MAXINTFITSF))
-
-#else  /* all integers fit in a float precisely */
-
-#define l_intfitsf(i)	1
-
-#endif
+#define l_intfitsf(i)	(i >= fix16_minimum && i <= fix16_maximum)
 
 
 /*
@@ -761,24 +738,51 @@ lua_Number luaV_modf (lua_State *L, lua_Number m, lua_Number n) {
 
 
 /* number of bits in an integer */
-#define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
+#define NBITS	cast_int(sizeof(lua_Number) * CHAR_BIT)
 
 /*
 ** Shift left operation. (Shift right just negates 'y'.)
 */
 #define luaV_shiftr(x,y)	luaV_shiftl(x,-(y))
 
-lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
+lua_Number luaV_shiftl (lua_Number x, lua_Integer y) {
   if (y < 0) {  /* shift right? */
     if (y <= -NBITS) return 0;
-    else return intop(>>, x, -y);
+    else return x >> -y;
   }
   else {  /* shift left */
     if (y >= NBITS) return 0;
-    else return intop(<<, x, y);
+    else return x << y;
   }
 }
 
+LUAI_FUNC lua_Number luaV_lshiftr(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_shiftr(x, y);
+    }
+    return (lua_Number)((unsigned int)x >> y);
+}
+
+LUAI_FUNC lua_Number luaV_rotl(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_rotr(x, -y);
+    }
+    unsigned int shifted = x << y;
+    unsigned int rotated = (unsigned int)x >> (32 - y);
+    return (lua_Number)(shifted | rotated);
+}
+
+LUAI_FUNC lua_Number luaV_rotr(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_rotl(x, -y);
+    }
+    unsigned int shifted = (unsigned int)x >> y;
+    unsigned int rotated = (unsigned int)x << (32 - y);
+    return (lua_Number)(shifted | rotated);
+}
 
 /*
 ** create a new Lua closure, push it in the stack, and initialize
@@ -873,9 +877,9 @@ void luaV_finishOp (lua_State *L) {
 #define l_addi(L,a,b)	intop(+, a, b)
 #define l_subi(L,a,b)	intop(-, a, b)
 #define l_muli(L,a,b)	intop(*, a, b)
-#define l_band(a,b)	intop(&, a, b)
-#define l_bor(a,b)	intop(|, a, b)
-#define l_bxor(a,b)	intop(^, a, b)
+#define l_band(a,b) a&b
+#define l_bor(a,b)	a|b
+#define l_bxor(a,b)	a^b
 
 #define l_lti(a,b)	(a < b)
 #define l_lei(a,b)	(a <= b)
@@ -965,10 +969,10 @@ void luaV_finishOp (lua_State *L) {
 #define op_bitwiseK(L,op) {  \
   TValue *v1 = vRB(i);  \
   TValue *v2 = KC(i);  \
-  lua_Integer i1;  \
-  lua_Integer i2 = ivalue(v2);  \
-  if (tointegerns(v1, &i1)) {  \
-    pc++; setivalue(s2v(ra), op(i1, i2));  \
+  lua_Number i1;  \
+  lua_Number i2 = fltvalue(v2);  \
+  if (tonumberns(v1, i1)) {  \
+    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
   }}
 
 
@@ -978,11 +982,21 @@ void luaV_finishOp (lua_State *L) {
 #define op_bitwise(L,op) {  \
   TValue *v1 = vRB(i);  \
   TValue *v2 = vRC(i);  \
-  lua_Integer i1; lua_Integer i2;  \
-  if (tointegerns(v1, &i1) && tointegerns(v2, &i2)) {  \
-    pc++; setivalue(s2v(ra), op(i1, i2));  \
+  lua_Number i1; lua_Number i2;  \
+  if (tonumberns(v1, i1) && tonumberns(v2, i2)) {  \
+    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
   }}
 
+/*
+** Bitwise int operations with register operands.
+*/
+#define op_bitwiseI(L,op) {  \
+  TValue *v1 = vRB(i);  \
+  TValue *v2 = vRC(i);  \
+  lua_Number i1; lua_Integer i2;  \
+  if (tonumberns(v1, i1) && tointegerns(v2, &i2)) {  \
+    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
+  }}
 
 /*
 ** Order operations with register operands. 'opn' actually works
@@ -1402,8 +1416,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_SHRI) {
         TValue *rb = vRB(i);
         int ic = GETARG_sC(i);
-        lua_Integer ib;
-        if (tointegerns(rb, &ib)) {
+        lua_Number ib;
+        if (tonumberns(rb, ib)) {
           pc++; setivalue(s2v(ra), luaV_shiftl(ib, -ic));
         }
         vmbreak;
@@ -1411,8 +1425,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
       vmcase(OP_SHLI) {
         TValue *rb = vRB(i);
         int ic = GETARG_sC(i);
-        lua_Integer ib;
-        if (tointegerns(rb, &ib)) {
+        lua_Number ib;
+        if (tonumberns(rb, ib)) {
           pc++; setivalue(s2v(ra), luaV_shiftl(ic, ib));
         }
         vmbreak;
@@ -1458,12 +1472,24 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         vmbreak;
       }
       vmcase(OP_SHR) {
-        op_bitwise(L, luaV_shiftr);
+        op_bitwiseI(L, luaV_shiftr);
         vmbreak;
       }
       vmcase(OP_SHL) {
-        op_bitwise(L, luaV_shiftl);
+        op_bitwiseI(L, luaV_shiftl);
         vmbreak;
+      }
+      vmcase(OP_LSHR) {
+          op_bitwiseI(L, luaV_lshiftr);
+          vmbreak;
+      }
+      vmcase(OP_ROTR) {
+          op_bitwiseI(L, luaV_rotr);
+          vmbreak;
+      }
+      vmcase(OP_ROTL) {
+          op_bitwiseI(L, luaV_rotl);
+          vmbreak;
       }
       vmcase(OP_MMBIN) {
         Instruction pi = *(pc - 2);  /* original arith. expression */

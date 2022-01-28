@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "lua.h"
 
@@ -1324,7 +1325,7 @@ static int constfolding (FuncState *fs, int op, expdesc *e1,
   }
   else {  /* folds neither NaN nor 0.0 (to avoid problems with -0.0) */
     lua_Number n = fltvalue(&res);
-    if (luai_numisnan(n) || n == 0)
+    if (luai_numisnan(n))
       return 0;
     e1->k = VKFLT;
     e1->u.nval = n;
@@ -1555,7 +1556,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   luaK_dischargevars(fs, e);
   switch (op) {
     case OPR_MINUS: case OPR_BNOT:  /* use 'ef' as fake 2nd operand */
-      if (constfolding(fs, op + LUA_OPUNM, e, &ef))
+      if (constfolding(fs, op + LUA_OPUNM, e, &ef)) // ORDER UNOPR
         break;
       /* else */ /* FALLTHROUGH */
     case OPR_LEN:
@@ -1680,23 +1681,24 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
       break;
     }
     case OPR_SHL: {
-      if (isSCint(e1)) {
-        swapexps(e1, e2);
-        codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);  /* I << r2 */
-      }
-      else if (finishbinexpneg(fs, e1, e2, OP_SHRI, line, TM_SHL)) {
-        /* coded as (r1 >> -I) */;
-      }
-      else  /* regular case (two registers) */
-       codebinexpval(fs, OP_SHL, e1, e2, line);
+      codebinexpval(fs, OP_SHL, e1, e2, line);
       break;
     }
     case OPR_SHR: {
-      if (isSCint(e2))
-        codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);  /* r1 >> I */
-      else  /* regular case (two registers) */
-        codebinexpval(fs, OP_SHR, e1, e2, line);
+      codebinexpval(fs, OP_SHR, e1, e2, line);
       break;
+    }
+    case OPR_LSHR: {
+        codebinexpval(fs, OP_LSHR, e1, e2, line);
+        break;
+    }
+    case OPR_ROTL: {
+        codebinexpval(fs, OP_ROTL, e1, e2, line);
+        break;
+    }
+    case OPR_ROTR: {
+        codebinexpval(fs, OP_ROTR, e1, e2, line);
+        break;
     }
     case OPR_EQ: case OPR_NE: {
       codeeq(fs, opr, e1, e2);

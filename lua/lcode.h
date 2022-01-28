@@ -21,7 +21,7 @@
 
 
 /*
-** grep "ORDER OPR" if you change these enums  (ORDER OP)
+** grep "ORDER OP" if you change these enums  (ORDER OP)
 */
 typedef enum BinOpr {
   /* arithmetic operators */
@@ -29,6 +29,7 @@ typedef enum BinOpr {
   OPR_DIV, OPR_IDIV,
   /* bitwise operators */
   OPR_BAND, OPR_BOR, OPR_BXOR,
+  OPR_ROTL, OPR_ROTR, OPR_LSHR,
   OPR_SHL, OPR_SHR,
   /* string operator */
   OPR_CONCAT,
@@ -40,6 +41,26 @@ typedef enum BinOpr {
   OPR_NOBINOPR
 } BinOpr;
 
+// ORDER RESERVED
+// Maps TK_ASSIGN_* => BinOpr
+static BinOpr assignment_to_opr[] = {
+  OPR_ADD,
+  OPR_SUB,
+  OPR_MUL,
+  OPR_DIV,
+  OPR_IDIV,
+  OPR_MOD,
+  OPR_POW,
+  OPR_CONCAT,
+  OPR_BOR,
+  OPR_BAND,
+  OPR_BXOR,
+  OPR_SHL,
+  OPR_SHR,
+  OPR_LSHR,
+  OPR_ROTL,
+  OPR_ROTR
+};
 
 /* true if operation is foldable (that is, it is arithmetic or bitwise) */
 #define foldbinop(op)	((op) <= OPR_SHR)
@@ -47,8 +68,10 @@ typedef enum BinOpr {
 
 #define luaK_codeABC(fs,o,a,b,c)	luaK_codeABCk(fs,o,a,b,c,0)
 
-
-typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
+/*
+** grep "ORDER UNOPR" if you change these enums  (ORDER UNOPR)
+*/
+typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_PEEK, OPR_PEEK2, OPR_PEEK4, OPR_NOUNOPR } UnOpr;
 
 
 /* get (pointer to) instruction of given 'expdesc' */

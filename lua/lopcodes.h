@@ -209,12 +209,12 @@ OP_LOADNIL,/*	A B	R[A], R[A+1], ..., R[A+B] := nil		*/
 OP_GETUPVAL,/*	A B	R[A] := UpValue[B]				*/
 OP_SETUPVAL,/*	A B	UpValue[B] := R[A]				*/
 
-OP_GETTABUP,/*	A B C	R[A] := UpValue[B][K[C]:string]			*/
+OP_GETTABUP,/*	A B C	R[A] := UpValue[B][K[C]:string]		11	*/
 OP_GETTABLE,/*	A B C	R[A] := R[B][R[C]]				*/
 OP_GETI,/*	A B C	R[A] := R[B][C]					*/
 OP_GETFIELD,/*	A B C	R[A] := R[B][K[C]:string]			*/
 
-OP_SETTABUP,/*	A B C	UpValue[A][K[B]:string] := RK(C)		*/
+OP_SETTABUP,/*	A B C	UpValue[A][K[B]:string] := RK(C)	15	*/
 OP_SETTABLE,/*	A B C	R[A][R[B]] := RK(C)				*/
 OP_SETI,/*	A B C	R[A][B] := RK(C)				*/
 OP_SETFIELD,/*	A B C	R[A][K[B]:string] := RK(C)			*/
@@ -223,7 +223,7 @@ OP_NEWTABLE,/*	A B C k	R[A] := {}					*/
 
 OP_SELF,/*	A B C	R[A+1] := R[B]; R[A] := R[B][RK(C):string]	*/
 
-OP_ADDI,/*	A B sC	R[A] := R[B] + sC				*/
+OP_ADDI,/*	A B sC	R[A] := R[B] + sC			21	*/
 
 OP_ADDK,/*	A B C	R[A] := R[B] + K[C]:number			*/
 OP_SUBK,/*	A B C	R[A] := R[B] - K[C]:number			*/
@@ -233,14 +233,14 @@ OP_POWK,/*	A B C	R[A] := R[B] ^ K[C]:number			*/
 OP_DIVK,/*	A B C	R[A] := R[B] / K[C]:number			*/
 OP_IDIVK,/*	A B C	R[A] := R[B] // K[C]:number			*/
 
-OP_BANDK,/*	A B C	R[A] := R[B] & K[C]:integer			*/
+OP_BANDK,/*	A B C	R[A] := R[B] & K[C]:integer		29	*/
 OP_BORK,/*	A B C	R[A] := R[B] | K[C]:integer			*/
 OP_BXORK,/*	A B C	R[A] := R[B] ~ K[C]:integer			*/
 
-OP_SHRI,/*	A B sC	R[A] := R[B] >> sC				*/
+OP_SHRI,/*	A B sC	R[A] := R[B] >> sC		32		*/
 OP_SHLI,/*	A B sC	R[A] := sC << R[B]				*/
 
-OP_ADD,/*	A B C	R[A] := R[B] + R[C]				*/
+OP_ADD,/*	A B C	R[A] := R[B] + R[C]			34	*/
 OP_SUB,/*	A B C	R[A] := R[B] - R[C]				*/
 OP_MUL,/*	A B C	R[A] := R[B] * R[C]				*/
 OP_MOD,/*	A B C	R[A] := R[B] % R[C]				*/
@@ -248,17 +248,18 @@ OP_POW,/*	A B C	R[A] := R[B] ^ R[C]				*/
 OP_DIV,/*	A B C	R[A] := R[B] / R[C]				*/
 OP_IDIV,/*	A B C	R[A] := R[B] // R[C]				*/
 
-OP_BAND,/*	A B C	R[A] := R[B] & R[C]				*/
+OP_BAND,/*	A B C	R[A] := R[B] & R[C]			41	*/
 OP_BOR,/*	A B C	R[A] := R[B] | R[C]				*/
 OP_BXOR,/*	A B C	R[A] := R[B] ~ R[C]				*/
+OP_ROTL, OP_ROTR, OP_LSHR,
 OP_SHL,/*	A B C	R[A] := R[B] << R[C]				*/
 OP_SHR,/*	A B C	R[A] := R[B] >> R[C]				*/
 
-OP_MMBIN,/*	A B C	call C metamethod over R[A] and R[B]		*/
+OP_MMBIN,/*	A B C	call C metamethod over R[A] and R[B]	46	*/
 OP_MMBINI,/*	A sB C k	call C metamethod over R[A] and sB	*/
 OP_MMBINK,/*	A B C k		call C metamethod over R[A] and K[B]	*/
 
-OP_UNM,/*	A B	R[A] := -R[B]					*/
+OP_UNM,/*	A B	R[A] := -R[B]				49	*/
 OP_BNOT,/*	A B	R[A] := ~R[B]					*/
 OP_NOT,/*	A B	R[A] := not R[B]				*/
 OP_LEN,/*	A B	R[A] := #R[B] (length operator)			*/
@@ -272,24 +273,24 @@ OP_EQ,/*	A B k	if ((R[A] == R[B]) ~= k) then pc++		*/
 OP_LT,/*	A B k	if ((R[A] <  R[B]) ~= k) then pc++		*/
 OP_LE,/*	A B k	if ((R[A] <= R[B]) ~= k) then pc++		*/
 
-OP_EQK,/*	A B k	if ((R[A] == K[B]) ~= k) then pc++		*/
+OP_EQK,/*	A B k	if ((R[A] == K[B]) ~= k) then pc++	60	*/
 OP_EQI,/*	A sB k	if ((R[A] == sB) ~= k) then pc++		*/
 OP_LTI,/*	A sB k	if ((R[A] < sB) ~= k) then pc++			*/
 OP_LEI,/*	A sB k	if ((R[A] <= sB) ~= k) then pc++		*/
 OP_GTI,/*	A sB k	if ((R[A] > sB) ~= k) then pc++			*/
 OP_GEI,/*	A sB k	if ((R[A] >= sB) ~= k) then pc++		*/
 
-OP_TEST,/*	A k	if (not R[A] == k) then pc++			*/
+OP_TEST,/*	A k	if (not R[A] == k) then pc++		66	*/
 OP_TESTSET,/*	A B k	if (not R[B] == k) then pc++ else R[A] := R[B]	*/
 
 OP_CALL,/*	A B C	R[A], ... ,R[A+C-2] := R[A](R[A+1], ... ,R[A+B-1]) */
 OP_TAILCALL,/*	A B C k	return R[A](R[A+1], ... ,R[A+B-1])		*/
 
-OP_RETURN,/*	A B C k	return R[A], ... ,R[A+B-2]	(see note)	*/
+OP_RETURN,/*	A B C k	return R[A], ... ,R[A+B-2]	(see note) 70	*/
 OP_RETURN0,/*		return						*/
 OP_RETURN1,/*	A	return R[A]					*/
 
-OP_FORLOOP,/*	A Bx	update counters; if loop continues then pc-=Bx; */
+OP_FORLOOP,/*	A Bx	update counters; if loop continues then pc-=Bx; 73 */
 OP_FORPREP,/*	A Bx	<check values and prepare counters>;
                         if not to run then pc+=Bx+1;			*/
 
@@ -301,7 +302,7 @@ OP_SETLIST,/*	A B C k	R[A][C+i] := R[A+i], 1 <= i <= B		*/
 
 OP_CLOSURE,/*	A Bx	R[A] := closure(KPROTO[Bx])			*/
 
-OP_VARARG,/*	A C	R[A], R[A+1], ..., R[A+C-2] = vararg		*/
+OP_VARARG,/*	A C	R[A], R[A+1], ..., R[A+C-2] = vararg	80	*/
 
 OP_VARARGPREP,/*A	(adjust vararg parameters)			*/
 

@@ -1,0 +1,205 @@
+diff -urN lua-5.4.0-beta/src/llex.c lua-5.4-test/src/llex.c
+Original URI http://lua-users.org/files/wiki_insecure/power_patches/5.4/plusequals-5.4.patch
+Referenced by http://lua-users.org/wiki/LuaPowerPatches
+Author Dave Hayden, based from Sven Olsen's patch
+More literature https://github.com/dibyendumajumdar/ravi/blob/master/readthedocs/lua-parser.rst
+Recovered on wayback machine https://web.archive.org/web/20210518114116/http://lua-users.org/files/wiki_insecure/power_patches/5.4/plusequals-5.4.patch
+
+--- lua-5.4.0-beta/src/llex.c	2019-09-30 18:52:15.000000000 -0500
++++ lua-5.4-test/src/llex.c	2020-01-03 22:39:27.000000000 -0600
+@@ -44,7 +44,8 @@
+     "return", "then", "true", "until", "while",
+     "//", "..", "...", "==", ">=", "<=", "~=",
+     "<<", ">>", "::", "<eof>",
+-    "<number>", "<integer>", "<name>", "<string>"
++    "<number>", "<integer>", "<name>", "<string>",
++    "+=", "-=", "*=", "/=", "<<=", ">>=", "&=", "|=", "^="
+ };
+ 
+ 
+@@ -453,6 +454,7 @@
+       }
+       case '-': {  /* '-' or '--' (comment) */
+         next(ls);
++        if (check_next1(ls, '=')) return TK_MINUSEQ;
+         if (ls->current != '-') return '-';
+         /* else is a comment */
+         next(ls);
+@@ -488,20 +490,52 @@
+       case '<': {
+         next(ls);
+         if (check_next1(ls, '=')) return TK_LE;
+-        else if (check_next1(ls, '<')) return TK_SHL;
++        else if (check_next1(ls, '<')) {
++          if ( check_next1(ls, '=') ) return TK_SHLEQ;
++          else return TK_SHL;
++        }
+         else return '<';
+       }
+       case '>': {
+         next(ls);
+         if (check_next1(ls, '=')) return TK_GE;
+-        else if (check_next1(ls, '>')) return TK_SHR;
++        else if (check_next1(ls, '>')) {
++          if ( check_next1(ls, '=') ) return TK_SHREQ;
++          else return TK_SHR;
++        }
+         else return '>';
+       }
+       case '/': {
+         next(ls);
+         if (check_next1(ls, '/')) return TK_IDIV;
++        if (check_next1(ls, '=')) return TK_DIVEQ;
+         else return '/';
+       }
++      case '+': {
++        next(ls);
++        if (check_next1(ls, '=')) return TK_PLUSEQ;
++        else return '+';
++      }
++      case '*': {
++        next(ls);
++        if (check_next1(ls, '=')) return TK_MULTEQ;
++        else return '*';
++      }
++      case '&': {
++        next(ls);
++        if (check_next1(ls, '=')) return TK_BANDEQ;
++        else return '*';
++      }
++      case '|': {
++        next(ls);
++        if (check_next1(ls, '=')) return TK_BOREQ;
++        else return '|';
++      }
++      case '^': {
++        next(ls);
++        if (check_next1(ls, '=')) return TK_BXOREQ;
++        else return '^';
++      }
+       case '~': {
+         next(ls);
+         if (check_next1(ls, '=')) return TK_NE;
+diff -urN lua-5.4.0-beta/src/llex.h lua-5.4-test/src/llex.h
+--- lua-5.4.0-beta/src/llex.h	2019-09-30 18:52:15.000000000 -0500
++++ lua-5.4-test/src/llex.h	2019-12-26 18:33:52.000000000 -0600
+@@ -33,7 +33,8 @@
+   TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
+   TK_SHL, TK_SHR,
+   TK_DBCOLON, TK_EOS,
+-  TK_FLT, TK_INT, TK_NAME, TK_STRING
++  TK_FLT, TK_INT, TK_NAME, TK_STRING,
++  TK_PLUSEQ, TK_MINUSEQ, TK_MULTEQ, TK_DIVEQ, TK_SHLEQ, TK_SHREQ, TK_BANDEQ, TK_BOREQ, TK_BXOREQ
+ };
+ 
+ /* number of reserved words */
+diff -urN lua-5.4.0-beta/src/lparser.c lua-5.4-test/src/lparser.c
+--- lua-5.4.0-beta/src/lparser.c	2019-10-08 05:18:16.000000000 -0500
++++ lua-5.4-test/src/lparser.c	2020-01-03 22:46:21.000000000 -0600
+@@ -1206,6 +1206,15 @@
+     case TK_GE: return OPR_GE;
+     case TK_AND: return OPR_AND;
+     case TK_OR: return OPR_OR;
++    case TK_PLUSEQ: return OPR_ADD;
++    case TK_MINUSEQ: return OPR_SUB;
++    case TK_MULTEQ: return OPR_MUL;
++    case TK_DIVEQ: return OPR_DIV;
++    case TK_SHLEQ: return OPR_SHL;
++    case TK_SHREQ: return OPR_SHR;
++    case TK_BANDEQ: return OPR_BAND;
++    case TK_BOREQ: return OPR_BOR;
++    case TK_BXOREQ: return OPR_BXOR;
+     default: return OPR_NOBINOPR;
+   }
+ }
+@@ -1345,12 +1354,55 @@
+   }
+ }
+ 
++
++static void compound_assignment(LexState *ls, expdesc* v) {
++  BinOpr op = getbinopr(ls->t.token);
++  FuncState * fs=ls->fs;
++  int tolevel=fs->nactvar;
++  int old_free=fs->freereg;
++  expdesc e,infix;
++  int line=ls->linenumber;
++  int nextra, i;
++  luaX_next(ls);
++
++  /* create temporary local variables to lock up any registers needed
++     by indexed lvalues. */
++  lu_byte top=fs->nactvar;
++  /* protect both the table and index result registers,
++  ** ensuring that they won't be overwritten prior to the
++  ** storevar calls. */
++  if (vkisindexed(v->k)) {
++    if (v->u.ind.t>=top)
++      top = v->u.ind.t+1;
++    if (v->k == VINDEXED && v->u.ind.idx >= top)
++      top = v->u.ind.idx+1;
++  }
++  nextra=top-fs->nactvar;
++  if(nextra) {
++    for(i=0;i<nextra;i++) {
++      new_localvarliteral(ls,"(temp)");
++    }
++    adjustlocalvars(ls,nextra);
++  }
++
++  infix = *v;
++  luaK_infix(fs,op,&infix);
++  expr(ls, &e);
++  luaK_posfix(fs, op, &infix, &e, line);
++  luaK_storevar(fs, v, &infix);
++  removevars(fs,tolevel);
++
++  if(old_free<fs->freereg) {
++    fs->freereg=old_free;
++  }
++}
++
+ /*
+ ** Parse and compile a multiple assignment. The first "variable"
+ ** (a 'suffixedexp') was already read by the caller.
+ **
+ ** assignment -> suffixedexp restassign
+-** restassign -> ',' suffixedexp restassign | '=' explist
++** restassign -> ',' suffixedexp restassign | '=' explist | opeq expr
+ */
+ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
+   expdesc e;
+@@ -1366,10 +1418,8 @@
+     restassign(ls, &nv, nvars+1);
+     leavelevel(ls);
+   }
+-  else {  /* restassign -> '=' explist */
+-    int nexps;
+-    checknext(ls, '=');
+-    nexps = explist(ls, &e);
++  else if (testnext(ls, '=')) {  /* restassign -> '=' explist */
++    int nexps = explist(ls, &e);
+     if (nexps != nvars)
+       adjust_assign(ls, nvars, nexps, &e);
+     else {
+@@ -1378,6 +1428,11 @@
+       return;  /* avoid default */
+     }
+   }
++  else if ( ls->t.token >= TK_PLUSEQ && ls->t.token <= TK_BXOREQ ) { /* restassign -> opeq expr */
++	  check_condition(ls, nvars == 1, "compound assignment not allowed on tuples");
++	  compound_assignment(ls,&lh->v);
++      return;
++  }
+   init_exp(&e, VNONRELOC, ls->fs->freereg-1);  /* default assignment */
+   luaK_storevar(ls->fs, &lh->v, &e);
+ }
+@@ -1816,7 +1871,7 @@
+   FuncState *fs = ls->fs;
+   struct LHS_assign v;
+   suffixedexp(ls, &v.v);
+-  if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
++  if (ls->t.token == '=' || ls->t.token == ',' || (ls->t.token >= TK_PLUSEQ && ls->t.token <= TK_BXOREQ) ) { /* stat -> assignment ? */
+     v.prev = NULL;
+     restassign(ls, &v, 1);
+   }
