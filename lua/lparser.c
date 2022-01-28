@@ -1437,6 +1437,50 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
 }
 
 #include <stdio.h>
+
+// Code from http://lua-users.org/files/wiki_insecure/power_patches/5.4/plusequals-5.4.patch
+static void compound_assignment(LexState *ls, expdesc* v) {
+  BinOpr op = assignment_to_opr[ls->t.token - TK_ASSIGN_ADD];
+  FuncState *fs = ls->fs;
+  int tolevel = fs->nactvar;
+  int old_free = fs->freereg;
+  expdesc e, infix;
+  int line = ls->linenumber;
+  int nextra, i;
+  luaX_next(ls);
+
+  /* create temporary local variables to lock up any registers needed
+     by indexed lvalues. */
+  lu_byte top = fs->nactvar;
+  /* protect both the table and index result registers,
+  ** ensuring that they won't be overwritten prior to the
+  ** storevar calls. */
+  if (vkisindexed(v->k)) {
+    if (v->u.ind.t >= top)
+      top = v->u.ind.t+1;
+    if (v->k == VINDEXED && v->u.ind.idx >= top)
+      top = v->u.ind.idx+1;
+  }
+  nextra = top-fs->nactvar;
+  if(nextra) {
+    for(i=0; i<nextra; i++) {
+      new_localvarliteral(ls, "(temp)");
+    }
+    adjustlocalvars(ls, nextra);
+  }
+
+  infix = *v;
+  luaK_infix(fs, op, &infix);
+  expr(ls, &e);
+  luaK_posfix(fs, op, &infix, &e, line);
+  luaK_storevar(fs, v, &infix);
+  removevars(fs, tolevel);
+
+  if (old_free < fs->freereg) {
+    fs->freereg = old_free;
+  }
+}
+
 /*
 ** Parse and compile a multiple assignment. The first "variable"
 ** (a 'suffixedexp') was already read by the caller.
@@ -1459,51 +1503,18 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
     enterlevel(ls);  /* control recursion depth */
     restassign(ls, &nv, nvars+1);
     leavelevel(ls);
-  }
-  else {  /* restassign -> '=' explist */
+  } else if (tk_is_assignment(ls->t.token)) { /* restassign -> opeq expr */
+    compound_assignment(ls, &lh->v);
+    return;
+  } else { /* restassign -> '=' explist */
     int nexps;
-
-    check_assignment(ls);
-    if(ls->t.token != '=') {
-      operator = assignment_to_opr[ls->t.token - TK_ASSIGN_ADD];
-    }
-    luaX_next(ls);
-
+    checknext(ls, '=');
     nexps = explist(ls, &e);
-    if (operator != OPR_NOBINOPR && (nexps > 1 || nvars > 1)) {
-      /**
-      On Pico8, this:
-      x,y,z += 2,3,4
 
-      is the same as:
-      x,y,z = (z+2),3,4
-
-      or (written differently)
-      x = z+2
-      y,z = 3,4
-
-      =========
-      It's hard to make this work in here, I don't know how to work with exprlists.
-      What the current version will do is:
-      x,y,z = 2,3,(z+4)
-      */
-      printf("TODO assignment operator with more than one var\n");
-    }
     if (nexps != nvars)
       adjust_assign(ls, nvars, nexps, &e);
     else {
       luaK_setoneret(ls->fs, &e);  /* close last expression */
-      if (operator != OPR_NOBINOPR) {
-        // On `e` we have the RHS
-        // On lh->v we have the LHS
-        // We need to change `e` to become `lh->v [OP] e` without modifying lh->v
-        expdesc tmp;
-        memcpy(&tmp, &lh->v, sizeof(expdesc));
-
-        luaK_infix(ls->fs, operator, &tmp);
-        luaK_posfix(ls->fs, operator, &tmp, &e, line);
-        e = tmp;
-      }
       luaK_storevar(ls->fs, &lh->v, &e);
       return;  /* avoid default */
     }
