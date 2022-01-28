@@ -48,8 +48,11 @@ enum RESERVED {
   TK_FLT, TK_INT, TK_NAME, TK_STRING
 };
 
+static int tk_is_assignment_op(int token) {
+    return token >= TK_ASSIGN_ADD && token <= TK_ASSIGN_ROTR;
+}
 static int tk_is_assignment(int token) {
-  return token == '=' || (token >= TK_ASSIGN_ADD && token <= TK_ASSIGN_ROTR);
+    return token == '=' || tk_is_assignment_op(token);
 }
 
 /* number of reserved words */

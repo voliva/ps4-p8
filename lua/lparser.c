@@ -119,11 +119,6 @@ static void checknext (LexState *ls, int c) {
 
 #define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
 
-static void check_assignment (LexState *ls) {
-  check_condition(ls, tk_is_assignment(ls->t.token), "expected assignment operator")
-}
-
-
 /*
 ** Check that next token is 'what' and skip it. In case of error,
 ** raise an error that the expected 'what' should match a 'who'
@@ -1503,7 +1498,7 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
     enterlevel(ls);  /* control recursion depth */
     restassign(ls, &nv, nvars+1);
     leavelevel(ls);
-  } else if (tk_is_assignment(ls->t.token)) { /* restassign -> opeq expr */
+  } else if (tk_is_assignment_op(ls->t.token)) { /* restassign -> opeq expr */
     compound_assignment(ls, &lh->v);
     return;
   } else { /* restassign -> '=' explist */
