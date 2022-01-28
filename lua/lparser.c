@@ -1465,7 +1465,7 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
 
     check_assignment(ls);
     if(ls->t.token != '=') {
-      operator = assignment_to_opr[ls->t.token];
+      operator = assignment_to_opr[ls->t.token - TK_ASSIGN_ADD];
     }
     luaX_next(ls);
 
