@@ -18,8 +18,8 @@ More .p8.png cartridges can be bundled with the .pkg file by adding them into `/
 
 - `print`: It prints text on the screen, but it's missing some P8SCII control codes, non-ascii characters.
 - Sprites: Done
-- Sfx: Done
-- Music: Done
+- Sfx: Playable. Room of improvement for sound quality, and sound filters are missing (damp, buzz, reverb, etc.)
+- Music: Playable.
 - Menu: WIP.
 - Memory manipulation: Almost complete.
 - Maps: Done
@@ -64,6 +64,8 @@ Special thanks to:
 
 - [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) GPL v3
 - [Lua](https://www.lua.org/) MIT
+- [libfixmath](https://code.google.com/archive/p/libfixmath/) MIT
+- [plusequals powerpatch](http://lua-users.org/wiki/LuaPowerPatches)
 - [STB](https://github.com/nothings/stb) MIT
 - [EFLA](http://www.edepot.com/algorithm.html)
 - [dirent](https://github.com/tronkko/dirent) MIT
