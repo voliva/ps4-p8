@@ -488,7 +488,7 @@ static const luaL_Reg base_funcs[] = {
   //{"dofile", luaB_dofile},
   //{"error", luaB_error},
   {"getmetatable", luaB_getmetatable},
-  //{"ipairs", luaB_ipairs},
+  {"ipairs", luaB_ipairs},
   //{"loadfile", luaB_loadfile},
   //{"load", luaB_load},
   {"__lua_next", luaB_next},

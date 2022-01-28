@@ -373,6 +373,12 @@ std::string p8lua_to_std_lua(std::string& s) {
             }
         }
 
+        if (((pos = line.find("for")) != std::string::npos) &&
+            ((pos = line.find("do", pos)) != std::string::npos) &&
+            line[pos - 1] >= '0' && line[pos - 1] <= '9') {
+            line = line.replace(pos, 0, " ");
+        }
+
         out << line << ENDL;
         line_num++;
     }
