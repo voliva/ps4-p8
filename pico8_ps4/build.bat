@@ -10,7 +10,7 @@ set PKG_CONTENT_ID="IV0000-BREW34965_00-OLIPS4PICO800000"
 Rem Libraries to link in
 set libraries=-lc -lkernel -lc++ -lSceUserService -lSceVideoOut -lSceAudioOut -lScePad -lSceSysmodule -lSceFreeType -lSDL2 -lSDL2_image -lSceNet -lSceHttp -lSceSsl
 
-set extra_flags=-I"..\\lua" -D__PS4__
+set extra_flags=-I"..\\lua" -I"..\\libfixmath" -D__PS4__
 
 Rem Read the script arguments into local vars
 set intdir=ps4_int
@@ -39,6 +39,7 @@ set obj_files=
 
 Rem Lua obj files
 for %%f in (..\lua\%intdir%\*.o) do set obj_files=!obj_files! .\%%f
+for %%f in (..\libfixmath\%intdir%\*.o) do set obj_files=!obj_files! .\%%f
 
 for %%f in (%intdir%\*.o) do set obj_files=!obj_files! .\%%f
 

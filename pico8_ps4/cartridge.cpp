@@ -1,9 +1,7 @@
 #include "cartridge.h"
 #include "log.h"
 
-#ifndef __PS4__ // OpenOrbis already has these ones precompiled
 #define STB_IMAGE_IMPLEMENTATION
-#endif
 
 #include <stb/stb_image.h>
 #include <sstream>
