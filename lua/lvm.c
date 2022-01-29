@@ -37,7 +37,7 @@
 */
 #if !defined(LUA_USE_JUMPTABLE)
 #if defined(__GNUC__)
-#define LUA_USE_JUMPTABLE	1
+#define LUA_USE_JUMPTABLE	0
 #else
 #define LUA_USE_JUMPTABLE	0
 #endif
