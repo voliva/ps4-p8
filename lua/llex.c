@@ -593,12 +593,12 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '|': {
           next(ls);
-          if (check_next1(ls, '|')) return TK_ASSIGN_BOR;
+          if (check_next1(ls, '=')) return TK_ASSIGN_BOR;
           return '|';
       }
       case '&': {
           next(ls);
-          if (check_next1(ls, '&')) return TK_ASSIGN_BAND;
+          if (check_next1(ls, '=')) return TK_ASSIGN_BAND;
           return '&';
       }
       case EOZ: {
