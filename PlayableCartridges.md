@@ -15,3 +15,12 @@ This is a list of some of the cartridges that have been tested and they are play
 - [Fruits Catcher](https://www.lexaloffle.com/bbs/?tid=45946)
 - [Blob Grabber](https://www.lexaloffle.com/bbs/?tid=45917)
 - [Memory](https://www.lexaloffle.com/bbs/?tid=45933)
+
+WIP
+https://www.lexaloffle.com/bbs/?tid=35326
+https://www.lexaloffle.com/bbs/?tid=44727
+https://www.lexaloffle.com/bbs/?tid=40906
+
+close?
+https://www.lexaloffle.com/bbs/?tid=42362
+https://www.lexaloffle.com/bbs/?tid=41791

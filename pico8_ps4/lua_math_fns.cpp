@@ -83,42 +83,6 @@ int cos(lua_State* L) {
 	return 1;
 }
 
-int shr(lua_State* L) {
-	fix16_t num = lua_tonumber(L, 1);
-	int bits = lua_tointeger(L, 2);
-
-	lua_pushnumber(L, num >> bits);
-
-	return 1;
-}
-
-int shl(lua_State* L) {
-	fix16_t num = lua_tonumber(L, 1);
-	int bits = lua_tointeger(L, 2);
-
-	lua_pushnumber(L, num << bits);
-
-	return 1;
-}
-
-int band(lua_State* L) {
-	fix16_t a = lua_tonumber(L, 1);
-	fix16_t b = lua_tonumber(L, 2);
-
-	lua_pushnumber(L, a & b);
-
-	return 1;
-}
-
-int bor(lua_State* L) {
-	fix16_t a = lua_tonumber(L, 1);
-	fix16_t b = lua_tonumber(L, 2);
-
-	lua_pushnumber(L, a | b);
-
-	return 1;
-}
-
 void load_math_fns(lua_State* L)
 {
 	register_fn(L, "__rnd_num", rnd);
@@ -129,10 +93,61 @@ void load_math_fns(lua_State* L)
 	register_fn(L, "cos", cos);
 	register_fn(L, "sin", sin);
 	register_fn(L, "atan2", atan2);
-	register_fn(L, "shr", shr);
-	register_fn(L, "shl", shl);
-	register_fn(L, "band", band);
-	register_fn(L, "bor", bor);
+
+
+	register_lua_fn(L, "bnot", R"V0G0N(
+function bnot(num)
+	return ~num
+end
+	)V0G0N");
+
+	register_lua_fn(L, "shr", R"V0G0N(
+function shr(num, bits)
+	return num >> bits
+end
+	)V0G0N");
+
+	register_lua_fn(L, "lshr", R"V0G0N(
+function lshr(num, bits)
+	return num >>> bits
+end
+	)V0G0N");
+
+	register_lua_fn(L, "shl", R"V0G0N(
+function shl(num, bits)
+	return num << bits
+end
+	)V0G0N");
+
+	register_lua_fn(L, "rotl", R"V0G0N(
+function rotl(num, bits)
+	return num <<> bits
+end
+	)V0G0N");
+
+	register_lua_fn(L, "rotr", R"V0G0N(
+function rotr(num, bits)
+	return num >>< bits
+end
+	)V0G0N");
+
+	register_lua_fn(L, "band", R"V0G0N(
+function band(first, second)
+	return first & second
+end
+	)V0G0N");
+
+	register_lua_fn(L, "bor", R"V0G0N(
+function bor(first, second)
+	return first | second
+end
+	)V0G0N");
+
+	register_lua_fn(L, "bxor", R"V0G0N(
+function bxor(first, second)
+	return first ^^ second
+end
+	)V0G0N");
 
 	register_lua_fn(L, "min", R"V0G0N(
 function min(first, second)
