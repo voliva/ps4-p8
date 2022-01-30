@@ -15,8 +15,10 @@ Log DEBUGLOG = logger.log("Runtime");
 
 #ifdef __PS4__
 #define IMAGE_FOLDER "/app0/assets/images"
+#define SKIPFRAME_LOG false
 #else
 #define IMAGE_FOLDER "../assets/images"
+#define SKIPFRAME_LOG true
 #endif
 
 SDL_Rect warningArea();
@@ -193,7 +195,7 @@ void RunningCart::runOnce()
 					luaState->run_draw();
 					renderer->present();
 				}
-				else {
+				else if(SKIPFRAME_LOG) {
 					DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;
 				}
 			}
