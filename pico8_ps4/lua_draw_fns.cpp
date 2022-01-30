@@ -181,6 +181,10 @@ int map(lua_State* L) {
 int mget(lua_State* L) {
 	int cellx = luaL_optinteger(L, 1, 0);
 	int celly = luaL_optinteger(L, 2, 0);
+	if (cellx < 0 || celly < 0 || cellx >= 128 || celly >= 64) {
+		lua_pushinteger(L, 0);
+		return 1;
+	}
 
 	int row_offset = ADDR_MAP + celly * 128;
 	if (celly >= 32) {

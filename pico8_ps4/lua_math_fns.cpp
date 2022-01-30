@@ -97,55 +97,55 @@ void load_math_fns(lua_State* L)
 
 	register_lua_fn(L, "bnot", R"V0G0N(
 function bnot(num)
-	return ~num
+	return ~(num or 0)
 end
 	)V0G0N");
 
 	register_lua_fn(L, "shr", R"V0G0N(
 function shr(num, bits)
-	return num >> bits
+	return (num or 0) >> (bits or 0)
 end
 	)V0G0N");
 
 	register_lua_fn(L, "lshr", R"V0G0N(
 function lshr(num, bits)
-	return num >>> bits
+	return (num or 0) >>> (bits or 0)
 end
 	)V0G0N");
 
 	register_lua_fn(L, "shl", R"V0G0N(
 function shl(num, bits)
-	return num << bits
+	return (num or 0) << (bits or 0)
 end
 	)V0G0N");
 
 	register_lua_fn(L, "rotl", R"V0G0N(
 function rotl(num, bits)
-	return num <<> bits
+	return (num or 0) <<> (bits or 0)
 end
 	)V0G0N");
 
 	register_lua_fn(L, "rotr", R"V0G0N(
 function rotr(num, bits)
-	return num >>< bits
+	return (num or 0) >>< (bits or 0)
 end
 	)V0G0N");
 
 	register_lua_fn(L, "band", R"V0G0N(
 function band(first, second)
-	return first & second
+	return (first or 0) & (second or 0)
 end
 	)V0G0N");
 
 	register_lua_fn(L, "bor", R"V0G0N(
 function bor(first, second)
-	return first | second
+	return (first or 0) | (second or 0)
 end
 	)V0G0N");
 
 	register_lua_fn(L, "bxor", R"V0G0N(
 function bxor(first, second)
-	return first ^^ second
+	return (first or 0) ^^ (second or 0)
 end
 	)V0G0N");
 

@@ -179,6 +179,8 @@ void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned
 {
 	for (int y = 0; y < ch; y++) {
 		int row = cy + y;
+		if (row < 0 || row >= 64) continue;
+
 		int row_offset = ADDR_MAP + row * 128;
 		if (row >= 32) {
 			row_offset = ADDR_MAP_SHARED + (row-32) * 128;
@@ -191,7 +193,7 @@ void Renderer::draw_map(int cx, int cy, int sx, int sy, int cw, int ch, unsigned
 
 		for (int x = 0; x < cw; x++) {
 			int col = cx + x;
-			if (col > 128) {
+			if (col >= 128 || col < 0) {
 				continue;
 			}
 
