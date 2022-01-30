@@ -13,6 +13,16 @@
 #define DEBUGLOG Runtime_DEBUGLOG
 Log DEBUGLOG = logger.log("Runtime");
 
+#ifdef __PS4__
+#define IMAGE_FOLDER "/app0/assets/images"
+#else
+#define IMAGE_FOLDER "../assets/images"
+#endif
+
+SDL_Rect warningArea();
+extern SDL_Texture* surface_from_file(std::string path); // From main.cpp lol
+SDL_Texture* warningTexture = NULL;
+
 LuaState* luaState = NULL;
 bool RunningCart::load(Cartridge* cartridge)
 {
@@ -20,6 +30,12 @@ bool RunningCart::load(Cartridge* cartridge)
         DEBUGLOG << "Can't load new cartridge: Already running another one." << ENDL;
         return false;
     }
+
+	if (warningTexture == NULL) {
+		DEBUGLOG << "Loading warning image" << ENDL;
+		std::string path = IMAGE_FOLDER;
+		warningTexture = surface_from_file(path + "/warning.png");
+	}
 
     DEBUGLOG << "Initializing memory" << ENDL;
     memory_load_cartridge(*cartridge);
@@ -170,6 +186,10 @@ void RunningCart::runOnce()
 				luaState->run_update();
 
 				if (time_debt < ms_per_frame / 2) {
+					if (!isTimestampNil(this->lastWarning) && getMillisecondsDiff(getTimestamp(), this->lastWarning) > 1000) {
+						this->dismissError();
+					}
+
 					luaState->run_draw();
 					renderer->present();
 				}
@@ -220,6 +240,35 @@ void RunningCart::runOnce()
 	}
 }
 
+void RunningCart::warnError() {
+	SDL_Rect viewport{};
+	SDL_RenderGetViewport(renderer->renderer, &viewport);
+	SDL_RenderSetViewport(renderer->renderer, NULL);
+
+	SDL_Rect target = warningArea();
+	SDL_SetRenderDrawColor(renderer->renderer, 0x10, 0x10, 0x10, 0xFF);
+	SDL_RenderFillRect(renderer->renderer, &target);
+	SDL_RenderCopy(renderer->renderer, warningTexture, NULL, &target);
+
+	this->lastWarning = getTimestamp();
+
+	SDL_RenderSetViewport(renderer->renderer, &viewport);
+}
+
+void RunningCart::dismissError() {
+	SDL_Rect viewport{};
+	SDL_RenderGetViewport(renderer->renderer, &viewport);
+	SDL_RenderSetViewport(renderer->renderer, NULL);
+
+	SDL_Rect target = warningArea();
+	SDL_SetRenderDrawColor(renderer->renderer, 0x10, 0x10, 0x10, 0xFF);
+	SDL_RenderFillRect(renderer->renderer, &target);
+
+	this->lastWarning = nilTimestamp();
+
+	SDL_RenderSetViewport(renderer->renderer, &viewport);
+}
+
 void blocking_alert(std::string str)
 {
 	int text_width = str.size() * SYS_CHAR_WIDTH;
@@ -265,4 +314,18 @@ void run_cartridge(Cartridge* r)
 		SDL_RenderSetViewport(renderer->renderer, NULL);
 		blocking_alert("cartridge not compatible yet");
 	}
+}
+
+SDL_Rect warningArea() {
+	SDL_Rect target;
+	SDL_RenderGetViewport(renderer->renderer, &target);
+	target.x = target.w;
+	target.y = 0;
+	SDL_QueryTexture(warningTexture, NULL, NULL, &target.w, &target.h);
+	target.w = target.w * 0.2;
+	target.h = target.h * 0.2;
+	target.x -= target.w + 1;
+	target.y = 0.5;
+
+	return target;
 }

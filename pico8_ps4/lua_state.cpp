@@ -2,6 +2,7 @@
 #include "log.h"
 #include "lua_fns.h"
 #include "chrono.h"
+#include "running-cart.h"
 
 #define DEBUGLOG LuaState_DEBUGLOG
 Log DEBUGLOG = logger.log("LuaState");
@@ -65,6 +66,7 @@ void LuaState::run_init()
 			std::string e = lua_tostring(this->state, -1);
 			lua_pop(this->state, 1);
 			DEBUGLOG << e << ENDL;
+			runningCart->warnError();
 			return;
 		}
 	}
@@ -90,6 +92,7 @@ void LuaState::run_draw()
 			std::string e = lua_tostring(this->state, -1);
 			lua_pop(this->state, 1);
 			DEBUGLOG << e << ENDL;
+			runningCart->warnError();
 		}
 	}
 	else {
@@ -105,6 +108,7 @@ void LuaState::run_update()
 			std::string e = lua_tostring(this->state, -1);
 			lua_pop(this->state, 1);
 			DEBUGLOG << e << ENDL;
+			runningCart->warnError();
 		}
 	}
 	else {
@@ -114,6 +118,7 @@ void LuaState::run_update()
 				std::string e = lua_tostring(this->state, -1);
 				lua_pop(this->state, 1);
 				DEBUGLOG << e << ENDL;
+				runningCart->warnError();
 			}
 		}
 		else {

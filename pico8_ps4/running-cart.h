@@ -1,5 +1,6 @@
 #pragma once
 #include "cartridge.h"
+#include "chrono.h"
 
 enum RunningStatus {
 	None,
@@ -18,13 +19,16 @@ public:
 	void restart();
 	void pause();
 	void resume();
+	void warnError();
 
 private:
 	Cartridge* loadedCartridge;
 	RunningStatus status = RunningStatus::None;
 	bool paused = false;
+	timestamp_t lastWarning = nilTimestamp();
 
 	void runOnce();
+	void dismissError();
 };
 extern RunningCart *runningCart;
 
