@@ -258,6 +258,14 @@ int main(void)
 			);
 		}
 
+		std::string github = "github.com/voliva/ps4-p8";
+		font->sys_print(
+			github,
+			FRAME_WIDTH - SYS_CHAR_WIDTH * github.length() / 3,
+			FRAME_HEIGHT - SYS_CHAR_HEIGHT / 3,
+			0.33
+		);
+
 		SDL_UpdateWindowSurface(renderer->window);
 	}
 
