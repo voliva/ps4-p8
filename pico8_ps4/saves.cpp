@@ -44,12 +44,18 @@ void SaveManager::open(std::string name)
 
 int SaveManager::read(int index)
 {
+	if (index >= 64 || index < 0) {
+		return 0;
+	}
 	// DEBUGLOG << "read " << index << ": " << memory_read_int(ADDR_PERSISTENT + index * 4) << ENDL;
 	return memory_read_int(ADDR_PERSISTENT + index * 4);
 }
 
 void SaveManager::write(int index, int value)
 {
+	if (index >= 64 || index < 0) {
+		return;
+	}
 	memory_write_int(ADDR_PERSISTENT + index * 4, value);
 	this->dirty = true;
 }

@@ -114,7 +114,7 @@ int extcmd(lua_State* L) {
 
 int dset(lua_State* L) {
 	int index = lua_tointeger(L, 1);
-	int value = lua_tointeger(L, 2);
+	lua_Number value = lua_tonumber(L, 2);
 
 	saveManager->write(index, value);
 
@@ -124,7 +124,7 @@ int dset(lua_State* L) {
 int dget(lua_State* L) {
 	int index = luaL_checkinteger(L, 1);
 
-	lua_pushinteger(L, saveManager->read(index));
+	lua_pushnumber(L, saveManager->read(index));
 
 	return 1;
 }
