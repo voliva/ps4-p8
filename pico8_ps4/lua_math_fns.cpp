@@ -25,7 +25,7 @@ int rnd(lua_State* L) {
 }
 
 int srand(lua_State* L) {
-	fix16_t num = luaL_checknumber(L, 1);
+	fix16_t num = luaL_optnumber(L, 1, 0);
 	machineState->setRndSeed(num);
 	return 0;
 }
@@ -194,6 +194,7 @@ end
 
 	register_lua_fn(L, "sgn", R"V0G0N(
 function sgn(value)
+	if type(value) != "number" then return 1 end
 	if value >= 0 then return 1 else return -1 end
 end
 	)V0G0N");

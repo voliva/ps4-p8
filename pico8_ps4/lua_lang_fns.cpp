@@ -149,16 +149,24 @@ bool decimal_to_num(std::string& str, int base, fix16_t* dest) {
 
 // 0 = nil, 1 = int, 2 = dec
 int string_to_num(std::string& str, short* shortval, fix16_t* doubleval) {
+	bool neg = false;
+	if (str[0] == '-') {
+		neg = true;
+		str = str.substr(1);
+	}
+
 	if (str.find("0x") == 0) {
 		str = str.replace(0, 2, "");
 
 		if (str.find(".") == std::string::npos) {
 			if (hexint_to_num(str, shortval)) {
+				if (neg) *shortval = -*shortval;
 				return 1;
 			}
 		}
 		else {
 			if (decimal_to_num(str, 16, doubleval)) {
+				if (neg) *doubleval = -*doubleval;
 				return 2;
 			}
 		}
@@ -167,11 +175,13 @@ int string_to_num(std::string& str, short* shortval, fix16_t* doubleval) {
 	if (str.find("0b") == 0) {
 		if (str.find(".") == std::string::npos) {
 			if (binint_to_num(str, shortval)) {
+				if (neg) *shortval = -*shortval;
 				return 1;
 			}
 		}
 		else {
 			if (decimal_to_num(str, 2, doubleval)) {
+				if (neg) *doubleval = -*doubleval;
 				return 2;
 			}
 		}
@@ -180,11 +190,13 @@ int string_to_num(std::string& str, short* shortval, fix16_t* doubleval) {
 
 	if (str.find(".") == std::string::npos) {
 		if (decint_to_num(str, shortval)) {
+			if (neg) *shortval = -*shortval;
 			return 1;
 		}
 	}
 	else {
 		if (decimal_to_num(str, 10, doubleval)) {
+			if (neg) *doubleval = -*doubleval;
 			return 2;
 		}
 	}
