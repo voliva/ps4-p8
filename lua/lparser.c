@@ -442,12 +442,7 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 }
 
 
-/*
-** Find a variable with the given name 'n', handling global variables
-** too.
-*/
-static void singlevar (LexState *ls, expdesc *var) {
-  TString *varname = str_checkname(ls);
+static void fetch_singlevar (LexState *ls, TString *varname, expdesc *var) {
   FuncState *fs = ls->fs;
   singlevaraux(fs, varname, var, 1);
   if (var->k == VVOID) {  /* global name? */
@@ -459,6 +454,14 @@ static void singlevar (LexState *ls, expdesc *var) {
   }
 }
 
+/*
+** Find a variable with the given name 'n', handling global variables
+** too.
+*/
+static void singlevar (LexState *ls, expdesc *var) {
+  TString *varname = str_checkname(ls);
+  fetch_singlevar(ls, varname, var);
+}
 
 /*
 ** Adjust the number of results from an expression list 'e' with 'nexps'
@@ -1879,8 +1882,10 @@ static void localstat (LexState *ls) {
   int nvars = 0;
   int nexps;
   expdesc e;
+  TString* last_varname = NULL;
   do {
-    vidx = new_localvar(ls, str_checkname(ls));
+      last_varname = str_checkname(ls);
+    vidx = new_localvar(ls, last_varname);
     kind = getlocalattribute(ls);
     getlocalvardesc(fs, vidx)->vd.kind = kind;
     if (kind == RDKTOCLOSE) {  /* to-be-closed? */
@@ -1892,6 +1897,27 @@ static void localstat (LexState *ls) {
   } while (testnext(ls, ','));
   if (testnext(ls, '='))
     nexps = explist(ls, &e);
+  else if (tk_is_assignment(ls->t.token)) {
+    printf("lparser - TODO local assignment operator (experimental)\n");
+    // Simulate we've read now "last_varname [op]"
+    fetch_singlevar(ls, last_varname, &e);
+    BinOpr op = assignment_to_opr[ls->t.token - TK_ASSIGN_ADD];
+    while (op != OPR_NOBINOPR) {
+        expdesc v2;
+        int line = ls->linenumber;
+        luaX_next(ls);  /* skip operator */
+        luaK_infix(ls->fs, op, &e);
+        op = subexpr(ls, &v2, priority[op].right);
+        luaK_posfix(ls->fs, op, &e, &v2, line);
+    }
+    if (testnext(ls, ',')) {
+        luaK_exp2nextreg(ls->fs, &e);
+        nexps = explist(ls, &e) + 1;
+    }
+    else {
+        nexps = 1;
+    }
+  }
   else {
     e.k = VVOID;
     nexps = 0;
