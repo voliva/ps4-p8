@@ -73,6 +73,17 @@ Special thanks to:
 - [Pico-8 Font + Palette](https://www.lexaloffle.com/pico-8.php?page=faq) CC-0
 - [ConcurrentQueue](https://stackoverflow.com/a/26491017/1026619)
 
+### Bundled cartridges
+
+- [Mine Walker](https://www.lexaloffle.com/bbs/?tid=42395) CC4-BY-NC-SA by voliva
+- [Celeste](https://www.lexaloffle.com/bbs/?tid=2145) by noel+maddy
+- [To a Starling](https://www.lexaloffle.com/bbs/?tid=45958) CC4-BY-NC-SA by Peteksi+Gruber
+- [Flip Knight](https://www.lexaloffle.com/bbs/?tid=40906) CC4-BY-NC-SA by st33d
+- [Harold's Bad Day](https://www.lexaloffle.com/bbs/?pid=100973) CC4-BY-NC-SA by biovoid
+- [PakPok](https://www.lexaloffle.com/bbs/?tid=35326) CC4-BY-NC-SA by st33d
+- [Phoenix](https://www.lexaloffle.com/bbs/?tid=44727) CC4-BY-NC-SA by pahammond
+- [Tiny golf puzzles](https://www.lexaloffle.com/bbs/?pid=79680) by beepyeah
+
 ### PS4-P8
 
 MIT
