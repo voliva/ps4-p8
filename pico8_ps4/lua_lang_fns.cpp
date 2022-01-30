@@ -309,9 +309,11 @@ function split(str, separator, convert_numbers)
 	if convert_numbers == nil then
 		convert_numbers = true
 	end
-	if not str then
-		printh(__lua_debug.traceback())
-		--return str
+	if type(str) == "number" then
+		return {str}
+	end
+	if type(str) != "string" then
+		return nil
 	end
 	separator = separator or ","
 	convert_numbers = convert_numbers ~= false

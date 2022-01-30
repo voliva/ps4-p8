@@ -202,7 +202,7 @@ end
 	register_lua_fn(L, "rnd_lua", R"V0G0N(
 function rnd(value)
 	if type(value) == "table" then
-		return value[__rnd_num(1 + flr(#value))]
+		return value[1 + flr(__rnd_num(#value))]
 	else
 		return __rnd_num(value)
 	end
