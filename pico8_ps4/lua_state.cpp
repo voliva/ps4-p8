@@ -24,6 +24,8 @@ LuaState::LuaState()
 	lua_pop(this->state, 1);
 	luaL_requiref(this->state, PREFIXED(LUA_STRLIBNAME), luaopen_string, 1);
 	lua_pop(this->state, 1);
+	luaL_requiref(this->state, PREFIXED(LUA_DBLIBNAME), luaopen_debug, 1);
+	lua_pop(this->state, 1);
 
 	load_lang_fns(this->state); // pairs, all, etc.
 	load_draw_fns(this->state); // print, cls, rect, etc.

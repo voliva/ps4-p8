@@ -191,10 +191,27 @@ int string_to_num(std::string& str, short* shortval, fix16_t* doubleval) {
 	return 0;
 }
 
+static const std::string WHITESPACE = " \n\r\t\f\v";
+std::string ltrim(const std::string& s)
+{
+	size_t start = s.find_first_not_of(WHITESPACE);
+	return (start == std::string::npos) ? "" : s.substr(start);
+}
+std::string rtrim(const std::string& s)
+{
+	size_t end = s.find_last_not_of(WHITESPACE);
+	return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+}
+std::string trim(const std::string& s) {
+	return rtrim(ltrim(s));
+}
+
 int tonum(lua_State* L) {
 	std::string str = luaL_checkstring(L, 1);
 	fix16_t decimal_value;
 	short integer_value;
+
+	str = trim(str);
 
 	int result = string_to_num(str, &integer_value, &decimal_value);
 
@@ -275,6 +292,12 @@ function del(table, value)
 end
 	)V0G0N");
 
+	register_lua_fn(L, "unpack", R"V0G0N(
+function unpack(tbl, i, j)
+	return __lua_table.unpack(tbl, i, j)
+end
+	)V0G0N");
+
 	register_lua_fn(L, "sub", R"V0G0N(
 function sub(str, pos0, pos1)
 	return __lua_string.sub(str, pos0, pos1)
@@ -283,6 +306,13 @@ end
 
 	register_lua_fn(L, "split", R"V0G0N(
 function split(str, separator, convert_numbers)
+	if convert_numbers == nil then
+		convert_numbers = true
+	end
+	if not str then
+		printh(__lua_debug.traceback())
+		--return str
+	end
 	separator = separator or ","
 	convert_numbers = convert_numbers ~= false
 	local result = {}
