@@ -36,7 +36,6 @@ public:
 	void pause();
 	void resume();
 	void stopChannel(int channel);
-	void poke(unsigned short addr, unsigned char value);
 
 	int getCurrentIndex(int channel);
 	int getActivePattern();

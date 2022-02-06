@@ -75,6 +75,7 @@ private:
 	unsigned char get_screen_pat_color(unsigned char color, unsigned short pattern, int sx, int sy);
 
 	unsigned char prev_screen[SCREEN_MEMORY_SIZE];
+	unsigned char prev_screen_pal[16];
 
 	timestamp_t prev_frame;
 	int sync_delay;

@@ -156,6 +156,7 @@ void Renderer::initialize()
 	this->reset_draw_pal();
 	this->reset_screen_pal();
 	memset(this->prev_screen, 0x00, SCREEN_MEMORY_SIZE);
+	memcpy(this->prev_screen_pal, &p8_memory[ADDR_DS_SCREEN_PAL], 16);
 
 	p8_memory[ADDR_DS_CLIP_RECT] = 0;
 	p8_memory[ADDR_DS_CLIP_RECT + 1] = 0;
@@ -434,21 +435,29 @@ void Renderer::reset_transparency_pal()
 #include <map>
 void Renderer::present()
 {
+	bool palette_changed = false;
+	for (int i = 0; !palette_changed && i<16; i++) {
+		palette_changed = this->prev_screen_pal[i] != p8_memory[ADDR_DS_SCREEN_PAL+i];
+	}
+	if (palette_changed) {
+		memcpy(this->prev_screen_pal, &p8_memory[ADDR_DS_SCREEN_PAL], 16);
+	}
+
 	std::vector<SDL_Point> points[16];
 	for (int i = 0; i < SCREEN_MEMORY_SIZE; i++) {
 		unsigned char pixels = p8_memory[ADDR_SCREEN + i];
 		unsigned char previous = this->prev_screen[i];
-		if (pixels == previous) {
+		if (!palette_changed && pixels == previous) {
 			continue;
 		}
 
 		int x = (i % 64) * 2;
 		int y = i / 64;
 
-		if ((pixels & 0x0F) != (previous & 0x0F)) {
+		if (palette_changed || ((pixels & 0x0F) != (previous & 0x0F))) {
 			points[pixels & 0x0F].push_back(SDL_Point{ x,y });
 		}
-		if ((pixels & 0xF0) != (previous & 0xF0)) {
+		if (palette_changed || ((pixels & 0xF0) != (previous & 0xF0))) {
 			points[pixels >> 4].push_back(SDL_Point{ x+1,y });
 		}
 	}

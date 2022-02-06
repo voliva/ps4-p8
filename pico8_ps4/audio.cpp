@@ -534,11 +534,6 @@ P8_SFX get_sfx(int s) {
 	return sfx;
 }
 
-void AudioManager::poke(unsigned short addr, unsigned char value)
-{
-	// Does nothing
-}
-
 int AudioManager::getCurrentIndex(int c)
 {
 	if (this->channels[c].sfx == -1) {

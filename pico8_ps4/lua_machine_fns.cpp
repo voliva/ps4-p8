@@ -49,7 +49,6 @@ int time(lua_State* L) {
 }
 
 void poke_memory(unsigned short addr, unsigned char value) {
-	audioManager->poke(addr, value);
 	p8_memory[addr] = value;
 }
 int poke(lua_State* L) {
@@ -190,6 +189,16 @@ int noop(lua_State* L) {
 	alert_todo("noop");
 	return 0;
 }
+
+int _memcpy(lua_State* L) {
+	int destaddr = luaL_checkinteger(L, 1);
+	int sourceaddr = luaL_checkinteger(L, 2);
+	int len = luaL_checkinteger(L, 3);
+
+	memcpy(&p8_memory[destaddr], &p8_memory[sourceaddr], len);
+	return 0;
+}
+
 void load_machine_fns(lua_State* L)
 {
 	register_fn(L, "btnp", btnp);
@@ -207,4 +216,5 @@ void load_machine_fns(lua_State* L)
 	register_fn(L, "memset", memset);
 	register_fn(L, "stat", stat);
 	register_fn(L, "menuitem", noop);
+	register_fn(L, "memcpy", _memcpy);
 }
