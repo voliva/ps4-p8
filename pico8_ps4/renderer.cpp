@@ -285,6 +285,13 @@ void Renderer::draw_points(std::vector<Renderer_Point>& points)
 
 void Renderer::draw_line(int x0, int y0, int x1, int y1)
 {
+	if (y0 == y1) {
+		int xmin = std::min(x0, x1);
+		int xmax = std::max(x0, x1);
+		Renderer_Point sc_min = this->coord_to_screen(xmin, y0);
+		Renderer_Point sc_max = this->coord_to_screen(xmax, y0);
+		return this->set_line(sc_min.x, sc_max.x, y0);
+	}
 	std::vector<Renderer_Point> points = efla_small_line(x0, y0, x1, y1);
 	this->draw_points(points);
 }
@@ -293,8 +300,6 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 {
 	int width = x1 - x0;
 	int height = y1 - y0;
-	double mid_x = x0 + (double)width / 2;
-	double mid_y = y0 + (double)height / 2;
 
 	if (width == 0 && height == 0) {
 		return this->draw_point(x0, y0);
@@ -303,45 +308,101 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 		return this->draw_line(x0, y0, x1, y1);
 	}
 
-	std::function<void(double, double)> draw_all = [width, height, mid_x, mid_y, this](double x_t, double y_t) {
-		int x2 = round(mid_x + x_t * width / 2);
-		int x3 = round(mid_x - x_t * width / 2);
-		int y2 = round(mid_y + y_t * height / 2);
-		int y3 = round(mid_y - y_t * height / 2);
-		this->draw_point(x2, y2);
-		this->draw_point(x2, y3);
-		this->draw_point(x3, y2);
-		this->draw_point(x3, y3);
-	};
+	/*
+	* The formula for an ellipse is
+	* (x/a)^2 + (y/b)^2 = 1
+	* a = width/2, b = height/2, in math coordinates centered at point 0,0
+	* 
+	* The idea is to scan line-by-line, get all the x points that need to be drawn and.... draw them
+	* for that, let's solve for x:
+	* x = a * sqrt(1-(y/b)^2)
+	* at y = 0, x[0] = a. If `fill`, then draw from x=-a to x=a. Otherwise, draw poitns x=-a and x=a
+	* at y = 1 we can get a different x[1] <= x[0]. Draw all the points from x[0]-1 to x[1]
+	* repeat until y = b
+	* And translate all math coordinates to logical coordinates. Easy.
+	*/
+
+
+	double a = width / 2;
+	double b = height / 2;
+
+	// Center in screen coordinates
+	double scx = (double)x0 + a - (double)(short)memory_read_short(ADDR_DS_CAMERA_X);
+	double scy = (double)y0 + b - (double)(short)memory_read_short(ADDR_DS_CAMERA_Y);
+
+	double y = 0;
+	double x = a;
+	int sx = round(scx + x);
+	int sy = round(scy);
+	// The inverted point in integer part comes from the invariant (xf-x == x'-x0): The distance between the extremes and the points is constant
+	// rearanging, we find x'=xf+x0-x
+	int sxi = x1 + x0 - sx;
+	int syi = y1 + y0 - sy;
 	if (fill) {
-		draw_all = [width, height, mid_x, mid_y, this](double x_t, double y_t) {
-			int x2 = round(mid_x + x_t * width / 2);
-			int x3 = round(mid_x - x_t * width / 2);
-			int y2 = round(mid_y + y_t * height / 2);
-			int y3 = round(mid_y - y_t * height / 2);
-			this->draw_line(x2, y2, x2, y3);
-			this->draw_line(x3, y2, x3, y3);
-		};
+		this->set_line(sxi, sx, sy);
+		this->set_line(sxi, sx, syi);
+	}
+	else {
+		this->set_point(sx, sy);
+		this->set_point(sxi, sy);
+		this->set_point(sx, syi);
+		this->set_point(sxi, syi);
 	}
 
-	// The second part of this formula was taken temptatively.... halfway_t is cos(M_PI/4) for circles, but not for ellipses where they are squished
-	// On the limit when width or height = 0, then it needs to go all the way from 0..1. So this seems to work.
-	double halfway_t = cos(M_PI / 4 - (double)abs(width-height) / std::max(width, height) * M_PI / 4);
-	int halfway_h = ceil(halfway_t * height / 2);
-	for (int dy = 0; dy <= halfway_h; dy++) {
-		double y_t = 2 * (double)dy / height; // dy/(height/2) = 2*dy/height
-		double x_t = sqrt(1 - y_t * y_t);
+	y += 1;
+	while (y < b) {
+		double tmp = y / b;
+		double new_x = a * sqrt(1 - tmp * tmp);
+		int new_sx = round(scx + new_x);
+		sy = round(scy - y);
+		sxi = x1 + x0 - new_sx;
+		syi = y1 + y0 - sy;
 
-		draw_all(x_t, y_t);
-	}
-	
-	int halfway_w = ceil(halfway_t * width / 2);
-	for (int dx = 0; dx <= halfway_w; dx++) {
-		double x_t = 2 * (double)dx / width;
-		double y_t = sqrt(1 - x_t * x_t);
+		if (new_sx == sx) {
+			// Simple, do the same as before.
+			sx = new_sx;
+			if (fill) {
+				this->set_line(sxi, sx, sy);
+				this->set_line(sxi, sx, syi);
+			}
+			else {
+				this->set_point(sx, sy);
+				this->set_point(sxi, sy);
+				this->set_point(sx, syi);
+				this->set_point(sxi, syi);
+			}
+		}
+		else {
+			/* We'll have to paint from x=new_x to x-1. Visualize this:
+			[nx]     -> Covered by previous if condition
+			[x ]
 
-		draw_all(x_t, y_t);
+			[nx]     -> trivial case, only 1 pixel needs to be drawn
+			    [x]
+
+		    [nx][ ]  -> draw from nx to x-1
+			       [x]
+			*/
+			int prev_sxi = x1 + x0 - sx;
+			if (fill) {
+				this->set_line(prev_sxi + 1, sx - 1, sy);
+				this->set_line(prev_sxi + 1, sx - 1, syi);
+			}
+			else {
+				this->set_line(new_sx, sx - 1, sy);
+				this->set_line(prev_sxi+1, sxi, sy);
+				this->set_line(new_sx, sx - 1, syi);
+				this->set_line(prev_sxi + 1, sxi, syi);
+			}
+			sx = new_sx;
+		}
+
+		y += 1;
 	}
+
+	// The lid is trivial
+	this->set_line(sxi + 1, sx - 1, y0);
+	this->set_line(sxi + 1, sx - 1, y1);
 }
 
 void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
@@ -528,9 +589,9 @@ void Renderer::set_pixel_pair(int sx, int sy, unsigned char colors)
 void Renderer::set_line(int sx0, int sxf, int sy) {
 
 	// Clip
-	/*if (!this->is_y_drawable(sy)) return;
+	if (!this->is_y_drawable(sy)) return;
 	sx0 = std::max(sx0, (int)p8_memory[ADDR_DS_CLIP_RECT]);
-	sxf = std::min(sxf, (int)p8_memory[ADDR_DS_CLIP_RECT+2]);*/
+	sxf = std::min(sxf, (int)p8_memory[ADDR_DS_CLIP_RECT+2]);
 
 	unsigned char color = p8_memory[ADDR_DS_COLOR];
 
@@ -606,6 +667,14 @@ void Renderer::set_line(int sx0, int sxf, int sy) {
 		this->set_pixel(x, sy, colors[subvalue]);
 		x++;
 	}
+}
+
+void Renderer::set_point(int sx, int sy) {
+	if (!this->is_drawable(sx, sy)) return;
+
+	unsigned char color = p8_memory[ADDR_DS_COLOR];
+	unsigned char mapped_color = this->get_screen_pat_color(color, sx, sy);
+	this->set_pixel(sx, sy, mapped_color);
 }
 
 Renderer_Point Renderer::coord_to_screen(int x, int y)

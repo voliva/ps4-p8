@@ -60,7 +60,9 @@ public:
 private:
 	void set_pixel(int sx, int sy, unsigned char color);
 	void set_pixel_pair(int sx, int sy, unsigned char colors);
+	// Same but use the draw state
 	void set_line(int sx0, int sxf, int sy);
+	void set_point(int sx, int sy);
 
 	// Camera
 	Renderer_Point coord_to_screen(int x, int y);
