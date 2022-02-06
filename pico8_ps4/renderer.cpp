@@ -265,9 +265,12 @@ void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int
 void Renderer::draw_point(int x, int y)
 {
 	unsigned char color = p8_memory[ADDR_DS_COLOR];
-	unsigned short pattern = memory_read_short(ADDR_DS_FILL_PAT);
 	Renderer_Point sc = this->coord_to_screen(x, y);
-	unsigned char mapped_color = this->get_screen_pat_color(color, pattern, sc.x, sc.y);
+	unsigned char mapped_color = this->get_screen_pat_color(color, sc.x, sc.y);
+	if (mapped_color > 0x0F) {
+		// Ignore transparent
+		return;
+	}
 	if (this->is_drawable(sc.x, sc.y)) {
 		this->set_pixel(sc.x, sc.y, mapped_color);
 	}
@@ -356,7 +359,6 @@ void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 
 	if (fill) {
 		unsigned char color = p8_memory[ADDR_DS_COLOR];
-		unsigned short pattern = memory_read_short(ADDR_DS_FILL_PAT);
 
 		Renderer_Point sc_start = this->coord_to_screen(x0, y0);
 		Renderer_Point sc_end = this->coord_to_screen(x1, y1);
@@ -365,8 +367,9 @@ void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 
 		for (int y = sc_start.y; y <= sc_end.y; y++) {
 			for (int x = sc_start.x; x <= sc_end.x; x++) {
-				unsigned char mapped_color = this->get_screen_pat_color(color, pattern, x, y);
-				this->set_pixel(x, y, mapped_color);
+				unsigned char mapped_color = this->get_screen_pat_color(color, x, y);
+				if (mapped_color <= 0x0F) // Ignore transparent
+					this->set_pixel(x, y, mapped_color);
 			}
 		}
 	}
@@ -528,6 +531,17 @@ void Renderer::set_pixel_pair(int sx, int sy, unsigned char colors)
 	p8_memory[addr] = colors;
 }
 
+void Renderer::set_line(int sx0, int sxf, int sy, unsigned char color) {
+
+	//unsigned char color = p8_memory[ADDR_DS_COLOR];
+	//unsigned short pattern = memory_read_short(ADDR_DS_FILL_PAT);
+	//Renderer_Point sc = this->coord_to_screen(x, y);
+	//unsigned char mapped_color = this->get_screen_pat_color(color, pattern, sc.x, sc.y);
+	//if (this->is_drawable(sc.x, sc.y)) {
+	//	this->set_pixel(sc.x, sc.y, mapped_color);
+	//}
+}
+
 Renderer_Point Renderer::coord_to_screen(int x, int y)
 {
 	int sx = x - (short)memory_read_short(ADDR_DS_CAMERA_X);
@@ -569,15 +583,22 @@ unsigned char Renderer::get_screen_color(unsigned char color)
 	return p8_memory[ADDR_DS_DRAW_PAL + (color & 0x0F)];
 }
 
-unsigned char Renderer::get_screen_pat_color(unsigned char color, unsigned short pattern, int sx, int sy)
+unsigned char Renderer::get_screen_pat_color(unsigned char color, int sx, int sy)
 {
+	unsigned short pattern = memory_read_short(ADDR_DS_FILL_PAT);
+	unsigned char off_is_transparent = (p8_memory[ADDR_DS_FILL_PAT + 2] & 0x80) > 0;
+
 	unsigned char bit = 15 - ((sy % 4) * 4 + sx % 4);
 	unsigned short mask = 0x1 << bit;
 	unsigned short value = (pattern & mask) >> bit;
+
+	if (off_is_transparent && value == 1) {
+		return 0x10;
+	}
 
 	// 0 => 0x0F, 1 => 0xF0
 	unsigned char bitshift = value * 4;
 
 	color = (color & (0x0F << bitshift)) >> bitshift;
-	return this->get_screen_color(color);
+	return this->get_screen_color(color) & 0x0F; // It seems like all draw fns effected by pattern ignore palt
 }

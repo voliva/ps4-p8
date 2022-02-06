@@ -24,10 +24,9 @@ int pget(lua_State* L) {
 }
 
 int fillp(lua_State* L) {
-	alert_todo("fillp"); // TODO decimals
-	int pat = luaL_optinteger(L, 1, 0);
-
-	memory_write_short(ADDR_DS_FILL_PAT, pat);
+	fix16_t pat = luaL_optnumber(L, 1, 0);
+	memory_write_short(ADDR_DS_FILL_PAT, pat >> 16);
+	p8_memory[ADDR_DS_FILL_PAT + 2] = (pat & 0x0FFFF) >> 8;
 
 	return 0;
 }

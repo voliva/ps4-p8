@@ -60,6 +60,7 @@ public:
 private:
 	void set_pixel(int sx, int sy, unsigned char color);
 	void set_pixel_pair(int sx, int sy, unsigned char colors);
+	void set_line(int sx0, int sxf, int sy, unsigned char color);
 
 	// Camera
 	Renderer_Point coord_to_screen(int x, int y);
@@ -72,7 +73,7 @@ private:
 
 	// Screen color
 	unsigned char get_screen_color(unsigned char color);
-	unsigned char get_screen_pat_color(unsigned char color, unsigned short pattern, int sx, int sy);
+	unsigned char get_screen_pat_color(unsigned char color, int sx, int sy);
 
 	unsigned char prev_screen[SCREEN_MEMORY_SIZE];
 	unsigned char prev_screen_pal[16];
