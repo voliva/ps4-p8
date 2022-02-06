@@ -229,12 +229,13 @@ void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int
 	}
 
 	int sprite_addr = ADDR_SPRITE_SHEET + sy * LINE_JMP + sx / 2;
+	int s_offset = sx % 2;
 	for (int _y = 0; _y < dh; _y++) {
 		int sprite_y = _y * sh / dh;
 		if (flip_y) {
 			sprite_y = sh - sprite_y;
 		}
-		for (int _x = 0; _x < dw; _x++) {
+		for (int _x = s_offset; _x < dw + s_offset; _x++) {
 			int sprite_x = _x * sw / dw;
 			if (flip_x) {
 				sprite_x = sw - sprite_x - 1;
