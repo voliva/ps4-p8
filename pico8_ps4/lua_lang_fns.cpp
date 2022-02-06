@@ -34,27 +34,51 @@ void register_lua_fn(lua_State* L, std::string name, std::string code)
 }
 
 int tostr(lua_State* L) {
-	fix16_t num = lua_tonumber(L, 1);
-	bool useHex = false;
-	if (lua_isboolean(L, 2)) {
-		useHex = lua_toboolean(L, 2);
-	}
-
-	std::ostringstream buf;
-	if (useHex) {
-		buf << std::hex << num;
-		std::string raw_text = buf.str();
-		// Pad left
-		while (raw_text.length() < 8) {
-			raw_text = "0" + raw_text;
+	int t = lua_type(L, 1);
+	switch (t) {
+	case LUA_TSTRING:
+		lua_pushstring(L, lua_tostring(L, 1));
+		break;
+	case LUA_TBOOLEAN:
+		if (lua_toboolean(L, 1)) {
+			lua_pushstring(L, "true");
+		}
+		else {
+			lua_pushstring(L, "false");
+		}
+		break;
+	case LUA_TNIL:
+		lua_pushstring(L, "[nil]");
+		break;
+	case LUA_TTABLE:
+		lua_pushstring(L, "[table]");
+		break;
+	case LUA_TFUNCTION:
+		lua_pushstring(L, "[function]");
+		break;
+	default:
+		fix16_t num = lua_tonumber(L, 1);
+		bool useHex = false;
+		if (lua_isboolean(L, 2)) {
+			useHex = lua_toboolean(L, 2);
 		}
 
-		std::string result = "0x" + raw_text.substr(0, 4) + "." + raw_text.substr(4);
-		lua_pushstring(L, result.c_str());
-	}
-	else {
-		buf << fix16_to_float(num);
-		lua_pushstring(L, buf.str().c_str());
+		std::ostringstream buf;
+		if (useHex) {
+			buf << std::hex << num;
+			std::string raw_text = buf.str();
+			// Pad left
+			while (raw_text.length() < 8) {
+				raw_text = "0" + raw_text;
+			}
+
+			std::string result = "0x" + raw_text.substr(0, 4) + "." + raw_text.substr(4);
+			lua_pushstring(L, result.c_str());
+		}
+		else {
+			buf << fix16_to_float(num);
+			lua_pushstring(L, buf.str().c_str());
+		}
 	}
 
 	return 1;
@@ -350,7 +374,7 @@ function split(str, separator, convert_numbers)
 	if convert_numbers then
 		for i=1,#result do
 			local value = tonum(result[i])
-			if value ~= nil then
+			if result[i] != "" and value ~= nil then
 				result[i] = value
 			end
 		end
