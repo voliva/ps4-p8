@@ -358,19 +358,13 @@ void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 	}
 
 	if (fill) {
-		unsigned char color = p8_memory[ADDR_DS_COLOR];
-
 		Renderer_Point sc_start = this->coord_to_screen(x0, y0);
 		Renderer_Point sc_end = this->coord_to_screen(x1, y1);
 
 		this->apply_clip(&sc_start.x, &sc_start.y, &sc_end.x, &sc_end.y);
 
 		for (int y = sc_start.y; y <= sc_end.y; y++) {
-			for (int x = sc_start.x; x <= sc_end.x; x++) {
-				unsigned char mapped_color = this->get_screen_pat_color(color, x, y);
-				if (mapped_color <= 0x0F) // Ignore transparent
-					this->set_pixel(x, y, mapped_color);
-			}
+			this->set_line(sc_start.x, sc_end.x, y);
 		}
 	}
 	else {
@@ -531,15 +525,87 @@ void Renderer::set_pixel_pair(int sx, int sy, unsigned char colors)
 	p8_memory[addr] = colors;
 }
 
-void Renderer::set_line(int sx0, int sxf, int sy, unsigned char color) {
+void Renderer::set_line(int sx0, int sxf, int sy) {
 
-	//unsigned char color = p8_memory[ADDR_DS_COLOR];
-	//unsigned short pattern = memory_read_short(ADDR_DS_FILL_PAT);
-	//Renderer_Point sc = this->coord_to_screen(x, y);
-	//unsigned char mapped_color = this->get_screen_pat_color(color, pattern, sc.x, sc.y);
-	//if (this->is_drawable(sc.x, sc.y)) {
-	//	this->set_pixel(sc.x, sc.y, mapped_color);
-	//}
+	// Clip
+	/*if (!this->is_y_drawable(sy)) return;
+	sx0 = std::max(sx0, (int)p8_memory[ADDR_DS_CLIP_RECT]);
+	sxf = std::min(sxf, (int)p8_memory[ADDR_DS_CLIP_RECT+2]);*/
+
+	unsigned char color = p8_memory[ADDR_DS_COLOR];
+
+	// Grab pattern for this line
+	unsigned short pattern = memory_read_short(ADDR_DS_FILL_PAT);
+	unsigned char bit = 12 - (sy % 4) * 4;
+	unsigned short mask = 0x0F << bit;
+	unsigned char value = (pattern & mask) >> bit;
+
+	// Precalculate screen colors
+	unsigned char colors[] = {
+		this->get_screen_color(color & 0x0F) & 0x0F,
+		this->get_screen_color((color & (0x0F << 4)) >> 4) & 0x0F
+	};
+
+	// If there's transparency, we can't optimize using memset
+	unsigned char off_is_transparent = (p8_memory[ADDR_DS_FILL_PAT + 2] & 0x80) > 0;
+	if (off_is_transparent && value == 0x0F) {
+		// Everything in this line is transparent lol
+		return;
+	}
+	// We can exclude when value == 0, because then all the line is using a color. Also, skip optimization if less than 8 pixels must be drawn. This also excludes sx0 > sxf
+	if ((off_is_transparent && value != 0) || (sxf - sx0) < 8) {
+		for (int x = sx0; x <= sxf; x++) {
+			unsigned char bit = 3 - x % 4;
+			unsigned short mask = 0x1 << bit;
+			unsigned char subvalue = (value & mask) >> bit;
+			if (off_is_transparent && subvalue == 1) {
+				continue;
+			}
+			this->set_pixel(x, sy, colors[subvalue]);
+		}
+		return;
+	}
+
+	// Now we can forget about transparency. The only way off_is_transparent can be true is if value == 0, which means that everything needs to be filled.
+
+	// from sx0 to (x%4 == 0) we need to do it manually
+	int x = sx0;
+	while (x % 4 > 0) {
+		unsigned char bit = 3 - x % 4;
+		unsigned short mask = 0x1 << bit;
+		unsigned char subvalue = (value & mask) >> bit;
+		this->set_pixel(x, sy, colors[subvalue]);
+		x++;
+	}
+
+	int start_offset = ADDR_SCREEN + sy * LINE_JMP + x / 2;
+	// Draw 4 pixels
+	for (int i = 0; i < 4; i++) {
+		unsigned char bit = 3 - x % 4;
+		unsigned short mask = 0x1 << bit;
+		unsigned char subvalue = (value & mask) >> bit;
+		this->set_pixel(x, sy, colors[subvalue]);
+		x++;
+	}
+
+	int end_offset = ADDR_SCREEN + sy * LINE_JMP + (sxf & 0xFC) / 2;
+	int bytes_available = 2;
+	while (x < (sxf & 0xFC)) {
+		int offset = ADDR_SCREEN + sy * LINE_JMP + x / 2;
+		int l = std::min(end_offset - offset, bytes_available);
+		memcpy(&p8_memory[offset], &p8_memory[start_offset], l);
+		x += l*2;
+		bytes_available += l;
+	}
+
+	// Draw the last pixels
+	while (x <= sxf) {
+		unsigned char bit = 3 - x % 4;
+		unsigned short mask = 0x1 << bit;
+		unsigned char subvalue = (value & mask) >> bit;
+		this->set_pixel(x, sy, colors[subvalue]);
+		x++;
+	}
 }
 
 Renderer_Point Renderer::coord_to_screen(int x, int y)

@@ -60,7 +60,7 @@ public:
 private:
 	void set_pixel(int sx, int sy, unsigned char color);
 	void set_pixel_pair(int sx, int sy, unsigned char colors);
-	void set_line(int sx0, int sxf, int sy, unsigned char color);
+	void set_line(int sx0, int sxf, int sy);
 
 	// Camera
 	Renderer_Point coord_to_screen(int x, int y);
