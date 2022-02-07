@@ -40,6 +40,8 @@ public:
 	int getCurrentIndex(int channel);
 	int getActivePattern();
 
+	void logStats();
+
 	Channel channels[4];
 
 	ConcurrentQueue<bool> music_notifier;

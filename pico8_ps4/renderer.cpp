@@ -603,8 +603,8 @@ void Renderer::set_line(int sx0, int sxf, int sy) {
 
 	// Precalculate screen colors
 	unsigned char colors[] = {
-		this->get_screen_color(color & 0x0F) & 0x0F,
-		this->get_screen_color((color & (0x0F << 4)) >> 4) & 0x0F
+		(unsigned char)(this->get_screen_color(color & 0x0F) & 0x0F),
+		(unsigned char)(this->get_screen_color((color & (0x0F << 4)) >> 4) & 0x0F)
 	};
 
 	// If there's transparency, we can't optimize using memset

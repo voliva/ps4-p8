@@ -253,7 +253,7 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 		// Option 3. Kick the first non-reserved channel to play yours, beginning from the end
 		for (int c = CHANNELS-1; channel == -1 && c >= 0; c--) {
 			Channel ch = this->channels[c];
-			if (!ch.reserved && ch.music_timing < 0) {
+			if (!ch.reserved && ch.music_timing <= 0) {
 				channel = c;
 			}
 		}
@@ -266,6 +266,7 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 	}
 	this->channels[channel].sfx = n;
 	int speed = get_sfx_speed(n);
+	this->channels[channel].isMusic = false;
 	this->channels[channel].offset = offset * speed * P8_TICKS_PER_T;
 	this->channels[channel].max = (offset+length) * speed * P8_TICKS_PER_T;
 	this->channels[channel].previousSample = 0;
@@ -278,6 +279,8 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 void AudioManager::playMusic(int n, unsigned char channelmask)
 {
 	SDL_LockAudioDevice(this->deviceId);
+
+	this->stopPattern();
 
 	for (int i = 0; i < CHANNELS; i++) {
 		int bit = 0x01 << i;
@@ -549,6 +552,16 @@ int AudioManager::getActivePattern()
 	return this->pattern;
 }
 
+void AudioManager::logStats()
+{
+	// DEBUGLOG << "pattern: " << this->pattern
+	// << ", c0: " << this->channels[0].sfx << "," << this->channels[0].music_timing << "," << this->channels[0].isMusic
+	// << ", c1: " << this->channels[1].sfx << "," << this->channels[1].music_timing << "," << this->channels[1].isMusic
+	// << ", c2: " << this->channels[2].sfx << "," << this->channels[2].music_timing << "," << this->channels[2].isMusic
+	// << ", c3: " << this->channels[3].sfx << "," << this->channels[3].music_timing << "," << this->channels[3].isMusic
+	// << ENDL;
+}
+
 void AudioManager::music_loop()
 {
 	bool dummy;
@@ -664,7 +677,7 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 			has_more = sfx.notes[i].volume > 0;
 		}
 
-		if (!has_more && sfx.loopEnd <= current_index && channel->music_timing < 0) {
+		if (!has_more && sfx.loopEnd <= current_index && channel->music_timing <= 0) {
 			// We're done if we don't have more notes, the loopEnd is in the past, and it's not timing music
 			channel->sfx = -1;
 			channel->offset = 0;
