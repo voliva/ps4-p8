@@ -151,6 +151,7 @@ void RunningCart::runOnce()
 	while (this->status == RunningStatus::Running) {
 		frame++;
 		machineState->registerFrame();
+		audioManager->logStats();
 
 		// When dragging the window the app pauses, on that case, ignore frame_start
 		// https://stackoverflow.com/questions/29552658/how-do-you-fix-a-program-from-freezing-when-you-move-the-window-in-sdl2

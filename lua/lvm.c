@@ -969,9 +969,8 @@ void luaV_finishOp (lua_State *L) {
 #define op_bitwiseK(L,op) {  \
   TValue *v1 = vRB(i);  \
   TValue *v2 = KC(i);  \
-  lua_Number i1;  \
-  lua_Number i2 = fltvalue(v2);  \
-  if (tonumberns(v1, i1)) {  \
+  lua_Number i1; lua_Number i2;  \
+  if (tonumberns(v1, i1) && tonumberns(v2, i2)) {  \
     pc++; setfltvalue(s2v(ra), op(i1, i2));  \
   }}
 
@@ -995,7 +994,7 @@ void luaV_finishOp (lua_State *L) {
   TValue *v2 = vRC(i);  \
   lua_Number i1; lua_Integer i2;  \
   if (tonumberns(v1, i1) && tointegerns(v2, &i2)) {  \
-    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
+    pc++; printf("lvm.c op_bitwiseI %d %d\n", i1, i2); setfltvalue(s2v(ra), op(i1, i2));  \
   }}
 
 /*
