@@ -290,7 +290,7 @@ void Renderer::draw_line(int x0, int y0, int x1, int y1)
 		int xmax = std::max(x0, x1);
 		Renderer_Point sc_min = this->coord_to_screen(xmin, y0);
 		Renderer_Point sc_max = this->coord_to_screen(xmax, y0);
-		return this->set_line(sc_min.x, sc_max.x, y0);
+		return this->set_line(sc_min.x, sc_max.x, sc_min.y);
 	}
 	std::vector<Renderer_Point> points = efla_small_line(x0, y0, x1, y1);
 	this->draw_points(points);
@@ -307,6 +307,14 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 	if (width == 0 || height == 0) {
 		return this->draw_line(x0, y0, x1, y1);
 	}
+
+	// Apply camera
+	Renderer_Point p0 = this->coord_to_screen(x0, y0);
+	Renderer_Point p1 = this->coord_to_screen(x1, y1);
+	x0 = p0.x;
+	y0 = p0.y;
+	x1 = p1.x;
+	y1 = p1.y;
 
 	/*
 	* The formula for an ellipse is
@@ -327,8 +335,8 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 	double b = height / 2;
 
 	// Center in screen coordinates
-	double scx = (double)x0 + a - (double)(short)memory_read_short(ADDR_DS_CAMERA_X);
-	double scy = (double)y0 + b - (double)(short)memory_read_short(ADDR_DS_CAMERA_Y);
+	double scx = (double)x0 + a;
+	double scy = (double)y0 + b;
 
 	double y = 0;
 	double x = a;
