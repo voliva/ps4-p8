@@ -150,12 +150,12 @@ void generate_next_samples(
 			float next = audio_noise_wave(0);
 			float diff = std::fmax(std::fmin(next - prev_sample, max_diff), -max_diff);
 			prev_sample = std::fmax(-1, std::fmin(1, prev_sample + diff * scale));
-			dest[i] += prev_sample * v / 7;
+			dest[i] += prev_sample * v / 7 * 1.0;
 		}
 		else {
 			float wavelength = audio_get_wavelength(current_freq);
 			phase = std::fmod(phase + 1 / wavelength, 1); // TODO 1/wavelength = current_freq / SAMPLE_RATE
-			dest[i] += waveGenerator(phase) * v / 7;
+			dest[i] += waveGenerator(phase) * 1 / 7;
 		}
 	}
 }
@@ -591,6 +591,7 @@ float pitch_to_freq(unsigned char pitch) {
 	return base_frequencies[base] * multipliers[mul];
 }
 
+char set = true;
 int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 	if (channel->sfx == -1) {
 		return 0;
@@ -610,6 +611,7 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 
 		int ticks_until_loop = sfx.loopEnd * sfx.speed * P8_TICKS_PER_T - channel->offset;
 		if (ticks_until_loop < data_points) {
+			set = false;
 			channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
 			return -audio_cb_channel(channel, &stream[ticks_until_loop], data_points - ticks_until_loop);
 		}
@@ -666,6 +668,7 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 		// Look for loop so we can start putting data from the next loop beginning.
 		int next_note = current_index + 1;
 		if (sfx.loopEnd == next_note) {
+			set = false;
 			channel->offset = sfx.loopStart * sfx.speed * P8_TICKS_PER_T;
 			int t = audio_cb_channel(channel, &stream[length], data_points - length);
 			return length + t;
@@ -700,6 +703,14 @@ void audio_cb(void* userdata, Uint8* stream, int len) {
 
 	for (int i = 0; i < CHANNELS; i++) {
 		audio_cb_channel(&(*channels)[i], buffer, data_points);
+	}
+
+	if(!set) {
+		for (int i=0; i<data_points; i++) {
+			DEBUGLOG << buffer[i] << " ";
+		}
+		DEBUGLOG << ENDL;
+		set = true;
 	}
 }
 
