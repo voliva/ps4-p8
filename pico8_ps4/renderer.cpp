@@ -332,31 +332,44 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 
 	double y = 0;
 	double x = a;
+	int sx = round(scx + x);
+	int sy = round(scy);
+	// The inverted point in integer part comes from the invariant (xf-x == x'-x0): The distance between the extremes and the points is constant
+	// rearanging, we find x'=xf+x0-x
+	int sxi = x1 + x0 - sx;
+	int syi = y1 + y0 - sy;
 	if (fill) {
-		this->set_line(scx - x, scx + x, scy);
+		this->set_line(sxi, sx, sy);
+		this->set_line(sxi, sx, syi);
 	}
 	else {
-		this->set_point(scx - x, scy);
-		this->set_point(scx + x, scy);
+		this->set_point(sx, sy);
+		this->set_point(sxi, sy);
+		this->set_point(sx, syi);
+		this->set_point(sxi, syi);
 	}
 
 	y += 1;
-	while (y <= b) {
+	while (y < b) {
 		double tmp = y / b;
 		double new_x = a * sqrt(1 - tmp * tmp);
+		int new_sx = round(scx + new_x);
+		sy = round(scy - y);
+		sxi = x1 + x0 - new_sx;
+		syi = y1 + y0 - sy;
 
-		if ((int)new_x == (int)x) {
+		if (new_sx == sx) {
 			// Simple, do the same as before.
-			x = new_x;
+			sx = new_sx;
 			if (fill) {
-				this->set_line(scx - x, scx + x, scy + y);
-				this->set_line(scx - x, scx + x, scy - y);
+				this->set_line(sxi, sx, sy);
+				this->set_line(sxi, sx, syi);
 			}
 			else {
-				this->set_point(scx - x, scy + y);
-				this->set_point(scx + x, scy + y);
-				this->set_point(scx - x, scy - y);
-				this->set_point(scx + x, scy - y);
+				this->set_point(sx, sy);
+				this->set_point(sxi, sy);
+				this->set_point(sx, syi);
+				this->set_point(sxi, syi);
 			}
 		}
 		else {
@@ -370,21 +383,26 @@ void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 		    [nx][ ]  -> draw from nx to x-1
 			       [x]
 			*/
+			int prev_sxi = x1 + x0 - sx;
 			if (fill) {
-				this->set_line(scx - (x-1), scx + (x-1), scy + y);
-				this->set_line(scx - (x - 1), scx + (x - 1), scy - y);
+				this->set_line(prev_sxi + 1, sx - 1, sy);
+				this->set_line(prev_sxi + 1, sx - 1, syi);
 			}
 			else {
-				this->set_line(scx + new_x, scx + (x - 1), scy + y);
-				this->set_line(scx - (x-1), scx - new_x, scy + y);
-				this->set_line(scx + new_x, scx + (x - 1), scy - y);
-				this->set_line(scx - (x - 1), scx - new_x, scy - y);
+				this->set_line(new_sx, sx - 1, sy);
+				this->set_line(prev_sxi+1, sxi, sy);
+				this->set_line(new_sx, sx - 1, syi);
+				this->set_line(prev_sxi + 1, sxi, syi);
 			}
-			x = new_x;
+			sx = new_sx;
 		}
 
 		y += 1;
 	}
+
+	// The lid is trivial
+	this->set_line(sxi + 1, sx - 1, y0);
+	this->set_line(sxi + 1, sx - 1, y1);
 }
 
 void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
@@ -401,7 +419,6 @@ void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 	}
 
 	if (fill) {
-		auto start = getTimestamp();
 		Renderer_Point sc_start = this->coord_to_screen(x0, y0);
 		Renderer_Point sc_end = this->coord_to_screen(x1, y1);
 
@@ -410,7 +427,6 @@ void Renderer::draw_rectangle(int x0, int y0, int x1, int y1, bool fill)
 		for (int y = sc_start.y; y <= sc_end.y; y++) {
 			this->set_line(sc_start.x, sc_end.x, y);
 		}
-		DEBUGLOG << getMicrosecondsDiff(getTimestamp(), start) << ENDL;
 	}
 	else {
 		this->draw_line(x0, y0, x0, y1);
