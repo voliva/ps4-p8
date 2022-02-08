@@ -13,6 +13,8 @@ This is a list of some of the cartridges that have been tested and they are play
 - [Phoenix](https://www.lexaloffle.com/bbs/?tid=44727)
 - [Tiny golf puzzles](https://www.lexaloffle.com/bbs/?pid=79680)
 - [Pengo](https://www.lexaloffle.com/bbs/?tid=45605)
+- [High Stakes](https://www.lexaloffle.com/bbs/?tid=40099)
+- [III Demake](https://www.lexaloffle.com/bbs/?pid=81257)
 - [Frog adventure](https://www.lexaloffle.com/bbs/?pid=104185)
 - [Alpine Ascent](https://www.lexaloffle.com/bbs/?tid=40791)
 - [Fruits Catcher](https://www.lexaloffle.com/bbs/?tid=45946)

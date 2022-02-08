@@ -294,6 +294,12 @@ int chr(lua_State* L) {
 	return 0;
 }
 
+std::string constant_assignment(char c, std::string val) {
+	std::string result = "_ = " + val;
+	result[0] = c;
+	return result;
+}
+
 void load_lang_fns(lua_State* L)
 {
 	register_fn(L, "printh", printh);
@@ -301,6 +307,33 @@ void load_lang_fns(lua_State* L)
 	register_fn(L, "tonum", tonum);
 	register_fn(L, "ord", ord);
 	register_fn(L, "chr", chr);
+
+	register_lua_fn(L, "constant 0x80", constant_assignment(0x80, "0x0000.8"));
+	register_lua_fn(L, "constant 0x81", constant_assignment(0x81, "0xA5A5.8"));
+	register_lua_fn(L, "constant 0x82", constant_assignment(0x82, "0xE1FA.8"));
+	register_lua_fn(L, "constant 0x83", constant_assignment(0x83, "0x0003.0"));
+	register_lua_fn(L, "constant 0x84", constant_assignment(0x84, "0xD7D7.8"));
+	register_lua_fn(L, "constant 0x85", constant_assignment(0x85, "0x81DB.8"));
+	register_lua_fn(L, "constant 0x86", constant_assignment(0x86, "0x99FF.8"));
+	register_lua_fn(L, "constant 0x87", constant_assignment(0x87, "0xBF51.8"));
+	register_lua_fn(L, "constant 0x88", constant_assignment(0x88, "0x5BFB.8"));
+	register_lua_fn(L, "constant 0x89", constant_assignment(0x89, "0x99F9.8"));
+	register_lua_fn(L, "constant 0x8A", constant_assignment(0x8A, "0x11FB.8"));
+	register_lua_fn(L, "constant 0x8B", constant_assignment(0x8B, "0x0000.0"));
+	register_lua_fn(L, "constant 0x8C", constant_assignment(0x8C, "0x0E0A.8"));
+	register_lua_fn(L, "constant 0x8D", constant_assignment(0x8D, "0x9B3F.8"));
+	register_lua_fn(L, "constant 0x8E", constant_assignment(0x8E, "0x0004.0"));
+	register_lua_fn(L, "constant 0x8F", constant_assignment(0x8F, "0xB1BF.8"));
+	register_lua_fn(L, "constant 0x90", constant_assignment(0x90, "0x5FFF.8"));
+	register_lua_fn(L, "constant 0x91", constant_assignment(0x91, "0x0001.0"));
+	register_lua_fn(L, "constant 0x92", constant_assignment(0x92, "0xB15F.8"));
+	register_lua_fn(L, "constant 0x93", constant_assignment(0x93, "0x1B1F.8"));
+	register_lua_fn(L, "constant 0x94", constant_assignment(0x94, "0x0002.0"));
+	register_lua_fn(L, "constant 0x95", constant_assignment(0x95, "0xF5BF.8"));
+	register_lua_fn(L, "constant 0x96", constant_assignment(0x96, "0x7ADF.8"));
+	register_lua_fn(L, "constant 0x97", constant_assignment(0x97, "0x0005.0"));
+	register_lua_fn(L, "constant 0x98", constant_assignment(0x98, "0x0F0F.8"));
+	register_lua_fn(L, "constant 0x99", constant_assignment(0x99, "0x5555.8"));
 
 	register_lua_fn(L, "add", R"V0G0N(
 function add(tbl, val, idx)
@@ -419,5 +452,18 @@ function all(t)
 		return v
 	end
 end
+	)V0G0N");
+
+	register_lua_fn(L, "cocreate", R"V0G0N(
+cocreate = __lua_coroutine.create
+	)V0G0N");
+	register_lua_fn(L, "coresume", R"V0G0N(
+coresume = __lua_coroutine.resume
+	)V0G0N");
+	register_lua_fn(L, "costatus", R"V0G0N(
+costatus = __lua_coroutine.status
+	)V0G0N");
+	register_lua_fn(L, "yield", R"V0G0N(
+yield = __lua_coroutine.yield
 	)V0G0N");
 }

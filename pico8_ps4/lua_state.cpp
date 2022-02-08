@@ -25,6 +25,8 @@ LuaState::LuaState()
 	lua_pop(this->state, 1);
 	luaL_requiref(this->state, PREFIXED(LUA_STRLIBNAME), luaopen_string, 1);
 	lua_pop(this->state, 1);
+	luaL_requiref(this->state, PREFIXED(LUA_COLIBNAME), luaopen_coroutine, 1);
+	lua_pop(this->state, 1);
 	luaL_requiref(this->state, PREFIXED(LUA_DBLIBNAME), luaopen_debug, 1);
 	lua_pop(this->state, 1);
 
