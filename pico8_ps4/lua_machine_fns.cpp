@@ -205,6 +205,7 @@ void load_machine_fns(lua_State* L)
 	register_fn(L, "btn", btn);
 	register_fn(L, "noop", noop);
 	register_fn(L, "time", time);
+	register_fn(L, "t", time);
 	register_fn(L, "peek", peek);
 	register_fn(L, "peek2", peek2);
 	register_fn(L, "peek4", peek4);

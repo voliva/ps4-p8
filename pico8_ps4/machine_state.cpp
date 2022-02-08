@@ -57,30 +57,8 @@ bool MachineState::isButtonPressed(int p, P8_Key key)
 bool MachineState::wasButtonPressed(int p, P8_Key btn)
 {
 	int cd = this->btn_countdown[p][(int)btn];
-	if (cd == 0) {
-		if (this->isButtonPressed(p, btn)) {
-			int delay = p8_memory[ADDR_HW_BTNP_DELAY];
-			if (delay == 0) {
-				delay = 16;
-			}
-			else if (delay == 0xFF) {
-				delay = -1;
-			}
-			this->btn_countdown[p][(int)btn] = delay;
-			return true;
-		}
-		return false;
-	}
-	else if (cd == 1) {
-		if (this->isButtonPressed(p, btn)) {
-			int delay = p8_memory[ADDR_HW_BTNP_INTERVAL];
-			if (delay == 0) {
-				delay = 5;
-			}
-			this->btn_countdown[p][(int)btn] = 5;
-			return true;
-		}
-		return false;
+	if (cd <= 1) {
+		return this->isButtonPressed(p, btn);
 	}
 
 	return false;
@@ -95,7 +73,24 @@ void MachineState::registerFrame()
 {
 	for (int p = 0; p < 8; p++) {
 		for (int b = 0; b < 8; b++) {
-			if (this->btn_countdown[p][b] > 0) {
+			if (this->btn_countdown[p][b] == 0 && this->isButtonPressed(p, (P8_Key)b)) {
+				// Start initial countdown
+				int delay = p8_memory[ADDR_HW_BTNP_DELAY];
+				if (delay == 0) {
+					delay = 16;
+				}
+				else if (delay == 0xFF) {
+					delay = -1;
+				}
+				this->btn_countdown[p][b] = delay;
+			}else if (this->btn_countdown[p][b] == 1 && this->isButtonPressed(p, (P8_Key)b)) {
+				// Reset countdown to interval
+				int delay = p8_memory[ADDR_HW_BTNP_INTERVAL];
+				if (delay == 0) {
+					delay = 5;
+				}
+				this->btn_countdown[p][b] = delay;
+			}else if (this->btn_countdown[p][b] > 0) {
 				this->btn_countdown[p][b]--;
 			}
 		}

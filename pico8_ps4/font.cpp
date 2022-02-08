@@ -81,8 +81,9 @@ unsigned char read_param(char c) {
 }
 void Font::print(std::string c, int x, int y, bool scroll)
 {
+	int initial_x = x;
 	p8_memory[ADDR_DS_CURSOR_X] = x;
-	p8_memory[ADDR_DS_CURSOR_HOME_X] = x;
+	p8_memory[ADDR_DS_CURSOR_HOME_X] = initial_x; // The cursor might overflow when using camera() - This is an issue on pico8 itself
 	p8_memory[ADDR_DS_CURSOR_Y] = y;
 
 	int start = 0;
@@ -131,7 +132,7 @@ void Font::print(std::string c, int x, int y, bool scroll)
 			continue;
 		}
 		else if (character == '\n') {
-			x = p8_memory[ADDR_DS_CURSOR_HOME_X];
+			x = initial_x;
 			y += y_offset;
 			p8_memory[ADDR_DS_CURSOR_Y] = y;
 			y_offset = 6;
