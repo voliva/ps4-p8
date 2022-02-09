@@ -58,9 +58,15 @@ int tostr(lua_State* L) {
 		break;
 	default:
 		fix16_t num = lua_tonumber(L, 1);
+		int flag = luaL_optinteger(L, 2, 0);
+
 		bool useHex = false;
-		if (lua_isboolean(L, 2)) {
-			useHex = lua_toboolean(L, 2);
+		if (flag & 0x01) {
+			useHex = true;
+		}
+		bool asInt = false;
+		if (flag & 0x02) {
+			asInt = true;
 		}
 
 		std::ostringstream buf;
@@ -73,10 +79,18 @@ int tostr(lua_State* L) {
 			}
 
 			std::string result = "0x" + raw_text.substr(0, 4) + "." + raw_text.substr(4);
+			if (asInt) {
+				result = "0x" + raw_text;
+			}
 			lua_pushstring(L, result.c_str());
 		}
 		else {
-			buf << fix16_to_float(num);
+			if (asInt) {
+				buf << num;
+			}
+			else {
+				buf << fix16_to_float(num);
+			}
 			lua_pushstring(L, buf.str().c_str());
 		}
 	}
