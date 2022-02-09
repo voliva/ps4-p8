@@ -426,8 +426,8 @@ int sset(lua_State* L) {
 int clip(lua_State* L) {
 	int x = luaL_optinteger(L, 1, 0);
 	int y = luaL_optinteger(L, 2, 0);
-	int w = luaL_optinteger(L, 3, P8_WIDTH - 1);
-	int h = luaL_optinteger(L, 4, P8_HEIGHT - 1);
+	int w = luaL_optinteger(L, 3, P8_WIDTH);
+	int h = luaL_optinteger(L, 4, P8_HEIGHT);
 	bool clip_previous = lua_toboolean(L, 5);
 
 	int x_end = x + w - 1;

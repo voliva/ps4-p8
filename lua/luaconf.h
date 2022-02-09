@@ -599,18 +599,6 @@
 #define l_sprintf(s,sz,f,i)	((void)(sz), sprintf(s,f,i))
 #endif
 
-
-/*
-@@ lua_strx2number converts a hexadecimal numeral to a number.
-** In C99, 'strtod' does that conversion. Otherwise, you can
-** leave 'lua_strx2number' undefined and Lua will provide its own
-** implementation.
-*/
-#if !defined(LUA_USE_C89)
-#define lua_strx2number(s,p)		lua_str2number(s,p)
-#endif
-
-
 /*
 @@ lua_pointer2str converts a pointer to a readable string in a
 ** non-specified way.
