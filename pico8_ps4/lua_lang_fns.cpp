@@ -342,6 +342,7 @@ function add(tbl, val, idx)
 	else
 		__lua_table.insert(tbl, val);
 	end
+	return val
 end
 	)V0G0N");
 

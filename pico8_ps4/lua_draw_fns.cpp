@@ -283,10 +283,19 @@ int pal(lua_State* L) {
 	}
 
 	int c0 = lua_tointeger(L, 1);
-	int c1 = luaL_optinteger(L, 2, 0);
+	if (lua_gettop(L) == 1) {
+		// pal(0) => Resets
+		// pal(x) => Noop
+		if (c0 == 0) {
+			renderer->reset_draw_pal();
+		}
+		return 0;
+	}
+
+	int c1 = lua_tointeger(L, 2);
 	int p = luaL_optinteger(L, 3, 0);
 	if (p > 1) {
-		alert_todo("pal for pattern");
+		alert_todo("pal for secondary palette");
 
 		return 0;
 	}
