@@ -8,11 +8,9 @@ Pico-8 is a Fantasy Programmable Console made by Lexaloffle Games. This emulator
 
 ## Status
 
-Not finished - Currently it's complete just enough so that it can run very simple games, but most of them don't fully work just yet.
+Not finished - Currently it's complete just enough so that it can run a few games, but some of them don't fully work just yet.
 
-It comes with one simple game which fully works, Minewalker, which is a game inspired by minesweeper. The cartridge is included in assets/misc/minewalker.p8.png:
-
-![minewalker.p8.png](https://github.com/voliva/ps4-p8/blob/main/assets/misc/minewalker.p8.png?raw=true)
+It comes with a set of bundled games which have been used to improve the compatibility.
 
 More .p8.png cartridges can be bundled with the .pkg file by adding them into `/assets/misc` folder, or they will be loaded in runtime from PS4's `/data/p8-cartridges` folder.
 
