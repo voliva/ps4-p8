@@ -55,6 +55,10 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory);
 #include "splore_loader.h"
 #include "splore.h"
 
+bool isSplore(int screen) {
+	return screen == 2 || screen == 3;
+}
+
 int main(void)
 {
 	DEBUGLOG << "Initializing renderer..." << ENDL;
@@ -97,7 +101,11 @@ int main(void)
 			localCartridges
 		},
 		Screen{
-			"bbs",
+			"bbs featured",
+			fakeBbs
+		},
+		Screen{
+			"bbs new",
 			fakeBbs
 		},
 	};
@@ -120,10 +128,10 @@ int main(void)
 		}
 		bool canDecScreen = prevScreen >= 0;
 		int nextScreen = currentScreen + 1;
-		while (nextScreen < 3 && screens[nextScreen].cartridges.size() == 0) {
+		while (nextScreen < 4 && screens[nextScreen].cartridges.size() == 0) {
 			nextScreen++;
 		}
-		bool canIncScreen = nextScreen < 3;
+		bool canIncScreen = nextScreen < 4;
 
 		while (SDL_PollEvent(&e) != 0)
 		{
@@ -147,13 +155,15 @@ int main(void)
 					renderingTargetCart = 0;
 
 					if (currentScreen == 2) {
-						splore.initialize();
+						splore.initialize(Mode::Featured);
+					} else if(currentScreen == 3) {
+						splore.initialize(Mode::New);
 					}
 				}
 				break;
 			}
 
-			if (currentScreen == 2) {
+			if (isSplore(currentScreen)) {
 				splore.key_down(k);
 			}
 			else {
@@ -214,7 +224,7 @@ int main(void)
 			font->sys_print("r2>", 2 * FRAME_WIDTH / 3, 30);
 		}
 
-		if (currentScreen == 2) {
+		if (isSplore(currentScreen)) {
 			splore.render();
 		}
 		else {

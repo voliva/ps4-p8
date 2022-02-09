@@ -18,3 +18,4 @@ typedef struct {
 } SploreResult;
 
 SploreResult* splore_get_featured();
+SploreResult* splore_get_new();

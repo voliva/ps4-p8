@@ -2,10 +2,15 @@
 #include "splore_loader.h"
 #include "events.h"
 
+enum class Mode {
+	Featured,
+	New
+};
+
 class Splore
 {
 public:
-	void initialize();
+	void initialize(Mode m);
 	void key_down(Key k);
 	void render();
 

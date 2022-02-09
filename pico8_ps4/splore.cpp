@@ -8,7 +8,7 @@
 #define DEBUGLOG Splore_DEBUGLOG
 Log DEBUGLOG = logger.log("Splore");
 
-void Splore::initialize()
+void Splore::initialize(Mode m)
 {
 	if (this->texture != NULL) {
 		SDL_DestroyTexture(this->texture);
@@ -17,7 +17,12 @@ void Splore::initialize()
 	this->cartridges.clear();
 	this->focus = 0;
 
-	SploreResult *result = splore_get_featured();
+	SploreResult* result;
+	if (m == Mode::Featured)
+		result = splore_get_featured();
+	else
+		result = splore_get_new();
+
 	if (result == NULL) {
 		DEBUGLOG << "SploreLoader didn't return a result" << ENDL; // TODO show to the user
 		return;
@@ -26,6 +31,7 @@ void Splore::initialize()
 	this->texture = SDL_CreateTextureFromSurface(renderer->renderer, result->surface);
 	this->cartridges = result->cartridges;
 	SDL_FreeSurface(result->surface);
+
 	delete result;
 }
 
