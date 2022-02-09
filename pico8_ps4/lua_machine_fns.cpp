@@ -185,6 +185,22 @@ int stat(lua_State* L) {
 	return 1;
 }
 
+int reload(lua_State* L) {
+	if (lua_gettop(L) == 0) {
+		runningCart->reload(0, 0, 0x4300);
+		return 0;
+	}
+	if (lua_gettop(L) == 4) {
+		alert_todo("reload from external cart");
+		return 0;
+	}
+
+	int destaddr = luaL_checkinteger(L, 1);
+	int sourceaddr = luaL_checkinteger(L, 2);
+	int len = luaL_checkinteger(L, 3);
+	runningCart->reload(destaddr, sourceaddr, len);
+}
+
 int noop(lua_State* L) {
 	alert_todo("noop");
 	return 0;
@@ -216,6 +232,7 @@ void load_machine_fns(lua_State* L)
 	register_fn(L, "cartdata", cartdata);
 	register_fn(L, "memset", memset);
 	register_fn(L, "stat", stat);
+	register_fn(L, "reload", reload);
 	register_fn(L, "menuitem", noop);
 	register_fn(L, "memcpy", _memcpy);
 }

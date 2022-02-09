@@ -14,6 +14,7 @@ class RunningCart
 {
 public:
 	bool load(Cartridge* cartridge);
+	void reload(int dest, int source, int length);
 	void run();
 	void stop();
 	void restart();

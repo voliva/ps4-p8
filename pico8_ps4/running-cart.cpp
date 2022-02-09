@@ -24,6 +24,7 @@ Log DEBUGLOG = logger.log("Runtime");
 SDL_Rect warningArea();
 extern SDL_Texture* surface_from_file(std::string path); // From main.cpp lol
 SDL_Texture* warningTexture = NULL;
+unsigned char memory_snapshot[P8_TOTAL_MEMORY];
 
 LuaState* luaState = NULL;
 bool RunningCart::load(Cartridge* cartridge)
@@ -47,6 +48,9 @@ bool RunningCart::load(Cartridge* cartridge)
     machineState->initialize();
     font->initialize();
 
+	DEBUGLOG << "saving initial memory snapshot" << ENDL;
+	memcpy(memory_snapshot, p8_memory, P8_TOTAL_MEMORY);
+
 	if (luaState != NULL) {
 		delete luaState;
 	}
@@ -58,12 +62,17 @@ bool RunningCart::load(Cartridge* cartridge)
 		return false;
 	}
 
+
     DEBUGLOG << "Cartridge succesfully loaded" << ENDL;
     this->loadedCartridge = cartridge;
 	this->paused = false;
     this->status = RunningStatus::Loaded;
 
     return true;
+}
+
+void RunningCart::reload(int dest, int source, int length) {
+	memcpy(&p8_memory[dest], &memory_snapshot[source], length);
 }
 
 void RunningCart::run()
