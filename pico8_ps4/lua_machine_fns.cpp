@@ -58,9 +58,37 @@ int poke(lua_State* L) {
 	poke_memory(addr, value);
 
 	for (int i = 3; lua_isinteger(L, i); i++) {
-		value = lua_tointeger(L, 2) & 0x0FF;
+		value = lua_tointeger(L, i) & 0x0FF;
 		addr++;
 		poke_memory(addr, value);
+	}
+
+	return 0;
+}
+int poke2(lua_State* L) {
+	unsigned short addr = luaL_checkinteger(L, 1) & 0x0FFFF;
+	unsigned short value = luaL_optinteger(L, 2, 0) & 0x0FFFF;
+
+	memory_write_short(addr, value);
+
+	for (int i = 3; lua_isinteger(L, i); i++) {
+		value = lua_tointeger(L, i) & 0x0FFFF;
+		addr+=2;
+		memory_write_short(addr, value);
+	}
+
+	return 0;
+}
+int poke4(lua_State* L) {
+	unsigned short addr = luaL_checkinteger(L, 1) & 0x0FFFF;
+	unsigned int value = luaL_optnumber(L, 2, 0);
+
+	memory_write_int(addr, value);
+
+	for (int i = 3; lua_isnumber(L, i); i++) {
+		value = lua_tonumber(L, i);
+		addr+=4;
+		memory_write_int(addr, value);
 	}
 
 	return 0;
@@ -226,6 +254,8 @@ void load_machine_fns(lua_State* L)
 	register_fn(L, "peek2", peek2);
 	register_fn(L, "peek4", peek4);
 	register_fn(L, "poke", poke);
+	register_fn(L, "poke2", poke2);
+	register_fn(L, "poke4", poke4);
 	register_fn(L, "extcmd", extcmd);
 	register_fn(L, "dget", dget);
 	register_fn(L, "dset", dset);
