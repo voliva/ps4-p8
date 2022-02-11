@@ -196,6 +196,7 @@ OP_IDIV,/*	A B C	R(A) := RK(B) // RK(C)				*/
 OP_BAND,/*	A B C	R(A) := RK(B) & RK(C)				*/
 OP_BOR,/*	A B C	R(A) := RK(B) | RK(C)				*/
 OP_BXOR,/*	A B C	R(A) := RK(B) ~ RK(C)				*/
+OP_ROTL, OP_ROTR, OP_LSHR,
 OP_SHL,/*	A B C	R(A) := RK(B) << RK(C)				*/
 OP_SHR,/*	A B C	R(A) := RK(B) >> RK(C)				*/
 OP_UNM,/*	A B	R(A) := -R(B)					*/

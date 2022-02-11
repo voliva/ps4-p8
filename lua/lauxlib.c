@@ -439,7 +439,7 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
 
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
                                                       lua_Integer def) {
-  return luaL_opt(L, luaL_checkinteger, arg, def);
+  return luaL_opt(L, lua_tointeger, arg, def);
 }
 
 /* }====================================================== */

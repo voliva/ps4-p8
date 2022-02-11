@@ -160,7 +160,7 @@ typedef struct lua_TValue {
 
 
 /* Macros to access values */
-#define ivalue(o)	check_exp(ttisinteger(o), val_(o).i)
+#define ivalue(o)	check_exp(ttisinteger(o), (int16_t)val_(o).i)
 #define fltvalue(o)	check_exp(ttisfloat(o), val_(o).n)
 #define nvalue(o)	check_exp(ttisnumber(o), \
 	(ttisinteger(o) ? cast_num(ivalue(o)) : fltvalue(o)))

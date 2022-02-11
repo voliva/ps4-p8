@@ -43,7 +43,13 @@ static const char *const luaX_tokens [] = {
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
-    "<<", ">>", "::", "<eof>",
+    "^^", "<<>", ">><", ">>>",
+    "<<", ">>", "::",
+    "+=", "-=", "*=", "/=", "\\=",
+    "%=", "^=", "..=", "|=", "&=",
+    "^^=", "<<=", ">>=", ">>>=", "<<>=",
+    ">><=",
+    "<eof>",
     "<number>", "<integer>", "<name>", "<string>"
 };
 
@@ -210,21 +216,18 @@ static int check_next2 (LexState *ls, const char *set) {
 /*
 ** this function is quite liberal in what it accepts, as 'luaO_str2num'
 ** will reject ill-formed numerals.
+*
+* Edit: Removed Exponential notation, added binary literals
 */
 static int read_numeral (LexState *ls, SemInfo *seminfo) {
   TValue obj;
-  const char *expo = "Ee";
   int first = ls->current;
   lua_assert(lisdigit(ls->current));
   save_and_next(ls);
-  if (first == '0' && check_next2(ls, "xX"))  /* hexadecimal? */
-    expo = "Pp";
+  if (first == '0')
+    check_next2(ls, "xXbB")
   for (;;) {
-    if (check_next2(ls, expo))  /* exponent part? */
-      check_next2(ls, "-+");  /* optional exponent sign */
-    if (lisxdigit(ls->current))
-      save_and_next(ls);
-    else if (ls->current == '.')
+    if (lisxdigit(ls->current) || ls->current == '.')  /* '%x|%.' */
       save_and_next(ls);
     else break;
   }
@@ -443,6 +446,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (ls->current != '-') return '-';
         /* else is a comment */
         next(ls);
+        if (check_next1(ls, '=')) return TK_ASSIGN_SUB;
         if (ls->current == '[') {  /* long comment? */
           int sep = skip_sep(ls);
           luaZ_resetbuffer(ls->buff);  /* 'skip_sep' may dirty the buffer */
@@ -456,6 +460,15 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         while (!currIsNewline(ls) && ls->current != EOZ)
           next(ls);  /* skip until end of line (or end of file) */
         break;
+      }
+      case '^': { // ^ or ^^
+        next(ls);
+        if (check_next1(ls, '^')) {
+            if (check_next1(ls, '=')) return TK_ASSIGN_BXOR;
+            return TK_XOR;
+        }
+        if (check_next1(ls, '=')) return TK_ASSIGN_POW;
+        else return '^';
       }
       case '[': {  /* long string or simply '[' */
         int sep = skip_sep(ls);
@@ -475,24 +488,47 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '<': {
         next(ls);
         if (check_next1(ls, '=')) return TK_LE;
-        else if (check_next1(ls, '<')) return TK_SHL;
-        else return '<';
+        else if (check_next1(ls, '<')) { /* '<<' */
+          if (check_next1(ls, '>')) {
+            if (check_next1(ls, '=')) return TK_ASSIGN_ROTL;
+            return TK_ROTL;
+          }
+          if (check_next1(ls, '=')) return TK_ASSIGN_SHL;
+          return TK_SHL;
+        } else return '<';
       }
       case '>': {
         next(ls);
         if (check_next1(ls, '=')) return TK_GE;
-        else if (check_next1(ls, '>')) return TK_SHR;
+        else if (check_next1(ls, '>')) { /* '>>' */
+          if (check_next1(ls, '>')) {
+            if (check_next1(ls, '=')) return TK_ASSIGN_LSHR;
+            return TK_LSHR;
+          }
+          if (check_next1(ls, '<')) {
+            if (check_next1(ls, '=')) return TK_ASSIGN_ROTR;
+            return TK_ROTR;
+          }
+          if (check_next1(ls, '=')) return TK_ASSIGN_SHR;
+          return TK_SHR;
+        }
         else return '>';
       }
       case '/': {
         next(ls);
         if (check_next1(ls, '/')) return TK_IDIV;
+        if (check_next1(ls, '=')) return TK_ASSIGN_DIV;
         else return '/';
       }
       case '~': {
         next(ls);
         if (check_next1(ls, '=')) return TK_NE;
         else return '~';
+      }
+      case '!': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_NE;
+        else return '!';
       }
       case ':': {
         next(ls);
@@ -506,9 +542,9 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '.': {  /* '.', '..', '...', or number */
         save_and_next(ls);
         if (check_next1(ls, '.')) {
-          if (check_next1(ls, '.'))
-            return TK_DOTS;   /* '...' */
-          else return TK_CONCAT;   /* '..' */
+          if (check_next1(ls, '.')) return TK_DOTS;   /* '...' */
+          if (check_next1(ls, '=')) return TK_ASSIGN_CONCAT;
+          return TK_CONCAT;   /* '..' */
         }
         else if (!lisdigit(ls->current)) return '.';
         else return read_numeral(ls, seminfo);
@@ -516,6 +552,36 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9': {
         return read_numeral(ls, seminfo);
+      }
+      case '+': { // + or +=
+        next(ls);
+        if (check_next1(ls, '=')) return TK_ASSIGN_ADD;
+        return '+';
+      }
+      case '*': {
+          next(ls);
+          if (check_next1(ls, '=')) return TK_ASSIGN_MUL;
+          return '*';
+      }
+      case '\\': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_ASSIGN_IDIV;
+        return '\\';
+      }
+      case '%': {
+          next(ls);
+          if (check_next1(ls, '=')) return TK_ASSIGN_MOD;
+          return '%';
+      }
+      case '|': {
+          next(ls);
+          if (check_next1(ls, '=')) return TK_ASSIGN_BOR;
+          return '|';
+      }
+      case '&': {
+          next(ls);
+          if (check_next1(ls, '=')) return TK_ASSIGN_BAND;
+          return '&';
       }
       case EOZ: {
         return TK_EOS;

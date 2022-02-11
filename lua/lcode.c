@@ -12,6 +12,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "lua.h"
 
@@ -987,7 +988,7 @@ static int constfolding (FuncState *fs, int op, expdesc *e1,
   }
   else {  /* folds neither NaN nor 0.0 (to avoid problems with -0.0) */
     lua_Number n = fltvalue(&res);
-    if (luai_numisnan(n) || n == 0)
+    if (luai_numisnan(n))
       return 0;
     e1->k = VKFLT;
     e1->u.nval = n;
@@ -1067,7 +1068,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP};
   switch (op) {
     case OPR_MINUS: case OPR_BNOT:  /* use 'ef' as fake 2nd operand */
-      if (constfolding(fs, op + LUA_OPUNM, e, &ef))
+      if (constfolding(fs, op + LUA_OPUNM, e, &ef)) // ORDER UNOPR
         break;
       /* FALLTHROUGH */
     case OPR_LEN:
@@ -1156,9 +1157,9 @@ void luaK_posfix (FuncState *fs, BinOpr op,
     case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
     case OPR_IDIV: case OPR_MOD: case OPR_POW:
     case OPR_BAND: case OPR_BOR: case OPR_BXOR:
-    case OPR_SHL: case OPR_SHR: {
-      if (!constfolding(fs, op + LUA_OPADD, e1, e2))
-        codebinexpval(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
+    case OPR_SHL: case OPR_SHR:
+    case OPR_LSHR: case OPR_ROTL: case OPR_ROTR: {
+      codebinexpval(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_LT: case OPR_LE:

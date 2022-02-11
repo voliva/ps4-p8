@@ -43,23 +43,7 @@
 */
 #if !defined(l_intfitsf)
 
-/* number of bits in the mantissa of a float */
-#define NBM		(l_mathlim(MANT_DIG))
-
-/*
-** Check whether some integers may not fit in a float, that is, whether
-** (maxinteger >> NBM) > 0 (that implies (1 << NBM) <= maxinteger).
-** (The shifts are done in parts to avoid shifting by more than the size
-** of an integer. In a worst case, NBM == 113 for long double and
-** sizeof(integer) == 32.)
-*/
-#if ((((LUA_MAXINTEGER >> (NBM / 4)) >> (NBM / 4)) >> (NBM / 4)) \
-	>> (NBM - (3 * (NBM / 4))))  >  0
-
-#define l_intfitsf(i)  \
-  (-((lua_Integer)1 << NBM) <= (i) && (i) <= ((lua_Integer)1 << NBM))
-
-#endif
+#define l_intfitsf(i)	(i >= fix16_minimum && i <= fix16_maximum)
 
 #endif
 
@@ -585,22 +569,50 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
 
 
 /* number of bits in an integer */
-#define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
+#define NBITS	cast_int(sizeof(lua_Number) * CHAR_BIT)
 
 /*
 ** Shift left operation. (Shift right just negates 'y'.)
 */
-lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
+lua_Number luaV_shiftl (lua_Number x, lua_Integer y) {
   if (y < 0) {  /* shift right? */
     if (y <= -NBITS) return 0;
-    else return intop(>>, x, -y);
+    else return x >> -y;
   }
   else {  /* shift left */
     if (y >= NBITS) return 0;
-    else return intop(<<, x, y);
+    else return x << y;
   }
 }
 
+LUAI_FUNC lua_Number luaV_lshiftr(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_shiftr(x, y);
+    }
+    return (lua_Number)((unsigned int)x >> y);
+}
+
+LUAI_FUNC lua_Number luaV_rotl(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_rotr(x, -y);
+    }
+    unsigned int shifted = x << y;
+    unsigned int rotated = (unsigned int)x >> (32 - y);
+    return (lua_Number)(shifted | rotated);
+}
+
+LUAI_FUNC lua_Number luaV_rotr(lua_Number x, lua_Integer y)
+{
+    if (y < 0) {
+        return luaV_rotl(x, -y);
+    }
+    unsigned int shifted = (unsigned int)x >> y;
+    unsigned int rotated = (unsigned int)x << (32 - y);
+    return (lua_Number)(shifted | rotated);
+}
+ 
 
 /*
 ** check whether cached closure in prototype 'p' may be reused, that is,
@@ -942,8 +954,8 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
-          setivalue(ra, intop(&, ib, ic));
+        if (tonumber(rb, &ib) && tonumber(rc, &ic)) {
+          setfltvalue(ra, ib&ic);
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BAND)); }
         vmbreak;
@@ -952,8 +964,8 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
-          setivalue(ra, intop(|, ib, ic));
+        if (tonumber(rb, &ib) && tonumber(rc, &ic)) {
+          setfltvalue(ra, ib|ic);
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BOR)); }
         vmbreak;
@@ -962,8 +974,8 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
-          setivalue(ra, intop(^, ib, ic));
+        if (tonumber(rb, &ib) && tonumber(rc, &ic)) {
+          setfltvalue(ra, ib^ic);
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_BXOR)); }
         vmbreak;
@@ -972,8 +984,8 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
-          setivalue(ra, luaV_shiftl(ib, ic));
+        if (tonumber(rb, &ib) && tonumber(rc, &ic)) {
+          setfltvalue(ra, luaV_shiftl(ib, ic));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHL)); }
         vmbreak;
@@ -982,10 +994,40 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
-        if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
-          setivalue(ra, luaV_shiftl(ib, -ic));
+        if (tonumber(rb, &ib) && tonumber(rc, &ic)) {
+          setfltvalue(ra, luaV_shiftl(ib, -ic));
         }
         else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_SHR)); }
+        vmbreak;
+      }
+      vmcase(OP_LSHR) {
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ib; lua_Integer ic;
+        if (tonumber(rb, &ib) && tonumber(rc, &ic)) {
+          setfltvalue(ra, luaV_lshiftr(ib, ic));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_LSHR)); }
+        vmbreak;
+      }
+      vmcase(OP_ROTR) {
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ib; lua_Integer ic;
+        if (tonumber(rb, &ib) && tonumber(rc, &ic)) {
+          setfltvalue(ra, luaV_rotr(ib, ic));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_ROTR)); }
+        vmbreak;
+      }
+      vmcase(OP_ROTL) {
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        lua_Integer ib; lua_Integer ic;
+        if (tonumber(rb, &ib) && tonumber(rc, &ic)) {
+          setfltvalue(ra, luaV_rotl(ib, ic));
+        }
+        else { Protect(luaT_trybinTM(L, rb, rc, ra, TM_ROTL)); }
         vmbreak;
       }
       vmcase(OP_MOD) {

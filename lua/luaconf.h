@@ -10,7 +10,7 @@
 
 #include <limits.h>
 #include <stddef.h>
-
+#include <fix16.h>
 
 /*
 ** ===================================================================
@@ -114,6 +114,7 @@
 #define LUA_FLOAT_FLOAT		1
 #define LUA_FLOAT_DOUBLE	2
 #define LUA_FLOAT_LONGDOUBLE	3
+#define LUA_FIXED_16	4
 
 #if defined(LUA_32BITS)		/* { */
 /*
@@ -124,14 +125,14 @@
 #else  /* otherwise use 'long' */
 #define LUA_INT_TYPE	LUA_INT_LONG
 #endif
-#define LUA_FLOAT_TYPE	LUA_FLOAT_FLOAT
+#define LUA_FLOAT_TYPE	LUA_FIXED_16
 
 #elif defined(LUA_C89_NUMBERS)	/* }{ */
 /*
 ** largest types available for C89 ('long' and 'double')
 */
 #define LUA_INT_TYPE	LUA_INT_LONG
-#define LUA_FLOAT_TYPE	LUA_FLOAT_DOUBLE
+#define LUA_FLOAT_TYPE	LUA_FIXED_16
 
 #endif				/* } */
 
@@ -144,7 +145,7 @@
 #endif
 
 #if !defined(LUA_FLOAT_TYPE)
-#define LUA_FLOAT_TYPE	LUA_FLOAT_DOUBLE
+#define LUA_FLOAT_TYPE	LUA_FIXED_16
 #endif
 
 /* }================================================================== */
@@ -434,7 +435,7 @@
 #define l_floor(x)		(l_mathop(floor)(x))
 
 #define lua_number2str(s,sz,n)  \
-	l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
+	fix16_to_str(n, s)
 
 /*
 @@ lua_numbertointeger converts a float number to an integer, or
@@ -445,9 +446,7 @@
 ** and therefore its conversion to float may have an ill-defined value.)
 */
 #define lua_numbertointeger(n,p) \
-  ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
-   (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
-      (*(p) = (LUA_INTEGER)(n), 1))
+  (*(p) = (LUA_INTEGER)fix16_to_int(n), 1)
 
 
 /* now the variable definitions */
@@ -497,6 +496,20 @@
 #define l_mathop(op)		op
 
 #define lua_str2number(s,p)	strtod((s), (p))
+ 
+#elif LUA_FLOAT_TYPE == LUA_FIXED_16
+
+#define LUA_NUMBER	fix16_t
+
+#define LUAI_UACNUMBER	fix16_t
+
+#define LUA_NUMBER_FRMLEN	""
+#define LUA_NUMBER_FMT		"%i.%i"
+
+#define l_mathop(op)		fix16_##op
+
+#define l_floatatt(n)		(DBL_##n)
+#define lua_str2number(s,p)	fix16_from_str((s), (p))
 
 #else						/* }{ */
 
@@ -608,18 +621,6 @@
 #define l_sprintf(s,sz,f,i)	((void)(sz), sprintf(s,f,i))
 #endif
 
-
-/*
-@@ lua_strx2number converts an hexadecimal numeric string to a number.
-** In C99, 'strtod' does that conversion. Otherwise, you can
-** leave 'lua_strx2number' undefined and Lua will provide its own
-** implementation.
-*/
-#if !defined(LUA_USE_C89)
-#define lua_strx2number(s,p)		lua_str2number(s,p)
-#endif
-
-
 /*
 @@ lua_pointer2str converts a pointer to a readable string in a
 ** non-specified way.
@@ -637,21 +638,6 @@
 #define lua_number2strx(L,b,sz,f,n)  \
 	((void)L, l_sprintf(b,sz,f,(LUAI_UACNUMBER)(n)))
 #endif
-
-
-/*
-** 'strtof' and 'opf' variants for math functions are not valid in
-** C89. Otherwise, the macro 'HUGE_VALF' is a good proxy for testing the
-** availability of these variants. ('math.h' is already included in
-** all files that use these macros.)
-*/
-#if defined(LUA_USE_C89) || (defined(HUGE_VAL) && !defined(HUGE_VALF))
-#undef l_mathop  /* variants not available */
-#undef lua_str2number
-#define l_mathop(op)		(lua_Number)op  /* no variant */
-#define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
-#endif
-
 
 /*
 @@ LUA_KCONTEXT is the type of the context ('ctx') for continuation

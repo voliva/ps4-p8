@@ -31,10 +31,23 @@ enum RESERVED {
   TK_RETURN, TK_THEN, TK_TRUE, TK_UNTIL, TK_WHILE,
   /* other terminal symbols */
   TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
+  TK_XOR, TK_ROTL, TK_ROTR, TK_LSHR,
   TK_SHL, TK_SHR,
-  TK_DBCOLON, TK_EOS,
+  TK_DBCOLON,
+  TK_ASSIGN_ADD, TK_ASSIGN_SUB, TK_ASSIGN_MUL, TK_ASSIGN_DIV, TK_ASSIGN_IDIV,
+  TK_ASSIGN_MOD, TK_ASSIGN_POW, TK_ASSIGN_CONCAT, TK_ASSIGN_BOR, TK_ASSIGN_BAND,
+  TK_ASSIGN_BXOR, TK_ASSIGN_SHL, TK_ASSIGN_SHR, TK_ASSIGN_LSHR, TK_ASSIGN_ROTL,
+  TK_ASSIGN_ROTR,
+  TK_EOS,
   TK_FLT, TK_INT, TK_NAME, TK_STRING
 };
+
+static int tk_is_assignment_op(int token) {
+    return token >= TK_ASSIGN_ADD && token <= TK_ASSIGN_ROTR;
+}
+static int tk_is_assignment(int token) {
+    return token == '=' || tk_is_assignment_op(token);
+}
 
 /* number of reserved words */
 #define NUM_RESERVED	(cast(int, TK_WHILE-FIRST_RESERVED+1))

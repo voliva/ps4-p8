@@ -17,10 +17,10 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
-
+#include "llimits.h"
 
 #undef PI
-#define PI	(l_mathop(3.141592653589793238462643383279502884))
+#define PI	(cast_num(3.141592653589793238462643383279502884))
 
 
 #if !defined(l_rand)		/* { */
@@ -135,7 +135,7 @@ static int math_fmod (lua_State *L) {
       lua_pushinteger(L, lua_tointeger(L, 1) % d);
   }
   else
-    lua_pushnumber(L, l_mathop(fmod)(luaL_checknumber(L, 1),
+    lua_pushnumber(L, l_mathop(mod)(luaL_checknumber(L, 1),
                                      luaL_checknumber(L, 2)));
   return 1;
 }
@@ -157,7 +157,7 @@ static int math_modf (lua_State *L) {
     lua_Number ip = (n < 0) ? l_mathop(ceil)(n) : l_mathop(floor)(n);
     pushnumint(L, ip);
     /* fractional part (test needed for inf/-inf) */
-    lua_pushnumber(L, (n == ip) ? l_mathop(0.0) : (n - ip));
+    lua_pushnumber(L, (n == ip) ? cast_num(0.0) : (n - ip));
   }
   return 2;
 }
@@ -184,10 +184,10 @@ static int math_log (lua_State *L) {
   else {
     lua_Number base = luaL_checknumber(L, 2);
 #if !defined(LUA_USE_C89)
-    if (base == l_mathop(2.0))
+    if (base == cast_num(2.0))
       res = l_mathop(log2)(x); else
 #endif
-    if (base == l_mathop(10.0))
+    if (base == cast_num(10.0))
       res = l_mathop(log10)(x);
     else
       res = l_mathop(log)(x)/l_mathop(log)(base);
@@ -202,12 +202,12 @@ static int math_exp (lua_State *L) {
 }
 
 static int math_deg (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1) * (l_mathop(180.0) / PI));
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (cast_num(180.0) / PI));
   return 1;
 }
 
 static int math_rad (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / l_mathop(180.0)));
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / cast_num(180.0)));
   return 1;
 }
 
@@ -325,13 +325,6 @@ static int math_pow (lua_State *L) {
   return 1;
 }
 
-static int math_frexp (lua_State *L) {
-  int e;
-  lua_pushnumber(L, l_mathop(frexp)(luaL_checknumber(L, 1), &e));
-  lua_pushinteger(L, e);
-  return 2;
-}
-
 static int math_ldexp (lua_State *L) {
   lua_Number x = luaL_checknumber(L, 1);
   int ep = (int)luaL_checkinteger(L, 2);
@@ -379,7 +372,6 @@ static const luaL_Reg mathlib[] = {
   {"sinh",   math_sinh},
   {"tanh",   math_tanh},
   {"pow",   math_pow},
-  {"frexp", math_frexp},
   {"ldexp", math_ldexp},
   {"log10", math_log10},
 #endif

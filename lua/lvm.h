@@ -33,7 +33,7 @@
 ** integral values)
 */
 #if !defined(LUA_FLOORN2I)
-#define LUA_FLOORN2I		0
+#define LUA_FLOORN2I		F2Ifloor
 #endif
 
 
@@ -107,7 +107,10 @@ LUAI_FUNC void luaV_execute (lua_State *L);
 LUAI_FUNC void luaV_concat (lua_State *L, int total);
 LUAI_FUNC lua_Integer luaV_div (lua_State *L, lua_Integer x, lua_Integer y);
 LUAI_FUNC lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y);
-LUAI_FUNC lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y);
+LUAI_FUNC lua_Number luaV_shiftl (lua_Number x, lua_Integer y);
+LUAI_FUNC lua_Number luaV_lshiftr(lua_Number x, lua_Integer y);
+LUAI_FUNC lua_Number luaV_rotl(lua_Number x, lua_Integer y);
+LUAI_FUNC lua_Number luaV_rotr(lua_Number x, lua_Integer y);
 LUAI_FUNC void luaV_objlen (lua_State *L, StkId ra, const TValue *rb);
 
 #endif
