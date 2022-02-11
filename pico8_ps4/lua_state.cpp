@@ -17,7 +17,7 @@ LuaState::LuaState()
     this->state = luaL_newstate();
 	this->is60FPS = false;
 
-	luaL_requiref(this->state, LUA_GNAME, luaopen_base, 1);
+	luaL_requiref(this->state, "_G", luaopen_base, 1);
 	lua_pop(this->state, 1);
 	luaL_requiref(this->state, PREFIXED(LUA_TABLIBNAME), luaopen_table, 1);
 	lua_pop(this->state, 1);

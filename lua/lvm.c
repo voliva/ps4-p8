@@ -570,6 +570,7 @@ lua_Integer luaV_mod (lua_State *L, lua_Integer m, lua_Integer n) {
 
 /* number of bits in an integer */
 #define NBITS	cast_int(sizeof(lua_Number) * CHAR_BIT)
+#define luaV_shiftr(x,y)	luaV_shiftl(x,-(y))
 
 /*
 ** Shift left operation. (Shift right just negates 'y'.)

@@ -824,7 +824,7 @@ static int str_gsub (lua_State *L) {
 ** to nibble boundaries by making what is left after that first digit a
 ** multiple of 4.
 */
-#define L_NBFD		((l_mathlim(MANT_DIG) - 1)%4 + 1)
+#define L_NBFD		((20 - 1)%4 + 1)
 
 
 /*
@@ -876,7 +876,7 @@ static int lua_number2strx (lua_State *L, char *buff, int sz,
 ** is maximum exponent + 1). (99+3+1 then rounded to 120 for "extra
 ** expenses", such as locale-dependent stuff)
 */
-#define MAX_ITEM        (120 + l_mathlim(MAX_10_EXP))
+#define MAX_ITEM        (120 + 308)
 
 
 /* valid flags in a format specification */

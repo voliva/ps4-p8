@@ -36,6 +36,11 @@
 #define LUA_FLOORN2I		F2Ifloor
 #endif
 
+typedef enum {
+  F2Ieq,     /* no rounding; accepts only integral values */
+  F2Ifloor,  /* takes the floor of the number */
+  F2Iceil    /* takes the ceil of the number */
+} F2Imod;
 
 #define tonumber(o,n) \
 	(ttisfloat(o) ? (*(n) = fltvalue(o), 1) : luaV_tonumber_(o,n))

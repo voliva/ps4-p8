@@ -191,7 +191,7 @@ static lua_Number lua_strb2number(const char* s, char** endptr) {
     int e = 16;  /* exponent correction */
     int neg;  /* 1 if number is negative */
     int hasdot = 0;  /* true after seen a dot */
-    *endptr = cast_charp(s);  /* nothing is valid yet */
+    *endptr = cast(char *, s);  /* nothing is valid yet */
     while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
     neg = isneg(&s);  /* check sign */
     if (!(*s == '0' && (*(s + 1) == 'b' || *(s + 1) == 'B')))  /* check '0b' */
@@ -214,7 +214,7 @@ static lua_Number lua_strb2number(const char* s, char** endptr) {
     }
     if (nosigdig + sigdig == 0)  /* no digits? */
         return 0.0;  /* invalid format */
-    *endptr = cast_charp(s);  /* valid up to here */
+    *endptr = cast(char *, s);  /* valid up to here */
     if (neg) r = -r;
     return l_mathop(ldexp)(r, e);
 }

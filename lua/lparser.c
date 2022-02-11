@@ -913,7 +913,7 @@ static void reg_global_fn(LexState* ls, expdesc* v, const char* fn_name) {
 
     singlevaraux(fs, ls->envn, v, 1);
     TString* s = luaX_newstring(ls, fn_name, strlen(fn_name));
-    codestring(&key, s);
+    codestring(ls, &key, s);
     luaK_indexed(fs, v, &key);
     luaK_exp2nextreg(fs, v);
 }
@@ -1247,7 +1247,7 @@ static void compound_assignment(LexState *ls, expdesc* v) {
   /* protect both the table and index result registers,
   ** ensuring that they won't be overwritten prior to the
   ** storevar calls. */
-  if (vkisindexed(v->k)) {
+  if (v->k == VINDEXED) {
     if (v->u.ind.t >= top)
       top = v->u.ind.t+1;
     if (v->k == VINDEXED && v->u.ind.idx >= top)
@@ -1609,7 +1609,7 @@ static void localstat (LexState *ls) {
   TString* last_varname = NULL;
   do {
     last_varname = str_checkname(ls);
-    vidx = new_localvar(ls, last_varname);
+    new_localvar(ls, last_varname);
     nvars++;
   } while (testnext(ls, ','));
   if (testnext(ls, '='))
@@ -1689,18 +1689,18 @@ static void retstat_line(LexState* ls, int line_num) {
     /* stat -> RETURN [explist] [';'] */
     FuncState* fs = ls->fs;
     expdesc e;
-    int nret;  /* number of values being returned */
-    int first = luaY_nvarstack(fs);  /* first slot to be returned */
+    int first, nret;  /* registers with returned values */
     if (block_follow(ls, 1) || ls->t.token == ';' || ls->linenumber != line_num)
-        nret = 0;  /* return no values */
+        first = nret = 0;  /* return no values */
     else {
         nret = explist(ls, &e);  /* optional return values */
         if (hasmultret(e.k)) {
             luaK_setmultret(fs, &e);
-            if (e.k == VCALL && nret == 1 && !fs->bl->insidetbc) {  /* tail call? */
+            if (e.k == VCALL && nret == 1) {  /* tail call? */
                 SET_OPCODE(getinstruction(fs, &e), OP_TAILCALL);
-                lua_assert(GETARG_A(getinstruction(fs, &e)) == luaY_nvarstack(fs));
+                lua_assert(GETARG_A(getinstruction(fs, &e)) == fs->nactvar);
             }
+            first = fs->nactvar;
             nret = LUA_MULTRET;  /* return all values */
         }
         else {
@@ -1708,6 +1708,7 @@ static void retstat_line(LexState* ls, int line_num) {
                 first = luaK_exp2anyreg(fs, &e);  /* can use original slot */
             else {  /* values must go to the top of the stack */
                 luaK_exp2nextreg(fs, &e);
+                first = fs->nactvar;  /* return all active values */
                 lua_assert(nret == fs->freereg - first);
             }
         }
