@@ -168,8 +168,8 @@ int map(lua_State* L) {
 	int celly = lua_tointeger(L, 2);
 	int sx = lua_tointeger(L, 3);
 	int sy = lua_tointeger(L, 4);
-	int cellw = lua_tointeger(L, 5);
-	int cellh = lua_tointeger(L, 6);
+	int cellw = luaL_optinteger(L, 5, 128);
+	int cellh = luaL_optinteger(L, 6, 64);
 	int layer = luaL_optinteger(L, 7, 0);
 
 	renderer->draw_map(cellx, celly, sx, sy, cellw, cellh, layer);

@@ -184,7 +184,12 @@ int stat(lua_State* L) {
 		n += 30;
 	}
 
-	if (30 <= n && n <= 39) {
+	if (n == 30) {
+		// boolean whether key has been pressed -> Return false
+		lua_pushboolean(L, false);
+		return 1;
+	}
+	if (31 <= n && n <= 39) {
 		// Mouse + keyboard support not enabled on PS4
 		alert_todo("stat(mouse + keyboard)");
 		lua_pushinteger(L, 0);

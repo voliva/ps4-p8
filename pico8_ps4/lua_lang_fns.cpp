@@ -305,7 +305,7 @@ int chr(lua_State* L) {
 	std::string result(str.begin(), str.end());
 	lua_pushstring(L, result.c_str());
 
-	return 0;
+	return 1;
 }
 
 std::string constant_assignment(char c, std::string val) {
