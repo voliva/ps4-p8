@@ -21,7 +21,7 @@ public:
 	void initialize();
 
 	void drawChar(unsigned char c, int x, int y);
-	void print(std::string c, int x, int y, bool scroll);
+	int print(std::string c, int x, int y, bool scroll);
 
 	void sys_print(std::string c, int x, int y);
 	void sys_print(std::string c, int x, int y, double scale);

@@ -238,29 +238,34 @@ int print(lua_State* L) {
 		text = luaL_checkstring(L, 1);
 	}
 
+	int x, y;
+	bool scroll = false;
+
 	if (lua_isinteger(L, 4)) {
-		int x = lua_tointeger(L, 2);
-		int y = lua_tointeger(L, 3);
+		x = lua_tointeger(L, 2);
+		y = lua_tointeger(L, 3);
 		int col = luaL_checkinteger(L, 4);
 
 		p8_memory[ADDR_DS_COLOR] = col;
 		font->print(text, x, y, false);
 	}
 	if (lua_isnumber(L, 3)) {
-		int x = lua_tointeger(L, 2);
-		int y = lua_tointeger(L, 3);
-
-		font->print(text, x, y, false);
-		return 0;
+		x = lua_tointeger(L, 2);
+		y = lua_tointeger(L, 3);
+	} else {
+		if (lua_isinteger(L, 2)) {
+			int col = luaL_checkinteger(L, 2);
+			p8_memory[ADDR_DS_COLOR] = col;
+		}
+		x = p8_memory[ADDR_DS_CURSOR_X];
+		y = p8_memory[ADDR_DS_CURSOR_Y];
+		scroll = true;
 	}
+	int width = font->print(text, x, y, scroll);
 
-	if (lua_isinteger(L, 2)) {
-		int col = luaL_checkinteger(L, 2);
-		p8_memory[ADDR_DS_COLOR] = col;
-	}
-	font->print(text, p8_memory[ADDR_DS_CURSOR_X], p8_memory[ADDR_DS_CURSOR_Y], true);
+	lua_pushinteger(L, width);
 
-	return 0;
+	return 1;
 }
 
 int color(lua_State* L) {

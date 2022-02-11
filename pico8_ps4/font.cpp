@@ -79,9 +79,10 @@ unsigned char read_param(char c) {
 	else
 		return 10 + c - 'a';
 }
-void Font::print(std::string c, int x, int y, bool scroll)
+int Font::print(std::string c, int x, int y, bool scroll)
 {
 	int initial_x = x;
+	int max_x = x;
 	p8_memory[ADDR_DS_CURSOR_X] = x;
 	p8_memory[ADDR_DS_CURSOR_HOME_X] = initial_x; // The cursor might overflow when using camera() - This is an issue on pico8 itself
 	p8_memory[ADDR_DS_CURSOR_Y] = y;
@@ -95,6 +96,7 @@ void Font::print(std::string c, int x, int y, bool scroll)
 	int bg_color = -1;
 
 	while (start < c.length()) {
+		max_x = std::max(x, max_x);
 		unsigned char character = c[start];
 
 		// Inline modifiers https://pico-8.fandom.com/wiki/P8SCII_Control_Codes
@@ -180,6 +182,9 @@ void Font::print(std::string c, int x, int y, bool scroll)
 		p8_memory[ADDR_DS_CURSOR_Y] -= y_offset;
 		renderer->scroll(y_offset);
 	}
+
+	max_x = std::max(x, max_x);
+	return max_x - initial_x;
 }
 
 unsigned char grapheme_to_code(std::string specialChar);
