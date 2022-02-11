@@ -1,0 +1,2195 @@
+diff --git a/lua/build.bat b/lua/build.bat
+index 4ca5d6c..3405713 100644
+--- a/lua/build.bat
++++ b/lua/build.bat
+@@ -7,9 +7,9 @@ set intdir=ps4_int
+ 
+ Rem Compile object files for all the source files
+ for %%f in (*.c) do (
+-    clang --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -I"%OO_PS4_TOOLCHAIN%\\include" -I"%OO_PS4_TOOLCHAIN%\\include\\c++\\v1" %extra_flags% -c -o %intdir%\%%~nf.o %%~nf.c
++    clang --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -I"../libfixmath" -I"%OO_PS4_TOOLCHAIN%\\include" -I"%OO_PS4_TOOLCHAIN%\\include\\c++\\v1" %extra_flags% -c -o %intdir%\%%~nf.o %%~nf.c
+ )
+ 
+ for %%f in (*.cpp) do (
+-    clang++ --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -I"%OO_PS4_TOOLCHAIN%\\include" -I"%OO_PS4_TOOLCHAIN%\\include\\c++\\v1" %extra_flags% -c -o %intdir%\%%~nf.o %%~nf.cpp
++    clang++ --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -I"../libfixmath" -I"%OO_PS4_TOOLCHAIN%\\include" -I"%OO_PS4_TOOLCHAIN%\\include\\c++\\v1" %extra_flags% -c -o %intdir%\%%~nf.o %%~nf.cpp
+ )
+diff --git a/lua/lauxlib.c b/lua/lauxlib.c
+index 94835ef..13fe90d 100644
+--- a/lua/lauxlib.c
++++ b/lua/lauxlib.c
+@@ -449,9 +449,8 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
+ }
+ 
+ 
+-LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
+-                                                      lua_Integer def) {
+-  return luaL_opt(L, luaL_checkinteger, arg, def);
++LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg, lua_Integer def) {
++  return luaL_opt(L, lua_tointeger, arg, def);
+ }
+ 
+ /* }====================================================== */
+diff --git a/lua/lauxlib.h b/lua/lauxlib.h
+index 72f70e7..951e86e 100644
+--- a/lua/lauxlib.h
++++ b/lua/lauxlib.h
+@@ -56,6 +56,7 @@ LUALIB_API const char *(luaL_checklstring) (lua_State *L, int arg,
+                                                           size_t *l);
+ LUALIB_API const char *(luaL_optlstring) (lua_State *L, int arg,
+                                           const char *def, size_t *l);
++
+ LUALIB_API lua_Number (luaL_checknumber) (lua_State *L, int arg);
+ LUALIB_API lua_Number (luaL_optnumber) (lua_State *L, int arg, lua_Number def);
+ 
+diff --git a/lua/lbaselib.c b/lua/lbaselib.c
+index 83ad306..5009bd9 100644
+--- a/lua/lbaselib.c
++++ b/lua/lbaselib.c
+@@ -484,35 +484,34 @@ static int luaB_tostring (lua_State *L) {
+ 
+ static const luaL_Reg base_funcs[] = {
+   {"assert", luaB_assert},
+-  {"collectgarbage", luaB_collectgarbage},
+-  {"dofile", luaB_dofile},
+-  {"error", luaB_error},
++  //{"collectgarbage", luaB_collectgarbage},
++  //{"dofile", luaB_dofile},
++  //{"error", luaB_error},
+   {"getmetatable", luaB_getmetatable},
+   {"ipairs", luaB_ipairs},
+-  {"loadfile", luaB_loadfile},
+-  {"load", luaB_load},
+-  {"next", luaB_next},
++  //{"loadfile", luaB_loadfile},
++  //{"load", luaB_load},
++  {"__lua_next", luaB_next},
+   {"pairs", luaB_pairs},
+-  {"pcall", luaB_pcall},
+-  {"print", luaB_print},
+-  {"warn", luaB_warn},
++  //{"pcall", luaB_pcall},
++  //{"print", luaB_print},
++  //{"warn", luaB_warn},
+   {"rawequal", luaB_rawequal},
+   {"rawlen", luaB_rawlen},
+   {"rawget", luaB_rawget},
+   {"rawset", luaB_rawset},
+   {"select", luaB_select},
+   {"setmetatable", luaB_setmetatable},
+-  {"tonumber", luaB_tonumber},
+-  {"tostring", luaB_tostring},
++  //{"tonumber", luaB_tonumber},
++  //{"tostring", luaB_tostring},
+   {"type", luaB_type},
+-  {"xpcall", luaB_xpcall},
++  //{"xpcall", luaB_xpcall},
+   /* placeholders */
+   {LUA_GNAME, NULL},
+   {"_VERSION", NULL},
+   {NULL, NULL}
+ };
+ 
+-
+ LUAMOD_API int luaopen_base (lua_State *L) {
+   /* open lib into global table */
+   lua_pushglobaltable(L);
+diff --git a/lua/lcode.c b/lua/lcode.c
+index 80d975c..3458d54 100644
+--- a/lua/lcode.c
++++ b/lua/lcode.c
+@@ -13,6 +13,7 @@
+ #include <limits.h>
+ #include <math.h>
+ #include <stdlib.h>
++#include <stdio.h>
+ 
+ #include "lua.h"
+ 
+@@ -1324,7 +1325,7 @@ static int constfolding (FuncState *fs, int op, expdesc *e1,
+   }
+   else {  /* folds neither NaN nor 0.0 (to avoid problems with -0.0) */
+     lua_Number n = fltvalue(&res);
+-    if (luai_numisnan(n) || n == 0)
++    if (luai_numisnan(n))
+       return 0;
+     e1->k = VKFLT;
+     e1->u.nval = n;
+@@ -1555,7 +1556,7 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
+   luaK_dischargevars(fs, e);
+   switch (op) {
+     case OPR_MINUS: case OPR_BNOT:  /* use 'ef' as fake 2nd operand */
+-      if (constfolding(fs, op + LUA_OPUNM, e, &ef))
++      if (constfolding(fs, op + LUA_OPUNM, e, &ef)) // ORDER UNOPR
+         break;
+       /* else */ /* FALLTHROUGH */
+     case OPR_LEN:
+@@ -1680,24 +1681,25 @@ void luaK_posfix (FuncState *fs, BinOpr opr,
+       break;
+     }
+     case OPR_SHL: {
+-      if (isSCint(e1)) {
+-        swapexps(e1, e2);
+-        codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);  /* I << r2 */
+-      }
+-      else if (finishbinexpneg(fs, e1, e2, OP_SHRI, line, TM_SHL)) {
+-        /* coded as (r1 >> -I) */;
+-      }
+-      else  /* regular case (two registers) */
+-       codebinexpval(fs, OP_SHL, e1, e2, line);
++      codebinexpval(fs, OP_SHL, e1, e2, line);
+       break;
+     }
+     case OPR_SHR: {
+-      if (isSCint(e2))
+-        codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);  /* r1 >> I */
+-      else  /* regular case (two registers) */
+-        codebinexpval(fs, OP_SHR, e1, e2, line);
++      codebinexpval(fs, OP_SHR, e1, e2, line);
+       break;
+     }
++    case OPR_LSHR: {
++        codebinexpval(fs, OP_LSHR, e1, e2, line);
++        break;
++    }
++    case OPR_ROTL: {
++        codebinexpval(fs, OP_ROTL, e1, e2, line);
++        break;
++    }
++    case OPR_ROTR: {
++        codebinexpval(fs, OP_ROTR, e1, e2, line);
++        break;
++    }
+     case OPR_EQ: case OPR_NE: {
+       codeeq(fs, opr, e1, e2);
+       break;
+diff --git a/lua/lcode.h b/lua/lcode.h
+index 3265824..cc1fba6 100644
+--- a/lua/lcode.h
++++ b/lua/lcode.h
+@@ -21,7 +21,7 @@
+ 
+ 
+ /*
+-** grep "ORDER OPR" if you change these enums  (ORDER OP)
++** grep "ORDER OP" if you change these enums  (ORDER OP)
+ */
+ typedef enum BinOpr {
+   /* arithmetic operators */
+@@ -29,6 +29,7 @@ typedef enum BinOpr {
+   OPR_DIV, OPR_IDIV,
+   /* bitwise operators */
+   OPR_BAND, OPR_BOR, OPR_BXOR,
++  OPR_ROTL, OPR_ROTR, OPR_LSHR,
+   OPR_SHL, OPR_SHR,
+   /* string operator */
+   OPR_CONCAT,
+@@ -40,6 +41,26 @@ typedef enum BinOpr {
+   OPR_NOBINOPR
+ } BinOpr;
+ 
++// ORDER RESERVED
++// Maps TK_ASSIGN_* => BinOpr
++static BinOpr assignment_to_opr[] = {
++  OPR_ADD,
++  OPR_SUB,
++  OPR_MUL,
++  OPR_DIV,
++  OPR_IDIV,
++  OPR_MOD,
++  OPR_POW,
++  OPR_CONCAT,
++  OPR_BOR,
++  OPR_BAND,
++  OPR_BXOR,
++  OPR_SHL,
++  OPR_SHR,
++  OPR_LSHR,
++  OPR_ROTL,
++  OPR_ROTR
++};
+ 
+ /* true if operation is foldable (that is, it is arithmetic or bitwise) */
+ #define foldbinop(op)	((op) <= OPR_SHR)
+@@ -47,8 +68,10 @@ typedef enum BinOpr {
+ 
+ #define luaK_codeABC(fs,o,a,b,c)	luaK_codeABCk(fs,o,a,b,c,0)
+ 
+-
+-typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
++/*
++** grep "ORDER UNOPR" if you change these enums  (ORDER UNOPR)
++*/
++typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_PEEK, OPR_PEEK2, OPR_PEEK4, OPR_NOUNOPR } UnOpr;
+ 
+ 
+ /* get (pointer to) instruction of given 'expdesc' */
+diff --git a/lua/lctype.c b/lua/lctype.c
+index 9542280..9390dfa 100644
+--- a/lua/lctype.c
++++ b/lua/lctype.c
+@@ -43,10 +43,10 @@ LUAI_DDEF const lu_byte luai_ctype_[UCHAR_MAX + 2] = {
+   0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,
+   0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,	/* 7. */
+   0x05,  0x05,  0x05,  0x04,  0x04,  0x04,  0x04,  0x00,
+-  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,	/* 8. */
+-  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,
+-  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,	/* 9. */
+-  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,
++  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,	/* 8. */
++  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,
++  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,  0x05,	/* 9. */
++  0x05,  0x05,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,
+   NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,	/* a. */
+   NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,
+   NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,  NONA,	/* b. */
+diff --git a/lua/llex.c b/lua/llex.c
+index e991517..199737f 100644
+--- a/lua/llex.c
++++ b/lua/llex.c
+@@ -35,7 +35,6 @@
+ 
+ #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
+ 
+-
+ /* ORDER RESERVED */
+ static const char *const luaX_tokens [] = {
+     "and", "break", "do", "else", "elseif",
+@@ -43,7 +42,13 @@ static const char *const luaX_tokens [] = {
+     "in", "local", "nil", "not", "or", "repeat",
+     "return", "then", "true", "until", "while",
+     "//", "..", "...", "==", ">=", "<=", "~=",
+-    "<<", ">>", "::", "<eof>",
++    "^^", "<<>", ">><", ">>>",
++    "<<", ">>", "::",
++    "+=", "-=", "*=", "/=", "\\=",
++    "%=", "^=", "..=", "|=", "&=",
++    "^^=", "<<=", ">>=", ">>>=", "<<>=",
++    ">><=",
++    "<eof>",
+     "<number>", "<integer>", "<name>", "<string>"
+ };
+ 
+@@ -223,24 +228,24 @@ static int check_next2 (LexState *ls, const char *set) {
+ ** mark, to avoid reading '3-4' or '0xe+1' as a single number.
+ **
+ ** The caller might have already read an initial dot.
++* 
++* Edit: Removed Exponential notation, added binary literals
+ */
+ static int read_numeral (LexState *ls, SemInfo *seminfo) {
+   TValue obj;
+-  const char *expo = "Ee";
+   int first = ls->current;
+   lua_assert(lisdigit(ls->current));
+   save_and_next(ls);
+-  if (first == '0' && check_next2(ls, "xX"))  /* hexadecimal? */
+-    expo = "Pp";
++  if (first == '0') {
++      check_next2(ls, "xXbB");
++  }
+   for (;;) {
+-    if (check_next2(ls, expo))  /* exponent mark? */
+-      check_next2(ls, "-+");  /* optional exponent sign */
+-    else if (lisxdigit(ls->current) || ls->current == '.')  /* '%x|%.' */
++    if (lisxdigit(ls->current) || ls->current == '.')  /* '%x|%.' */
+       save_and_next(ls);
+     else break;
+   }
+-  if (lislalpha(ls->current))  /* is numeral touching a letter? */
+-    save_and_next(ls);  /* force an error */
++  //if (lislalpha(ls->current))  /* is numeral touching a letter? */ => Commenting this out should solve the `if x = 3then` errors in pico-8
++  //  save_and_next(ls);  /* force an error */
+   save(ls, '\0');
+   if (luaO_str2num(luaZ_buffer(ls->buff), &obj) == 0)  /* format error? */
+     lexerror(ls, "malformed number", TK_FLT);
+@@ -456,6 +461,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
+       }
+       case '-': {  /* '-' or '--' (comment) */
+         next(ls);
++        if (check_next1(ls, '=')) return TK_ASSIGN_SUB;
+         if (ls->current != '-') return '-';
+         /* else is a comment */
+         next(ls);
+@@ -488,21 +494,48 @@ static int llex (LexState *ls, SemInfo *seminfo) {
+         if (check_next1(ls, '=')) return TK_EQ;  /* '==' */
+         else return '=';
+       }
++      case '^': { // ^ or ^^
++        next(ls);
++        if (check_next1(ls, '^')) {
++            if (check_next1(ls, '=')) return TK_ASSIGN_BXOR;
++            return TK_XOR;
++        }
++        if (check_next1(ls, '=')) return TK_ASSIGN_POW;
++        else return '^';
++      }
+       case '<': {
+         next(ls);
+         if (check_next1(ls, '=')) return TK_LE;  /* '<=' */
+-        else if (check_next1(ls, '<')) return TK_SHL;  /* '<<' */
+-        else return '<';
++        else if (check_next1(ls, '<')) { /* '<<' */
++          if (check_next1(ls, '>')) {
++            if (check_next1(ls, '=')) return TK_ASSIGN_ROTL;
++            return TK_ROTL;
++          }
++          if (check_next1(ls, '=')) return TK_ASSIGN_SHL;
++          return TK_SHL;
++        } else return '<';
+       }
+       case '>': {
+         next(ls);
+         if (check_next1(ls, '=')) return TK_GE;  /* '>=' */
+-        else if (check_next1(ls, '>')) return TK_SHR;  /* '>>' */
++        else if (check_next1(ls, '>')) { /* '>>' */
++          if (check_next1(ls, '>')) {
++            if (check_next1(ls, '=')) return TK_ASSIGN_LSHR;
++            return TK_LSHR;
++          }
++          if (check_next1(ls, '<')) {
++            if (check_next1(ls, '=')) return TK_ASSIGN_ROTR;
++            return TK_ROTR;
++          }
++          if (check_next1(ls, '=')) return TK_ASSIGN_SHR;
++          return TK_SHR;
++        }
+         else return '>';
+       }
+       case '/': {
+         next(ls);
+         if (check_next1(ls, '/')) return TK_IDIV;  /* '//' */
++        if (check_next1(ls, '=')) return TK_ASSIGN_DIV;
+         else return '/';
+       }
+       case '~': {
+@@ -510,6 +543,11 @@ static int llex (LexState *ls, SemInfo *seminfo) {
+         if (check_next1(ls, '=')) return TK_NE;  /* '~=' */
+         else return '~';
+       }
++      case '!': {
++        next(ls);
++        if (check_next1(ls, '=')) return TK_NE;
++        else return '!';
++      }
+       case ':': {
+         next(ls);
+         if (check_next1(ls, ':')) return TK_DBCOLON;  /* '::' */
+@@ -522,9 +560,9 @@ static int llex (LexState *ls, SemInfo *seminfo) {
+       case '.': {  /* '.', '..', '...', or number */
+         save_and_next(ls);
+         if (check_next1(ls, '.')) {
+-          if (check_next1(ls, '.'))
+-            return TK_DOTS;   /* '...' */
+-          else return TK_CONCAT;   /* '..' */
++          if (check_next1(ls, '.')) return TK_DOTS;   /* '...' */
++          if (check_next1(ls, '=')) return TK_ASSIGN_CONCAT;
++          return TK_CONCAT;   /* '..' */
+         }
+         else if (!lisdigit(ls->current)) return '.';
+         else return read_numeral(ls, seminfo);
+@@ -533,6 +571,36 @@ static int llex (LexState *ls, SemInfo *seminfo) {
+       case '5': case '6': case '7': case '8': case '9': {
+         return read_numeral(ls, seminfo);
+       }
++      case '+': { // + or +=
++        next(ls);
++        if (check_next1(ls, '=')) return TK_ASSIGN_ADD;
++        return '+';
++      }
++      case '*': {
++          next(ls);
++          if (check_next1(ls, '=')) return TK_ASSIGN_MUL;
++          return '*';
++      }
++      case '\\': {
++        next(ls);
++        if (check_next1(ls, '=')) return TK_ASSIGN_IDIV;
++        return '\\';
++      }
++      case '%': {
++          next(ls);
++          if (check_next1(ls, '=')) return TK_ASSIGN_MOD;
++          return '%';
++      }
++      case '|': {
++          next(ls);
++          if (check_next1(ls, '=')) return TK_ASSIGN_BOR;
++          return '|';
++      }
++      case '&': {
++          next(ls);
++          if (check_next1(ls, '=')) return TK_ASSIGN_BAND;
++          return '&';
++      }
+       case EOZ: {
+         return TK_EOS;
+       }
+diff --git a/lua/llex.h b/lua/llex.h
+index 389d2f8..c1e86ba 100644
+--- a/lua/llex.h
++++ b/lua/llex.h
+@@ -37,11 +37,24 @@ enum RESERVED {
+   TK_RETURN, TK_THEN, TK_TRUE, TK_UNTIL, TK_WHILE,
+   /* other terminal symbols */
+   TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
++  TK_XOR, TK_ROTL, TK_ROTR, TK_LSHR,
+   TK_SHL, TK_SHR,
+-  TK_DBCOLON, TK_EOS,
++  TK_DBCOLON,
++  TK_ASSIGN_ADD, TK_ASSIGN_SUB, TK_ASSIGN_MUL, TK_ASSIGN_DIV, TK_ASSIGN_IDIV,
++  TK_ASSIGN_MOD, TK_ASSIGN_POW, TK_ASSIGN_CONCAT, TK_ASSIGN_BOR, TK_ASSIGN_BAND,
++  TK_ASSIGN_BXOR, TK_ASSIGN_SHL, TK_ASSIGN_SHR, TK_ASSIGN_LSHR, TK_ASSIGN_ROTL,
++  TK_ASSIGN_ROTR,
++  TK_EOS,
+   TK_FLT, TK_INT, TK_NAME, TK_STRING
+ };
+ 
++static int tk_is_assignment_op(int token) {
++    return token >= TK_ASSIGN_ADD && token <= TK_ASSIGN_ROTR;
++}
++static int tk_is_assignment(int token) {
++    return token == '=' || tk_is_assignment_op(token);
++}
++
+ /* number of reserved words */
+ #define NUM_RESERVED	(cast_int(TK_WHILE-FIRST_RESERVED + 1))
+ 
+diff --git a/lua/llimits.h b/lua/llimits.h
+index 025f1c8..005feb1 100644
+--- a/lua/llimits.h
++++ b/lua/llimits.h
+@@ -124,7 +124,7 @@ typedef LUAI_UACINT l_uacInt;
+ 
+ #define cast_void(i)	cast(void, (i))
+ #define cast_voidp(i)	cast(void *, (i))
+-#define cast_num(i)	cast(lua_Number, (i))
++#define cast_num(i)	fix16_from_float(cast(float, (i)))
+ #define cast_int(i)	cast(int, (i))
+ #define cast_uint(i)	cast(unsigned int, (i))
+ #define cast_byte(i)	cast(lu_byte, (i))
+@@ -288,7 +288,7 @@ typedef l_uint32 Instruction;
+ 
+ /* float division */
+ #if !defined(luai_numdiv)
+-#define luai_numdiv(L,a,b)      ((a)/(b))
++#define luai_numdiv(L,a,b)      fix16_div(a,b)
+ #endif
+ 
+ /*
+@@ -304,7 +304,7 @@ typedef l_uint32 Instruction;
+ */
+ #if !defined(luai_nummod)
+ #define luai_nummod(L,a,b,m)  \
+-  { (void)L; (m) = l_mathop(fmod)(a,b); \
++  { (void)L; (m) = l_mathop(mod)(a,b); \
+     if (((m) > 0) ? (b) < 0 : ((m) < 0 && (b) > 0)) (m) += (b); }
+ #endif
+ 
+@@ -316,9 +316,9 @@ typedef l_uint32 Instruction;
+ 
+ /* the others are quite standard operations */
+ #if !defined(luai_numadd)
+-#define luai_numadd(L,a,b)      ((a)+(b))
+-#define luai_numsub(L,a,b)      ((a)-(b))
+-#define luai_nummul(L,a,b)      ((a)*(b))
++#define luai_numadd(L,a,b)      fix16_add(a, b)
++#define luai_numsub(L,a,b)      fix16_sub(a, b)
++#define luai_nummul(L,a,b)      fix16_mul(a, b)
+ #define luai_numunm(L,a)        (-(a))
+ #define luai_numeq(a,b)         ((a)==(b))
+ #define luai_numlt(a,b)         ((a)<(b))
+diff --git a/lua/lmathlib.c b/lua/lmathlib.c
+index 5f5983a..056dcf0 100644
+--- a/lua/lmathlib.c
++++ b/lua/lmathlib.c
+@@ -20,10 +20,10 @@
+ 
+ #include "lauxlib.h"
+ #include "lualib.h"
+-
++#include "llimits.h"
+ 
+ #undef PI
+-#define PI	(l_mathop(3.141592653589793238462643383279502884))
++#define PI	(cast_num(3.141592653589793238462643383279502884))
+ 
+ 
+ static int math_abs (lua_State *L) {
+@@ -125,7 +125,7 @@ static int math_fmod (lua_State *L) {
+       lua_pushinteger(L, lua_tointeger(L, 1) % d);
+   }
+   else
+-    lua_pushnumber(L, l_mathop(fmod)(luaL_checknumber(L, 1),
++    lua_pushnumber(L, l_mathop(mod)(luaL_checknumber(L, 1),
+                                      luaL_checknumber(L, 2)));
+   return 1;
+ }
+@@ -147,7 +147,7 @@ static int math_modf (lua_State *L) {
+     lua_Number ip = (n < 0) ? l_mathop(ceil)(n) : l_mathop(floor)(n);
+     pushnumint(L, ip);
+     /* fractional part (test needed for inf/-inf) */
+-    lua_pushnumber(L, (n == ip) ? l_mathop(0.0) : (n - ip));
++    lua_pushnumber(L, (n == ip) ? cast_num(0.0) : (n - ip));
+   }
+   return 2;
+ }
+@@ -174,11 +174,11 @@ static int math_log (lua_State *L) {
+   else {
+     lua_Number base = luaL_checknumber(L, 2);
+ #if !defined(LUA_USE_C89)
+-    if (base == l_mathop(2.0))
++    if (base == cast_num(2.0))
+       res = l_mathop(log2)(x);
+     else
+ #endif
+-    if (base == l_mathop(10.0))
++    if (base == cast_num(10.0))
+       res = l_mathop(log10)(x);
+     else
+       res = l_mathop(log)(x)/l_mathop(log)(base);
+@@ -193,12 +193,12 @@ static int math_exp (lua_State *L) {
+ }
+ 
+ static int math_deg (lua_State *L) {
+-  lua_pushnumber(L, luaL_checknumber(L, 1) * (l_mathop(180.0) / PI));
++  lua_pushnumber(L, luaL_checknumber(L, 1) * (cast_num(180.0) / PI));
+   return 1;
+ }
+ 
+ static int math_rad (lua_State *L) {
+-  lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / l_mathop(180.0)));
++  lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / cast_num(180.0)));
+   return 1;
+ }
+ 
+@@ -332,7 +332,7 @@ static Rand64 nextrand (Rand64 *state) {
+ #define shift64_FIG	(64 - FIGS)
+ 
+ /* to scale to [0, 1), multiply by scaleFIG = 2^(-FIGS) */
+-#define scaleFIG	(l_mathop(0.5) / ((Rand64)1 << (FIGS - 1)))
++#define scaleFIG	(cast_num(0.5) / ((Rand64)1 << (FIGS - 1)))
+ 
+ static lua_Number I2d (Rand64 x) {
+   return (lua_Number)(trim64(x) >> shift64_FIG) * scaleFIG;
+@@ -678,13 +678,6 @@ static int math_pow (lua_State *L) {
+   return 1;
+ }
+ 
+-static int math_frexp (lua_State *L) {
+-  int e;
+-  lua_pushnumber(L, l_mathop(frexp)(luaL_checknumber(L, 1), &e));
+-  lua_pushinteger(L, e);
+-  return 2;
+-}
+-
+ static int math_ldexp (lua_State *L) {
+   lua_Number x = luaL_checknumber(L, 1);
+   int ep = (int)luaL_checkinteger(L, 2);
+@@ -730,7 +723,6 @@ static const luaL_Reg mathlib[] = {
+   {"sinh",   math_sinh},
+   {"tanh",   math_tanh},
+   {"pow",   math_pow},
+-  {"frexp", math_frexp},
+   {"ldexp", math_ldexp},
+   {"log10", math_log10},
+ #endif
+diff --git a/lua/lobject.c b/lua/lobject.c
+index 0e504be..dcde4c4 100644
+--- a/lua/lobject.c
++++ b/lua/lobject.c
+@@ -81,6 +81,14 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
+     case LUA_OPIDIV: return luai_numidiv(L, v1, v2);
+     case LUA_OPUNM: return luai_numunm(L, v1);
+     case LUA_OPMOD: return luaV_modf(L, v1, v2);
++    case LUA_OPBAND: return v1 & v2;
++    case LUA_OPBOR: return v1 | v2;
++    case LUA_OPBXOR: return v1 ^ v2;
++    case LUA_OPSHL: return luaV_shiftl(v1, (v2 >> 16));
++    case LUA_OPSHR: return luaV_shiftl(v1, -(v2 >> 16));
++    case LUA_OPLSHR: return luaV_lshiftr(v1, v2 >> 16);
++    case LUA_OPROTR: return luaV_rotr(v1, v2 >> 16);
++    case LUA_OPROTL: return luaV_rotl(v1, v2 >> 16);
+     default: lua_assert(0); return 0;
+   }
+ }
+@@ -90,22 +98,16 @@ int luaO_rawarith (lua_State *L, int op, const TValue *p1, const TValue *p2,
+                    TValue *res) {
+   switch (op) {
+     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
++    case LUA_OPROTL: case LUA_OPROTR: case LUA_OPLSHR:
+     case LUA_OPSHL: case LUA_OPSHR:
+-    case LUA_OPBNOT: {  /* operate only on integers */
+-      lua_Integer i1; lua_Integer i2;
+-      if (tointegerns(p1, &i1) && tointegerns(p2, &i2)) {
+-        setivalue(res, intarith(L, op, i1, i2));
+-        return 1;
+-      }
+-      else return 0;  /* fail */
+-    }
++    case LUA_OPBNOT:
+     case LUA_OPDIV: case LUA_OPPOW: {  /* operate only on floats */
+       lua_Number n1; lua_Number n2;
+       if (tonumberns(p1, n1) && tonumberns(p2, n2)) {
+         setfltvalue(res, numarith(L, op, n1, n2));
+         return 1;
+       }
+-      else return 0;  /* fail */
++      return 0;  /* fail */
+     }
+     default: {  /* other operations */
+       lua_Number n1; lua_Number n2;
+@@ -117,7 +119,7 @@ int luaO_rawarith (lua_State *L, int op, const TValue *p1, const TValue *p2,
+         setfltvalue(res, numarith(L, op, n1, n2));
+         return 1;
+       }
+-      else return 0;  /* fail */
++      return 0;  /* fail */
+     }
+   }
+ }
+@@ -145,6 +147,53 @@ static int isneg (const char **s) {
+ }
+ 
+ 
++/*
++** {==================================================================
++** Lua's implementation for 'lua_strb2number'
++** ===================================================================
++*/
++
++#if !defined(lua_strb2number)
++
++static lua_Number lua_strb2number(const char* s, char** endptr) {
++    int dot = lua_getlocaledecpoint();
++    fix16_t r = 0;  /* result (accumulator) */
++    int sigdig = 0;  /* number of significant digits */
++    int nosigdig = 0;  /* number of non-significant digits */
++    int e = 16;  /* exponent correction */
++    int neg;  /* 1 if number is negative */
++    int hasdot = 0;  /* true after seen a dot */
++    *endptr = cast_charp(s);  /* nothing is valid yet */
++    while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
++    neg = isneg(&s);  /* check sign */
++    if (!(*s == '0' && (*(s + 1) == 'b' || *(s + 1) == 'B')))  /* check '0b' */
++        return 0;  /* invalid format (no '0b') */
++    for (s += 2; ; s++) {  /* skip '0b' and read numeral */
++        if (*s == dot) {
++            if (hasdot) break;  /* second dot? stop loop */
++            else hasdot = 1;
++        }
++        else if (lisxdigit(cast_uchar(*s))) {
++            if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
++                nosigdig++;
++            else {
++                sigdig++;
++                r = (r << 1) + (*s - '0');
++            }
++            if (hasdot) e--; /* decimal digit? correct exponent */
++        }
++        else break;  /* neither a dot nor a digit */
++    }
++    if (nosigdig + sigdig == 0)  /* no digits? */
++        return 0.0;  /* invalid format */
++    *endptr = cast_charp(s);  /* valid up to here */
++    if (neg) r = -r;
++    return l_mathop(ldexp)(r, e);
++}
++
++#endif
++/* }====================================================== */
++
+ 
+ /*
+ ** {==================================================================
+@@ -164,17 +213,17 @@ static int isneg (const char **s) {
+ */
+ static lua_Number lua_strx2number (const char *s, char **endptr) {
+   int dot = lua_getlocaledecpoint();
+-  lua_Number r = 0.0;  /* result (accumulator) */
++  fix16_t r = 0;  /* result (accumulator) */
+   int sigdig = 0;  /* number of significant digits */
+   int nosigdig = 0;  /* number of non-significant digits */
+-  int e = 0;  /* exponent correction */
++  int e = 4;  /* exponent correction */
+   int neg;  /* 1 if number is negative */
+   int hasdot = 0;  /* true after seen a dot */
+   *endptr = cast_charp(s);  /* nothing is valid yet */
+   while (lisspace(cast_uchar(*s))) s++;  /* skip initial spaces */
+   neg = isneg(&s);  /* check sign */
+   if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
+-    return 0.0;  /* invalid format (no '0x') */
++    return 0;  /* invalid format (no '0x') */
+   for (s += 2; ; s++) {  /* skip '0x' and read numeral */
+     if (*s == dot) {
+       if (hasdot) break;  /* second dot? stop loop */
+@@ -184,14 +233,14 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
+       if (sigdig == 0 && *s == '0')  /* non-significant digit (zero)? */
+         nosigdig++;
+       else if (++sigdig <= MAXSIGDIG)  /* can read it without overflow? */
+-          r = (r * cast_num(16.0)) + luaO_hexavalue(*s);
++        r = (r << 4) + luaO_hexavalue(*s);
+       else e++; /* too many digits; ignore, but still count for exponent */
+       if (hasdot) e--;  /* decimal digit? correct exponent */
+     }
+     else break;  /* neither a dot nor a digit */
+   }
+   if (nosigdig + sigdig == 0)  /* no digits? */
+-    return 0.0;  /* invalid format */
++    return 0;  /* invalid format */
+   *endptr = cast_charp(s);  /* valid up to here */
+   e *= 4;  /* each digit multiplies/divides value by 2^4 */
+   if (*s == 'p' || *s == 'P') {  /* exponent part? */
+@@ -224,10 +273,12 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
+ ** Convert string 's' to a Lua number (put in 'result'). Return NULL on
+ ** fail or the address of the ending '\0' on success. ('mode' == 'x')
+ ** means a hexadecimal numeral.
++* mode == 'b' means a binary numeral
+ */
+ static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
+   char *endptr;
+   *result = (mode == 'x') ? lua_strx2number(s, &endptr)  /* try to convert */
++          : (mode == 'b') ? lua_strb2number(s, &endptr)
+                           : lua_str2number(s, &endptr);
+   if (endptr == s) return NULL;  /* nothing recognized? */
+   while (lisspace(cast_uchar(*endptr))) endptr++;  /* skip trailing spaces */
+@@ -246,11 +297,12 @@ static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
+ ** The variable 'mode' checks for special characters in the string:
+ ** - 'n' means 'inf' or 'nan' (which should be rejected)
+ ** - 'x' means a hexadecimal numeral
++** - 'b' means a binary numeral
+ ** - '.' just optimizes the search for the common case (no special chars)
+ */
+ static const char *l_str2d (const char *s, lua_Number *result) {
+   const char *endptr;
+-  const char *pmode = strpbrk(s, ".xXnN");  /* look for special chars */
++  const char *pmode = strpbrk(s, ".xXnNbB");  /* look for special chars */
+   int mode = pmode ? ltolower(cast_uchar(*pmode)) : 0;
+   if (mode == 'n')  /* reject 'inf' and 'nan' */
+     return NULL;
+@@ -287,6 +339,14 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
+       empty = 0;
+     }
+   }
++  else if (s[0] == '0' &&
++    (s[1] == 'b' || s[1] == 'B')) {  /* binary? */
++    s += 2;  /* skip '0b' */
++    for (; lisxdigit(cast_uchar(*s)); s++) {
++      a = a * 2 + (*s - '0');
++      empty = 0;
++    }
++  }
+   else {  /* decimal */
+     for (; lisdigit(cast_uchar(*s)); s++) {
+       int d = *s - '0';
+@@ -357,13 +417,8 @@ static int tostringbuff (TValue *obj, char *buff) {
+   lua_assert(ttisnumber(obj));
+   if (ttisinteger(obj))
+     len = lua_integer2str(buff, MAXNUMBER2STR, ivalue(obj));
+-  else {
++  else
+     len = lua_number2str(buff, MAXNUMBER2STR, fltvalue(obj));
+-    if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
+-      buff[len++] = lua_getlocaledecpoint();
+-      buff[len++] = '0';  /* adds '.0' to result */
+-    }
+-  }
+   return len;
+ }
+ 
+diff --git a/lua/lobject.h b/lua/lobject.h
+index 950bebb..6be5cd4 100644
+--- a/lua/lobject.h
++++ b/lua/lobject.h
+@@ -317,7 +317,7 @@ typedef struct GCObject {
+ #define nvalue(o)	check_exp(ttisnumber(o), \
+ 	(ttisinteger(o) ? cast_num(ivalue(o)) : fltvalue(o)))
+ #define fltvalue(o)	check_exp(ttisfloat(o), val_(o).n)
+-#define ivalue(o)	check_exp(ttisinteger(o), val_(o).i)
++#define ivalue(o)	check_exp(ttisinteger(o), (int16_t)val_(o).i)
+ 
+ #define fltvalueraw(v)	((v).n)
+ #define ivalueraw(v)	((v).i)
+diff --git a/lua/lopcodes.c b/lua/lopcodes.c
+index c67aa22..ca82efe 100644
+--- a/lua/lopcodes.c
++++ b/lua/lopcodes.c
+@@ -61,6 +61,9 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
+  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_BAND */
+  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_BOR */
+  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_BXOR */
++ ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_ROTL */
++ ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_ROTR */
++ ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_LSHR */
+  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_SHL */
+  ,opmode(0, 0, 0, 0, 1, iABC)		/* OP_SHR */
+  ,opmode(1, 0, 0, 0, 0, iABC)		/* OP_MMBIN */
+diff --git a/lua/lopcodes.h b/lua/lopcodes.h
+index d6a47e5..28fefbc 100644
+--- a/lua/lopcodes.h
++++ b/lua/lopcodes.h
+@@ -209,12 +209,12 @@ OP_LOADNIL,/*	A B	R[A], R[A+1], ..., R[A+B] := nil		*/
+ OP_GETUPVAL,/*	A B	R[A] := UpValue[B]				*/
+ OP_SETUPVAL,/*	A B	UpValue[B] := R[A]				*/
+ 
+-OP_GETTABUP,/*	A B C	R[A] := UpValue[B][K[C]:string]			*/
++OP_GETTABUP,/*	A B C	R[A] := UpValue[B][K[C]:string]		11	*/
+ OP_GETTABLE,/*	A B C	R[A] := R[B][R[C]]				*/
+ OP_GETI,/*	A B C	R[A] := R[B][C]					*/
+ OP_GETFIELD,/*	A B C	R[A] := R[B][K[C]:string]			*/
+ 
+-OP_SETTABUP,/*	A B C	UpValue[A][K[B]:string] := RK(C)		*/
++OP_SETTABUP,/*	A B C	UpValue[A][K[B]:string] := RK(C)	15	*/
+ OP_SETTABLE,/*	A B C	R[A][R[B]] := RK(C)				*/
+ OP_SETI,/*	A B C	R[A][B] := RK(C)				*/
+ OP_SETFIELD,/*	A B C	R[A][K[B]:string] := RK(C)			*/
+@@ -223,7 +223,7 @@ OP_NEWTABLE,/*	A B C k	R[A] := {}					*/
+ 
+ OP_SELF,/*	A B C	R[A+1] := R[B]; R[A] := R[B][RK(C):string]	*/
+ 
+-OP_ADDI,/*	A B sC	R[A] := R[B] + sC				*/
++OP_ADDI,/*	A B sC	R[A] := R[B] + sC			21	*/
+ 
+ OP_ADDK,/*	A B C	R[A] := R[B] + K[C]:number			*/
+ OP_SUBK,/*	A B C	R[A] := R[B] - K[C]:number			*/
+@@ -233,14 +233,14 @@ OP_POWK,/*	A B C	R[A] := R[B] ^ K[C]:number			*/
+ OP_DIVK,/*	A B C	R[A] := R[B] / K[C]:number			*/
+ OP_IDIVK,/*	A B C	R[A] := R[B] // K[C]:number			*/
+ 
+-OP_BANDK,/*	A B C	R[A] := R[B] & K[C]:integer			*/
++OP_BANDK,/*	A B C	R[A] := R[B] & K[C]:integer		29	*/
+ OP_BORK,/*	A B C	R[A] := R[B] | K[C]:integer			*/
+ OP_BXORK,/*	A B C	R[A] := R[B] ~ K[C]:integer			*/
+ 
+-OP_SHRI,/*	A B sC	R[A] := R[B] >> sC				*/
++OP_SHRI,/*	A B sC	R[A] := R[B] >> sC		32		*/
+ OP_SHLI,/*	A B sC	R[A] := sC << R[B]				*/
+ 
+-OP_ADD,/*	A B C	R[A] := R[B] + R[C]				*/
++OP_ADD,/*	A B C	R[A] := R[B] + R[C]			34	*/
+ OP_SUB,/*	A B C	R[A] := R[B] - R[C]				*/
+ OP_MUL,/*	A B C	R[A] := R[B] * R[C]				*/
+ OP_MOD,/*	A B C	R[A] := R[B] % R[C]				*/
+@@ -248,17 +248,18 @@ OP_POW,/*	A B C	R[A] := R[B] ^ R[C]				*/
+ OP_DIV,/*	A B C	R[A] := R[B] / R[C]				*/
+ OP_IDIV,/*	A B C	R[A] := R[B] // R[C]				*/
+ 
+-OP_BAND,/*	A B C	R[A] := R[B] & R[C]				*/
++OP_BAND,/*	A B C	R[A] := R[B] & R[C]			41	*/
+ OP_BOR,/*	A B C	R[A] := R[B] | R[C]				*/
+ OP_BXOR,/*	A B C	R[A] := R[B] ~ R[C]				*/
++OP_ROTL, OP_ROTR, OP_LSHR,
+ OP_SHL,/*	A B C	R[A] := R[B] << R[C]				*/
+ OP_SHR,/*	A B C	R[A] := R[B] >> R[C]				*/
+ 
+-OP_MMBIN,/*	A B C	call C metamethod over R[A] and R[B]		*/
++OP_MMBIN,/*	A B C	call C metamethod over R[A] and R[B]	46	*/
+ OP_MMBINI,/*	A sB C k	call C metamethod over R[A] and sB	*/
+ OP_MMBINK,/*	A B C k		call C metamethod over R[A] and K[B]	*/
+ 
+-OP_UNM,/*	A B	R[A] := -R[B]					*/
++OP_UNM,/*	A B	R[A] := -R[B]				49	*/
+ OP_BNOT,/*	A B	R[A] := ~R[B]					*/
+ OP_NOT,/*	A B	R[A] := not R[B]				*/
+ OP_LEN,/*	A B	R[A] := #R[B] (length operator)			*/
+@@ -272,24 +273,24 @@ OP_EQ,/*	A B k	if ((R[A] == R[B]) ~= k) then pc++		*/
+ OP_LT,/*	A B k	if ((R[A] <  R[B]) ~= k) then pc++		*/
+ OP_LE,/*	A B k	if ((R[A] <= R[B]) ~= k) then pc++		*/
+ 
+-OP_EQK,/*	A B k	if ((R[A] == K[B]) ~= k) then pc++		*/
++OP_EQK,/*	A B k	if ((R[A] == K[B]) ~= k) then pc++	60	*/
+ OP_EQI,/*	A sB k	if ((R[A] == sB) ~= k) then pc++		*/
+ OP_LTI,/*	A sB k	if ((R[A] < sB) ~= k) then pc++			*/
+ OP_LEI,/*	A sB k	if ((R[A] <= sB) ~= k) then pc++		*/
+ OP_GTI,/*	A sB k	if ((R[A] > sB) ~= k) then pc++			*/
+ OP_GEI,/*	A sB k	if ((R[A] >= sB) ~= k) then pc++		*/
+ 
+-OP_TEST,/*	A k	if (not R[A] == k) then pc++			*/
++OP_TEST,/*	A k	if (not R[A] == k) then pc++		66	*/
+ OP_TESTSET,/*	A B k	if (not R[B] == k) then pc++ else R[A] := R[B]	*/
+ 
+ OP_CALL,/*	A B C	R[A], ... ,R[A+C-2] := R[A](R[A+1], ... ,R[A+B-1]) */
+ OP_TAILCALL,/*	A B C k	return R[A](R[A+1], ... ,R[A+B-1])		*/
+ 
+-OP_RETURN,/*	A B C k	return R[A], ... ,R[A+B-2]	(see note)	*/
++OP_RETURN,/*	A B C k	return R[A], ... ,R[A+B-2]	(see note) 70	*/
+ OP_RETURN0,/*		return						*/
+ OP_RETURN1,/*	A	return R[A]					*/
+ 
+-OP_FORLOOP,/*	A Bx	update counters; if loop continues then pc-=Bx; */
++OP_FORLOOP,/*	A Bx	update counters; if loop continues then pc-=Bx; 73 */
+ OP_FORPREP,/*	A Bx	<check values and prepare counters>;
+                         if not to run then pc+=Bx+1;			*/
+ 
+@@ -301,7 +302,7 @@ OP_SETLIST,/*	A B C k	R[A][C+i] := R[A+i], 1 <= i <= B		*/
+ 
+ OP_CLOSURE,/*	A Bx	R[A] := closure(KPROTO[Bx])			*/
+ 
+-OP_VARARG,/*	A C	R[A], R[A+1], ..., R[A+C-2] = vararg		*/
++OP_VARARG,/*	A C	R[A], R[A+1], ..., R[A+C-2] = vararg	80	*/
+ 
+ OP_VARARGPREP,/*A	(adjust vararg parameters)			*/
+ 
+diff --git a/lua/lopnames.h b/lua/lopnames.h
+index 965cec9..560803c 100644
+--- a/lua/lopnames.h
++++ b/lua/lopnames.h
+@@ -57,6 +57,9 @@ static const char *const opnames[] = {
+   "BAND",
+   "BOR",
+   "BXOR",
++  "ROTL",
++  "ROTR",
++  "LSHR",
+   "SHL",
+   "SHR",
+   "MMBIN",
+diff --git a/lua/lparser.c b/lua/lparser.c
+index 284ef1f..96e9046 100644
+--- a/lua/lparser.c
++++ b/lua/lparser.c
+@@ -100,7 +100,6 @@ static int testnext (LexState *ls, int c) {
+   else return 0;
+ }
+ 
+-
+ /*
+ ** Check that next token is 'c'.
+ */
+@@ -118,10 +117,8 @@ static void checknext (LexState *ls, int c) {
+   luaX_next(ls);
+ }
+ 
+-
+ #define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
+ 
+-
+ /*
+ ** Check that next token is 'what' and skip it. In case of error,
+ ** raise an error that the expected 'what' should match a 'who'
+@@ -445,12 +442,7 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
+ }
+ 
+ 
+-/*
+-** Find a variable with the given name 'n', handling global variables
+-** too.
+-*/
+-static void singlevar (LexState *ls, expdesc *var) {
+-  TString *varname = str_checkname(ls);
++static void fetch_singlevar (LexState *ls, TString *varname, expdesc *var) {
+   FuncState *fs = ls->fs;
+   singlevaraux(fs, varname, var, 1);
+   if (var->k == VVOID) {  /* global name? */
+@@ -462,6 +454,14 @@ static void singlevar (LexState *ls, expdesc *var) {
+   }
+ }
+ 
++/*
++** Find a variable with the given name 'n', handling global variables
++** too.
++*/
++static void singlevar (LexState *ls, expdesc *var) {
++  TString *varname = str_checkname(ls);
++  fetch_singlevar(ls, varname, var);
++}
+ 
+ /*
+ ** Adjust the number of results from an expression list 'e' with 'nexps'
+@@ -783,6 +783,18 @@ static int block_follow (LexState *ls, int withuntil) {
+   }
+ }
+ 
++static void retstat_line(LexState* ls, int line_num);
++static void statlist_line(LexState* ls, int line) {
++    /* statlist -> { stat [';'] } */
++    while (ls->linenumber == line && !block_follow(ls, 1)) {
++        if (ls->t.token == TK_RETURN) {
++            luaX_next(ls); // skip return
++            retstat_line(ls, line);
++            return;  /* 'return' must be last statement */
++        }
++        statement(ls);
++    }
++}
+ 
+ static void statlist (LexState *ls) {
+   /* statlist -> { stat [';'] } */
+@@ -1086,10 +1098,54 @@ static void primaryexp (LexState *ls, expdesc *v) {
+   }
+ }
+ 
++/*
++* Get global function and put it in a register.
++* Register index it was put in is `v->u.info`
++*/
++static void reg_global_fn(LexState* ls, expdesc* v, const char* fn_name) {
++    FuncState* fs = ls->fs;
++    expdesc key;
++
++    singlevaraux(fs, ls->envn, v, 1);
++    TString* s = luaX_newstring(ls, fn_name, strlen(fn_name));
++    codestring(&key, s);
++    luaK_indexed(fs, v, &key);
++    luaK_exp2nextreg(fs, v);
++}
+ 
+ static void suffixedexp (LexState *ls, expdesc *v) {
+   /* suffixedexp ->
+        primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
++
++    if (ls->t.token == '?') {
++        int line = ls->linenumber;
++
++        reg_global_fn(ls, v, "print");
++
++        luaX_next(ls);  // skip operator
++
++        FuncState* fs = ls->fs;
++        expdesc args;
++        int base, nparams;
++        explist(ls, &args);
++        if (hasmultret(args.k))
++            luaK_setmultret(fs, &args);
++        lua_assert(f->k == VNONRELOC);
++        base = v->u.info;  /* base register for call */
++        if (hasmultret(args.k))
++            nparams = LUA_MULTRET;  /* open call */
++        else {
++            if (args.k != VVOID)
++                luaK_exp2nextreg(fs, &args);  /* close last argument */
++            nparams = fs->freereg - (base + 1);
++        }
++        init_exp(v, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams + 1, 2));
++        luaK_fixline(fs, line);
++        fs->freereg = base + 1;  /* call remove function and arguments and leaves
++                                    (unless changed) one result */
++        return;
++    }
++
+   FuncState *fs = ls->fs;
+   int line = ls->linenumber;
+   primaryexp(ls, v);
+@@ -1124,7 +1180,6 @@ static void suffixedexp (LexState *ls, expdesc *v) {
+   }
+ }
+ 
+-
+ static void simpleexp (LexState *ls, expdesc *v) {
+   /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
+                   constructor | FUNCTION body | suffixedexp */
+@@ -1186,11 +1241,13 @@ static UnOpr getunopr (int op) {
+     case '-': return OPR_MINUS;
+     case '~': return OPR_BNOT;
+     case '#': return OPR_LEN;
++    case '@': return OPR_PEEK;
++    case '%': return OPR_PEEK2;
++    case '$': return OPR_PEEK4;
+     default: return OPR_NOUNOPR;
+   }
+ }
+ 
+-
+ static BinOpr getbinopr (int op) {
+   switch (op) {
+     case '+': return OPR_ADD;
+@@ -1203,6 +1260,10 @@ static BinOpr getbinopr (int op) {
+     case '&': return OPR_BAND;
+     case '|': return OPR_BOR;
+     case '~': return OPR_BXOR;
++    case TK_XOR: return OPR_BXOR;
++    case TK_ROTL: return OPR_ROTL;
++    case TK_ROTR: return OPR_ROTR;
++    case TK_LSHR: return OPR_LSHR;
+     case TK_SHL: return OPR_SHL;
+     case TK_SHR: return OPR_SHR;
+     case TK_CONCAT: return OPR_CONCAT;
+@@ -1225,12 +1286,13 @@ static BinOpr getbinopr (int op) {
+ static const struct {
+   lu_byte left;  /* left priority for each binary operator */
+   lu_byte right; /* right priority */
+-} priority[] = {  /* ORDER OPR */
++} priority[] = {  /* ORDER OP */
+    {10, 10}, {10, 10},           /* '+' '-' */
+    {11, 11}, {11, 11},           /* '*' '%' */
+    {14, 13},                  /* '^' (right associative) */
+    {11, 11}, {11, 11},           /* '/' '//' */
+    {6, 6}, {4, 4}, {5, 5},   /* '&' '|' '~' */
++   {7, 7}, {7, 7}, {7, 7},   // OPR_ROTL, OPR_ROTR, OPR_LSHR,
+    {7, 7}, {7, 7},           /* '<<' '>>' */
+    {9, 8},                   /* '..' (right associative) */
+    {3, 3}, {3, 3}, {3, 3},   /* ==, <, <= */
+@@ -1240,6 +1302,8 @@ static const struct {
+ 
+ #define UNARY_PRIORITY	12  /* priority for unary operators */
+ 
++// ORDER UNOPR
++const char* custom_unopr_fns[] = { "peek", "peek2", "peek4" };
+ 
+ /*
+ ** subexpr -> (simpleexp | unop subexpr) { binop subexpr }
+@@ -1250,7 +1314,24 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
+   UnOpr uop;
+   enterlevel(ls);
+   uop = getunopr(ls->t.token);
+-  if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
++  if (uop >= OPR_PEEK && uop <= OPR_PEEK4) { // ORDER UNOPR
++    FuncState* fs = ls->fs;
++
++    // Get peek2 function
++    expdesc var, arg;
++    reg_global_fn(ls, &var, custom_unopr_fns[uop - OPR_PEEK]); // ORDER UNOPR
++
++    luaX_next(ls);  // skip operator
++    subexpr(ls, &arg, UNARY_PRIORITY);
++    luaK_exp2nextreg(fs, &arg); // Set it as an argument
++
++    // Call the function, set code output to `v`
++    int nparams = 1;
++    init_exp(v, VCALL, luaK_codeABC(fs, OP_CALL, var.u.info, nparams + 1, 2));
++
++    // It will leave the result in one register after the base one (not sure... but following same steps as in funcargs)
++    fs->freereg = var.u.info + 1;
++  } else if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
+     int line = ls->linenumber;
+     luaX_next(ls);  /* skip operator */
+     subexpr(ls, v, UNARY_PRIORITY);
+@@ -1353,6 +1434,51 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
+   }
+ }
+ 
++#include <stdio.h>
++
++// Code from http://lua-users.org/files/wiki_insecure/power_patches/5.4/plusequals-5.4.patch
++static void compound_assignment(LexState *ls, expdesc* v) {
++  BinOpr op = assignment_to_opr[ls->t.token - TK_ASSIGN_ADD];
++  FuncState *fs = ls->fs;
++  int tolevel = fs->nactvar;
++  int old_free = fs->freereg;
++  expdesc e, infix;
++  int line = ls->linenumber;
++  int nextra, i;
++  luaX_next(ls);
++
++  /* create temporary local variables to lock up any registers needed
++     by indexed lvalues. */
++  lu_byte top = fs->nactvar;
++  /* protect both the table and index result registers,
++  ** ensuring that they won't be overwritten prior to the
++  ** storevar calls. */
++  if (vkisindexed(v->k)) {
++    if (v->u.ind.t >= top)
++      top = v->u.ind.t+1;
++    if (v->k == VINDEXED && v->u.ind.idx >= top)
++      top = v->u.ind.idx+1;
++  }
++  nextra = top-fs->nactvar;
++  if(nextra) {
++    for(i=0; i<nextra; i++) {
++      new_localvarliteral(ls, "(temp)");
++    }
++    adjustlocalvars(ls, nextra);
++  }
++
++  infix = *v;
++  luaK_infix(fs, op, &infix);
++  expr(ls, &e);
++  luaK_posfix(fs, op, &infix, &e, line);
++  luaK_storevar(fs, v, &infix);
++  removevars(fs, tolevel);
++
++  if (old_free < fs->freereg) {
++    fs->freereg = old_free;
++  }
++}
++
+ /*
+ ** Parse and compile a multiple assignment. The first "variable"
+ ** (a 'suffixedexp') was already read by the caller.
+@@ -1364,6 +1490,8 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
+   expdesc e;
+   check_condition(ls, vkisvar(lh->v.k), "syntax error");
+   check_readonly(ls, &lh->v);
++  int line = ls->linenumber;
++  BinOpr operator = OPR_NOBINOPR;
+   if (testnext(ls, ',')) {  /* restassign -> ',' suffixedexp restassign */
+     struct LHS_assign nv;
+     nv.prev = lh;
+@@ -1373,11 +1501,14 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
+     enterlevel(ls);  /* control recursion depth */
+     restassign(ls, &nv, nvars+1);
+     leavelevel(ls);
+-  }
+-  else {  /* restassign -> '=' explist */
++  } else if (tk_is_assignment_op(ls->t.token)) { /* restassign -> opeq expr */
++    compound_assignment(ls, &lh->v);
++    return;
++  } else { /* restassign -> '=' explist */
+     int nexps;
+     checknext(ls, '=');
+     nexps = explist(ls, &e);
++
+     if (nexps != nvars)
+       adjust_assign(ls, nvars, nexps, &e);
+     else {
+@@ -1386,6 +1517,7 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
+       return;  /* avoid default */
+     }
+   }
++
+   init_exp(&e, VNONRELOC, ls->fs->freereg-1);  /* default assignment */
+   luaK_storevar(ls->fs, &lh->v, &e);
+ }
+@@ -1622,16 +1754,26 @@ static void forstat (LexState *ls, int line) {
+   leaveblock(fs);  /* loop scope ('break' jumps to this point) */
+ }
+ 
+-
+-static void test_then_block (LexState *ls, int *escapelist) {
++static char test_then_block (LexState *ls, int *escapelist) {
+   /* test_then_block -> [IF | ELSEIF] cond THEN block */
+   BlockCnt bl;
+   FuncState *fs = ls->fs;
+   expdesc v;
+   int jf;  /* instruction to skip 'then' code (if condition is false) */
+   luaX_next(ls);  /* skip IF or ELSEIF */
++  char is_shorthand = ls->t.token == '(';
++  int line_num = ls->linenumber; // On the same line of shorthand we can have an else block
++
+   expr(ls, &v);  /* read condition */
+-  checknext(ls, TK_THEN);
++  // p8-lua custom if: `if (cond) expr` => `if (cond) then expr end`
++  // This implementation is more permissive than p8's, but I don't know how to do it without refactoring all of this.
++  // This implementation will accept `if (cond) or (cond) expr`, whereas p8 doesn't.
++  if (is_shorthand) {
++      is_shorthand = ls->t.token != TK_THEN;
++  }
++  if(!is_shorthand) {
++      checknext(ls, TK_THEN);
++  }
+   if (ls->t.token == TK_BREAK) {  /* 'if x then break' ? */
+     int line = ls->linenumber;
+     luaK_goiffalse(ls->fs, &v);  /* will jump if condition is true */
+@@ -1641,7 +1783,7 @@ static void test_then_block (LexState *ls, int *escapelist) {
+     while (testnext(ls, ';')) {}  /* skip semicolons */
+     if (block_follow(ls, 0)) {  /* jump is the entire block? */
+       leaveblock(fs);
+-      return;  /* and that is it */
++      return is_shorthand;  /* and that is it */
+     }
+     else  /* must skip over 'then' part if condition is false */
+       jf = luaK_jump(fs);
+@@ -1651,20 +1793,38 @@ static void test_then_block (LexState *ls, int *escapelist) {
+     enterblock(fs, &bl, 0);
+     jf = v.f;
+   }
+-  statlist(ls);  /* 'then' part */
+-  leaveblock(fs);
+-  if (ls->t.token == TK_ELSE ||
+-      ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
+-    luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
+-  luaK_patchtohere(fs, jf);
+-}
++  if (is_shorthand) {
++      statlist_line(ls, line_num);
+ 
++      leaveblock(fs);
++      if (ls->t.token == TK_ELSE && ls->linenumber == line_num)
++          luaK_concat(fs, escapelist, luaK_jump(fs));
++      luaK_patchtohere(fs, jf);
++  }
++  else {
++      statlist(ls);  /* 'then' part */
++
++      leaveblock(fs);
++      if (ls->t.token == TK_ELSE ||
++          ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
++          luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
++      luaK_patchtohere(fs, jf);
++  }
++  return is_shorthand;
++}
+ 
+ static void ifstat (LexState *ls, int line) {
+   /* ifstat -> IF cond THEN block {ELSEIF cond THEN block} [ELSE block] END */
+   FuncState *fs = ls->fs;
+   int escapelist = NO_JUMP;  /* exit list for finished parts */
+-  test_then_block(ls, &escapelist);  /* IF cond THEN block */
++  int line_num = ls->linenumber; // On the same line of shorthand we can have an else block
++  char is_shorthand = test_then_block(ls, &escapelist);  /* IF cond THEN block */
++  if (is_shorthand) {
++    if (ls->linenumber == line_num && testnext(ls, TK_ELSE))
++        statlist_line(ls, line_num);  /* 'else' part */
++    luaK_patchtohere(fs, escapelist);  /* patch escape list to 'if' end */
++    return;
++  }
+   while (ls->t.token == TK_ELSEIF)
+     test_then_block(ls, &escapelist);  /* ELSEIF cond THEN block */
+   if (testnext(ls, TK_ELSE))
+@@ -1722,8 +1882,10 @@ static void localstat (LexState *ls) {
+   int nvars = 0;
+   int nexps;
+   expdesc e;
++  TString* last_varname = NULL;
+   do {
+-    vidx = new_localvar(ls, str_checkname(ls));
++      last_varname = str_checkname(ls);
++    vidx = new_localvar(ls, last_varname);
+     kind = getlocalattribute(ls);
+     getlocalvardesc(fs, vidx)->vd.kind = kind;
+     if (kind == RDKTOCLOSE) {  /* to-be-closed? */
+@@ -1735,6 +1897,27 @@ static void localstat (LexState *ls) {
+   } while (testnext(ls, ','));
+   if (testnext(ls, '='))
+     nexps = explist(ls, &e);
++  else if (tk_is_assignment(ls->t.token)) {
++    printf("lparser - TODO local assignment operator (experimental)\n");
++    // Simulate we've read now "last_varname [op]"
++    fetch_singlevar(ls, last_varname, &e);
++    BinOpr op = assignment_to_opr[ls->t.token - TK_ASSIGN_ADD];
++    while (op != OPR_NOBINOPR) {
++        expdesc v2;
++        int line = ls->linenumber;
++        luaX_next(ls);  /* skip operator */
++        luaK_infix(ls->fs, op, &e);
++        op = subexpr(ls, &v2, priority[op].right);
++        luaK_posfix(ls->fs, op, &e, &v2, line);
++    }
++    if (testnext(ls, ',')) {
++        luaK_exp2nextreg(ls->fs, &e);
++        nexps = explist(ls, &e) + 1;
++    }
++    else {
++        nexps = 1;
++    }
++  }
+   else {
+     e.k = VVOID;
+     nexps = 0;
+@@ -1780,13 +1963,12 @@ static void funcstat (LexState *ls, int line) {
+   luaK_fixline(ls->fs, line);  /* definition "happens" in the first line */
+ }
+ 
+-
+ static void exprstat (LexState *ls) {
+   /* stat -> func | assignment */
+   FuncState *fs = ls->fs;
+   struct LHS_assign v;
+   suffixedexp(ls, &v.v);
+-  if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
++  if (tk_is_assignment(ls->t.token) || ls->t.token == ',') { /* stat -> assignment ? */
+     v.prev = NULL;
+     restassign(ls, &v, 1);
+   }
+@@ -1799,6 +1981,37 @@ static void exprstat (LexState *ls) {
+ }
+ 
+ 
++static void retstat_line(LexState* ls, int line_num) {
++    /* stat -> RETURN [explist] [';'] */
++    FuncState* fs = ls->fs;
++    expdesc e;
++    int nret;  /* number of values being returned */
++    int first = luaY_nvarstack(fs);  /* first slot to be returned */
++    if (block_follow(ls, 1) || ls->t.token == ';' || ls->linenumber != line_num)
++        nret = 0;  /* return no values */
++    else {
++        nret = explist(ls, &e);  /* optional return values */
++        if (hasmultret(e.k)) {
++            luaK_setmultret(fs, &e);
++            if (e.k == VCALL && nret == 1 && !fs->bl->insidetbc) {  /* tail call? */
++                SET_OPCODE(getinstruction(fs, &e), OP_TAILCALL);
++                lua_assert(GETARG_A(getinstruction(fs, &e)) == luaY_nvarstack(fs));
++            }
++            nret = LUA_MULTRET;  /* return all values */
++        }
++        else {
++            if (nret == 1)  /* only one single value? */
++                first = luaK_exp2anyreg(fs, &e);  /* can use original slot */
++            else {  /* values must go to the top of the stack */
++                luaK_exp2nextreg(fs, &e);
++                lua_assert(nret == fs->freereg - first);
++            }
++        }
++    }
++    luaK_ret(fs, first, nret);
++    testnext(ls, ';');  /* skip optional semicolon */
++}
++
+ static void retstat (LexState *ls) {
+   /* stat -> RETURN [explist] [';'] */
+   FuncState *fs = ls->fs;
+diff --git a/lua/lstrlib.c b/lua/lstrlib.c
+index 47e5b27..9f46db6 100644
+--- a/lua/lstrlib.c
++++ b/lua/lstrlib.c
+@@ -1030,25 +1030,8 @@ static int num2straux (char *buff, int sz, lua_Number x) {
+     return l_sprintf(buff, sz, LUA_NUMBER_FMT "x0p+0", (LUAI_UACNUMBER)x);
+   }
+   else {
+-    int e;
+-    lua_Number m = l_mathop(frexp)(x, &e);  /* 'x' fraction and exponent */
+-    int n = 0;  /* character count */
+-    if (m < 0) {  /* is number negative? */
+-      buff[n++] = '-';  /* add sign */
+-      m = -m;  /* make it positive */
+-    }
+-    buff[n++] = '0'; buff[n++] = 'x';  /* add "0x" */
+-    m = adddigit(buff, n++, m * (1 << L_NBFD));  /* add first digit */
+-    e -= L_NBFD;  /* this digit goes before the radix point */
+-    if (m > 0) {  /* more digits? */
+-      buff[n++] = lua_getlocaledecpoint();  /* add radix point */
+-      do {  /* add as many digits as needed */
+-        m = adddigit(buff, n++, m * 16);
+-      } while (m > 0);
+-    }
+-    n += l_sprintf(buff + n, sz - n, "p%+d", e);  /* add exponent */
+-    lua_assert(n < sz);
+-    return n;
++    printf("lstrlib: Float formatting disabled");
++    return 0;
+   }
+ }
+ 
+diff --git a/lua/ltable.c b/lua/ltable.c
+index 33c1ab3..957adb9 100644
+--- a/lua/ltable.c
++++ b/lua/ltable.c
+@@ -101,6 +101,11 @@ static const Node dummynode_ = {
+ static const TValue absentkey = {ABSTKEYCONSTANT};
+ 
+ 
++#if !defined(l_hashfloat)
++#define orig_lua_numbertointeger(n,p) \
++  ((n) >= (float)(LUA_MININTEGER) && \
++   (n) < -(float)(LUA_MININTEGER) && \
++      (*(p) = (int)(n), 1))
+ 
+ /*
+ ** Hash for floating-point numbers.
+@@ -115,19 +120,22 @@ static const TValue absentkey = {ABSTKEYCONSTANT};
+ ** adding 'i'; the use of '~u' (instead of '-u') avoids problems with
+ ** INT_MIN.
+ */
+-#if !defined(l_hashfloat)
++static int l_orighashfloat(float n) {
++    int i;
++    lua_Integer ni;
++    n = frexp(n, &i) * -INT_MIN;
++    if (!orig_lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
++        return 0;
++    }
++    else {  /* normal case */
++        unsigned int u = cast_uint(i) + cast_uint(ni);
++        return cast_int(u <= cast_uint(INT_MAX) ? u : ~u);
++    }
++}
++
+ static int l_hashfloat (lua_Number n) {
+-  int i;
+-  lua_Integer ni;
+-  n = l_mathop(frexp)(n, &i) * -cast_num(INT_MIN);
+-  if (!lua_numbertointeger(n, &ni)) {  /* is 'n' inf/-inf/NaN? */
+-    lua_assert(luai_numisnan(n) || l_mathop(fabs)(n) == cast_num(HUGE_VAL));
+-    return 0;
+-  }
+-  else {  /* normal case */
+-    unsigned int u = cast_uint(i) + cast_uint(ni);
+-    return cast_int(u <= cast_uint(INT_MAX) ? u : ~u);
+-  }
++    int hash = l_orighashfloat(fix16_to_float(n));
++    return hash;
+ }
+ #endif
+ 
+diff --git a/lua/ltm.c b/lua/ltm.c
+index b657b78..f49f04c 100644
+--- a/lua/ltm.c
++++ b/lua/ltm.c
+@@ -41,7 +41,9 @@ void luaT_init (lua_State *L) {
+     "__gc", "__mode", "__len", "__eq",
+     "__add", "__sub", "__mul", "__mod", "__pow",
+     "__div", "__idiv",
+-    "__band", "__bor", "__bxor", "__shl", "__shr",
++    "__band", "__bor", "__bxor",
++    "__rotl", "__rotr", "__lshr",
++    "__shl", "__shr",
+     "__unm", "__bnot", "__lt", "__le",
+     "__concat", "__call", "__close"
+   };
+diff --git a/lua/ltm.h b/lua/ltm.h
+index 73b833c..5d48ec2 100644
+--- a/lua/ltm.h
++++ b/lua/ltm.h
+@@ -32,6 +32,9 @@ typedef enum {
+   TM_BAND,
+   TM_BOR,
+   TM_BXOR,
++  TM_ROTL,
++  TM_ROTR,
++  TM_LSHR,
+   TM_SHL,
+   TM_SHR,
+   TM_UNM,
+diff --git a/lua/lua.h b/lua/lua.h
+index 820535b..ed5e90a 100644
+--- a/lua/lua.h
++++ b/lua/lua.h
+@@ -212,10 +212,13 @@ LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
+ #define LUA_OPBAND	7
+ #define LUA_OPBOR	8
+ #define LUA_OPBXOR	9
+-#define LUA_OPSHL	10
+-#define LUA_OPSHR	11
+-#define LUA_OPUNM	12
+-#define LUA_OPBNOT	13
++#define LUA_OPROTL	10
++#define LUA_OPROTR	11
++#define LUA_OPLSHR	12
++#define LUA_OPSHL	13
++#define LUA_OPSHR	14
++#define LUA_OPUNM	15
++#define LUA_OPBNOT	16
+ 
+ LUA_API void  (lua_arith) (lua_State *L, int op);
+ 
+diff --git a/lua/lua.txt b/lua/lua.txt
+new file mode 100644
+index 0000000..f6386bb
+--- /dev/null
++++ b/lua/lua.txt
+@@ -0,0 +1,42 @@
++llex => Tokens
++    luaX_next
++
++lparser => Grammar
++    funcargs
++    => subexpr => getunopr
++
++lcode => bytecode generator
++
++Original program name string:
++    LexState->z->data
++
++token TK_NAME
++    seminfo->ts => Token string
++        ts = luaX_newstring(ls, luaZ_buffer(ls->buf), luaZ_bufferlen(ls->buff)) // @llex.c `int llex (LexState *ls`
++ls->t.token = TK_NAME
++ls->t.seminfo.ts
++
++Parser the main function that parses each statement is:
++static void statement (LexState *ls) 
++(called from statlist)
++
++Statement:
++print("something")
++
++statement -> exprstat
++    -> suffixedexp 
++        -> primaryexp -> singlevar
++            varname = str_checkname(ls) -> ls->t.seminfo.ts // For some reason it's different from the original string!!
++            -> singlvaraux: Finds for variable with varname in the current scope. Global => VVOID (not found)
++            FuncState *fs = ls->fs;
++            expdesc var, key;
++            singlevaraux(fs, ls->envn, &var, 1) // Gets the global environment, puts into var
++            codestring(&key, varname);
++            luaK_indexed(fs, &var, &key);
++        -> funcargs
++            expdesc args
++            -> explist(ls, &args) => (ls, v)
++                -> expr(ls, v) -> subexpr(ls, v, 0)
++            -> init_exp(f)
++        luaK_codeABC(fs, OP_CALL, base, nparams+1, 2)
++    /* call statement uses no results */
+\ No newline at end of file
+diff --git a/lua/lua.vcxproj b/lua/lua.vcxproj
+index 06ead4a..644753a 100644
+--- a/lua/lua.vcxproj
++++ b/lua/lua.vcxproj
+@@ -45,6 +45,7 @@
+   <PropertyGroup Label="UserMacros" />
+   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+     <LinkIncremental>true</LinkIncremental>
++    <IncludePath>../libfixmath;$(IncludePath)</IncludePath>
+   </PropertyGroup>
+   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+     <LinkIncremental>false</LinkIncremental>
+@@ -149,6 +150,11 @@
+     <ClCompile Include="lvm.c" />
+     <ClCompile Include="lzio.c" />
+   </ItemGroup>
++  <ItemGroup>
++    <ProjectReference Include="..\libfixmath\libfixmath.vcxproj">
++      <Project>{f5e5bb9e-c7b8-4b93-ac74-02ef4d3f3c6a}</Project>
++    </ProjectReference>
++  </ItemGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <ImportGroup Label="ExtensionTargets">
+   </ImportGroup>
+diff --git a/lua/luaconf.h b/lua/luaconf.h
+index 28b265d..4b861be 100644
+--- a/lua/luaconf.h
++++ b/lua/luaconf.h
+@@ -10,7 +10,7 @@
+ 
+ #include <limits.h>
+ #include <stddef.h>
+-
++#include <fix16.h>
+ 
+ /*
+ ** ===================================================================
+@@ -106,12 +106,11 @@
+ #define LUA_FLOAT_FLOAT		1
+ #define LUA_FLOAT_DOUBLE	2
+ #define LUA_FLOAT_LONGDOUBLE	3
+-
++#define LUA_FIXED_16	4
+ 
+ /* Default configuration ('long long' and 'double', for 64-bit Lua) */
+ #define LUA_INT_DEFAULT		LUA_INT_LONGLONG
+-#define LUA_FLOAT_DEFAULT	LUA_FLOAT_DOUBLE
+-
++#define LUA_FLOAT_DEFAULT	LUA_FIXED_16
+ 
+ /*
+ @@ LUA_32BITS enables Lua with 32-bit integers and 32-bit floats.
+@@ -404,7 +403,7 @@
+ #define l_floor(x)		(l_mathop(floor)(x))
+ 
+ #define lua_number2str(s,sz,n)  \
+-	l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
++	fix16_to_str(n, s)
+ 
+ /*
+ @@ lua_numbertointeger converts a float number with an integral value
+@@ -416,10 +415,7 @@
+ ** may have an ill-defined value.)
+ */
+ #define lua_numbertointeger(n,p) \
+-  ((n) >= (LUA_NUMBER)(LUA_MININTEGER) && \
+-   (n) < -(LUA_NUMBER)(LUA_MININTEGER) && \
+-      (*(p) = (LUA_INTEGER)(n), 1))
+-
++  (*(p) = (LUA_INTEGER)fix16_to_int(n), 1)
+ 
+ /* now the variable definitions */
+ 
+@@ -469,6 +465,20 @@
+ 
+ #define lua_str2number(s,p)	strtod((s), (p))
+ 
++#elif LUA_FLOAT_TYPE == LUA_FIXED_16
++
++#define LUA_NUMBER	fix16_t
++
++#define LUAI_UACNUMBER	fix16_t
++
++#define LUA_NUMBER_FRMLEN	""
++#define LUA_NUMBER_FMT		"%i.%i"
++
++#define l_mathop(op)		fix16_##op
++
++#define l_floatatt(n)		(DBL_##n)
++#define lua_str2number(s,p)	fix16_from_str((s), (p))
++
+ #else						/* }{ */
+ 
+ #error "numeric float type not defined"
+@@ -589,18 +599,6 @@
+ #define l_sprintf(s,sz,f,i)	((void)(sz), sprintf(s,f,i))
+ #endif
+ 
+-
+-/*
+-@@ lua_strx2number converts a hexadecimal numeral to a number.
+-** In C99, 'strtod' does that conversion. Otherwise, you can
+-** leave 'lua_strx2number' undefined and Lua will provide its own
+-** implementation.
+-*/
+-#if !defined(LUA_USE_C89)
+-#define lua_strx2number(s,p)		lua_str2number(s,p)
+-#endif
+-
+-
+ /*
+ @@ lua_pointer2str converts a pointer to a readable string in a
+ ** non-specified way.
+@@ -619,21 +617,6 @@
+ 	((void)L, l_sprintf(b,sz,f,(LUAI_UACNUMBER)(n)))
+ #endif
+ 
+-
+-/*
+-** 'strtof' and 'opf' variants for math functions are not valid in
+-** C89. Otherwise, the macro 'HUGE_VALF' is a good proxy for testing the
+-** availability of these variants. ('math.h' is already included in
+-** all files that use these macros.)
+-*/
+-#if defined(LUA_USE_C89) || (defined(HUGE_VAL) && !defined(HUGE_VALF))
+-#undef l_mathop  /* variants not available */
+-#undef lua_str2number
+-#define l_mathop(op)		(lua_Number)op  /* no variant */
+-#define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
+-#endif
+-
+-
+ /*
+ @@ LUA_KCONTEXT is the type of the context ('ctx') for continuation
+ ** functions.  It must be a numerical type; Lua will use 'intptr_t' if
+diff --git a/lua/lvm.c b/lua/lvm.c
+index c9729bc..f940340 100644
+--- a/lua/lvm.c
++++ b/lua/lvm.c
+@@ -37,7 +37,7 @@
+ */
+ #if !defined(LUA_USE_JUMPTABLE)
+ #if defined(__GNUC__)
+-#define LUA_USE_JUMPTABLE	1
++#define LUA_USE_JUMPTABLE	0
+ #else
+ #define LUA_USE_JUMPTABLE	0
+ #endif
+@@ -54,30 +54,7 @@
+ ** can be converted to a float without rounding. Used in comparisons.
+ */
+ 
+-/* number of bits in the mantissa of a float */
+-#define NBM		(l_floatatt(MANT_DIG))
+-
+-/*
+-** Check whether some integers may not fit in a float, testing whether
+-** (maxinteger >> NBM) > 0. (That implies (1 << NBM) <= maxinteger.)
+-** (The shifts are done in parts, to avoid shifting by more than the size
+-** of an integer. In a worst case, NBM == 113 for long double and
+-** sizeof(long) == 32.)
+-*/
+-#if ((((LUA_MAXINTEGER >> (NBM / 4)) >> (NBM / 4)) >> (NBM / 4)) \
+-	>> (NBM - (3 * (NBM / 4))))  >  0
+-
+-/* limit for integers that fit in a float */
+-#define MAXINTFITSF	((lua_Unsigned)1 << NBM)
+-
+-/* check whether 'i' is in the interval [-MAXINTFITSF, MAXINTFITSF] */
+-#define l_intfitsf(i)	((MAXINTFITSF + l_castS2U(i)) <= (2 * MAXINTFITSF))
+-
+-#else  /* all integers fit in a float precisely */
+-
+-#define l_intfitsf(i)	1
+-
+-#endif
++#define l_intfitsf(i)	(i >= fix16_minimum && i <= fix16_maximum)
+ 
+ 
+ /*
+@@ -761,24 +738,51 @@ lua_Number luaV_modf (lua_State *L, lua_Number m, lua_Number n) {
+ 
+ 
+ /* number of bits in an integer */
+-#define NBITS	cast_int(sizeof(lua_Integer) * CHAR_BIT)
++#define NBITS	cast_int(sizeof(lua_Number) * CHAR_BIT)
+ 
+ /*
+ ** Shift left operation. (Shift right just negates 'y'.)
+ */
+ #define luaV_shiftr(x,y)	luaV_shiftl(x,-(y))
+ 
+-lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
++lua_Number luaV_shiftl (lua_Number x, lua_Integer y) {
+   if (y < 0) {  /* shift right? */
+     if (y <= -NBITS) return 0;
+-    else return intop(>>, x, -y);
++    else return x >> -y;
+   }
+   else {  /* shift left */
+     if (y >= NBITS) return 0;
+-    else return intop(<<, x, y);
++    else return x << y;
+   }
+ }
+ 
++LUAI_FUNC lua_Number luaV_lshiftr(lua_Number x, lua_Integer y)
++{
++    if (y < 0) {
++        return luaV_shiftr(x, y);
++    }
++    return (lua_Number)((unsigned int)x >> y);
++}
++
++LUAI_FUNC lua_Number luaV_rotl(lua_Number x, lua_Integer y)
++{
++    if (y < 0) {
++        return luaV_rotr(x, -y);
++    }
++    unsigned int shifted = x << y;
++    unsigned int rotated = (unsigned int)x >> (32 - y);
++    return (lua_Number)(shifted | rotated);
++}
++
++LUAI_FUNC lua_Number luaV_rotr(lua_Number x, lua_Integer y)
++{
++    if (y < 0) {
++        return luaV_rotl(x, -y);
++    }
++    unsigned int shifted = (unsigned int)x >> y;
++    unsigned int rotated = (unsigned int)x << (32 - y);
++    return (lua_Number)(shifted | rotated);
++}
+ 
+ /*
+ ** create a new Lua closure, push it in the stack, and initialize
+@@ -873,9 +877,9 @@ void luaV_finishOp (lua_State *L) {
+ #define l_addi(L,a,b)	intop(+, a, b)
+ #define l_subi(L,a,b)	intop(-, a, b)
+ #define l_muli(L,a,b)	intop(*, a, b)
+-#define l_band(a,b)	intop(&, a, b)
+-#define l_bor(a,b)	intop(|, a, b)
+-#define l_bxor(a,b)	intop(^, a, b)
++#define l_band(a,b) a&b
++#define l_bor(a,b)	a|b
++#define l_bxor(a,b)	a^b
+ 
+ #define l_lti(a,b)	(a < b)
+ #define l_lei(a,b)	(a <= b)
+@@ -965,10 +969,9 @@ void luaV_finishOp (lua_State *L) {
+ #define op_bitwiseK(L,op) {  \
+   TValue *v1 = vRB(i);  \
+   TValue *v2 = KC(i);  \
+-  lua_Integer i1;  \
+-  lua_Integer i2 = ivalue(v2);  \
+-  if (tointegerns(v1, &i1)) {  \
+-    pc++; setivalue(s2v(ra), op(i1, i2));  \
++  lua_Number i1; lua_Number i2;  \
++  if (tonumberns(v1, i1) && tonumberns(v2, i2)) {  \
++    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
+   }}
+ 
+ 
+@@ -978,11 +981,21 @@ void luaV_finishOp (lua_State *L) {
+ #define op_bitwise(L,op) {  \
+   TValue *v1 = vRB(i);  \
+   TValue *v2 = vRC(i);  \
+-  lua_Integer i1; lua_Integer i2;  \
+-  if (tointegerns(v1, &i1) && tointegerns(v2, &i2)) {  \
+-    pc++; setivalue(s2v(ra), op(i1, i2));  \
++  lua_Number i1; lua_Number i2;  \
++  if (tonumberns(v1, i1) && tonumberns(v2, i2)) {  \
++    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
+   }}
+ 
++/*
++** Bitwise int operations with register operands.
++*/
++#define op_bitwiseI(L,op) {  \
++  TValue *v1 = vRB(i);  \
++  TValue *v2 = vRC(i);  \
++  lua_Number i1; lua_Integer i2;  \
++  if (tonumberns(v1, i1) && tointegerns(v2, &i2)) {  \
++    pc++; setfltvalue(s2v(ra), op(i1, i2));  \
++  }}
+ 
+ /*
+ ** Order operations with register operands. 'opn' actually works
+@@ -1402,8 +1415,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
+       vmcase(OP_SHRI) {
+         TValue *rb = vRB(i);
+         int ic = GETARG_sC(i);
+-        lua_Integer ib;
+-        if (tointegerns(rb, &ib)) {
++        lua_Number ib;
++        if (tonumberns(rb, ib)) {
+           pc++; setivalue(s2v(ra), luaV_shiftl(ib, -ic));
+         }
+         vmbreak;
+@@ -1411,8 +1424,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
+       vmcase(OP_SHLI) {
+         TValue *rb = vRB(i);
+         int ic = GETARG_sC(i);
+-        lua_Integer ib;
+-        if (tointegerns(rb, &ib)) {
++        lua_Number ib;
++        if (tonumberns(rb, ib)) {
+           pc++; setivalue(s2v(ra), luaV_shiftl(ic, ib));
+         }
+         vmbreak;
+@@ -1458,13 +1471,25 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
+         vmbreak;
+       }
+       vmcase(OP_SHR) {
+-        op_bitwise(L, luaV_shiftr);
++        op_bitwiseI(L, luaV_shiftr);
+         vmbreak;
+       }
+       vmcase(OP_SHL) {
+-        op_bitwise(L, luaV_shiftl);
++        op_bitwiseI(L, luaV_shiftl);
+         vmbreak;
+       }
++      vmcase(OP_LSHR) {
++          op_bitwiseI(L, luaV_lshiftr);
++          vmbreak;
++      }
++      vmcase(OP_ROTR) {
++          op_bitwiseI(L, luaV_rotr);
++          vmbreak;
++      }
++      vmcase(OP_ROTL) {
++          op_bitwiseI(L, luaV_rotl);
++          vmbreak;
++      }
+       vmcase(OP_MMBIN) {
+         Instruction pi = *(pc - 2);  /* original arith. expression */
+         TValue *rb = vRB(i);
+diff --git a/lua/lvm.h b/lua/lvm.h
+index 1bc16f3..2475e0e 100644
+--- a/lua/lvm.h
++++ b/lua/lvm.h
+@@ -33,7 +33,7 @@
+ ** integral values)
+ */
+ #if !defined(LUA_FLOORN2I)
+-#define LUA_FLOORN2I		F2Ieq
++#define LUA_FLOORN2I		F2Ifloor
+ #endif
+ 
+ 
+@@ -130,7 +130,10 @@ LUAI_FUNC void luaV_concat (lua_State *L, int total);
+ LUAI_FUNC lua_Integer luaV_idiv (lua_State *L, lua_Integer x, lua_Integer y);
+ LUAI_FUNC lua_Integer luaV_mod (lua_State *L, lua_Integer x, lua_Integer y);
+ LUAI_FUNC lua_Number luaV_modf (lua_State *L, lua_Number x, lua_Number y);
+-LUAI_FUNC lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y);
++LUAI_FUNC lua_Number luaV_shiftl (lua_Number x, lua_Integer y);
++LUAI_FUNC lua_Number luaV_lshiftr(lua_Number x, lua_Integer y);
++LUAI_FUNC lua_Number luaV_rotl(lua_Number x, lua_Integer y);
++LUAI_FUNC lua_Number luaV_rotr(lua_Number x, lua_Integer y);
+ LUAI_FUNC void luaV_objlen (lua_State *L, StkId ra, const TValue *rb);
+ 
+ #endif
+diff --git a/lua/mac.sh b/lua/mac.sh
+index 9ef6939..9ca72a8 100755
+--- a/lua/mac.sh
++++ b/lua/mac.sh
+@@ -4,6 +4,9 @@ mkdir $intdir
+ 
+ for file in *.c; do
+   filename="${file%.*}"
+-  echo "clang -c -o \"$intdir/$filename.o\" $file"
+-  clang -c -o "$intdir/$filename.o" $file
++  if [ "$file" -nt "$intdir/$filename.o" ]
++  then
++    echo "clang -I\"../libfixmath\" -c -o \"$intdir/$filename.o\" $file"
++    clang -I"../libfixmath" -c -o "$intdir/$filename.o" $file
++  fi
+ done
+diff --git a/lua/plusequals-5.4.patch b/lua/plusequals-5.4.patch
+new file mode 100644
+index 0000000..ee7f0a9
+--- /dev/null
++++ b/lua/plusequals-5.4.patch
+@@ -0,0 +1,205 @@
++diff -urN lua-5.4.0-beta/src/llex.c lua-5.4-test/src/llex.c
++Original URI http://lua-users.org/files/wiki_insecure/power_patches/5.4/plusequals-5.4.patch
++Referenced by http://lua-users.org/wiki/LuaPowerPatches
++Author Dave Hayden, based from Sven Olsen's patch
++More literature https://github.com/dibyendumajumdar/ravi/blob/master/readthedocs/lua-parser.rst
++Recovered on wayback machine https://web.archive.org/web/20210518114116/http://lua-users.org/files/wiki_insecure/power_patches/5.4/plusequals-5.4.patch
++
++--- lua-5.4.0-beta/src/llex.c	2019-09-30 18:52:15.000000000 -0500
+++++ lua-5.4-test/src/llex.c	2020-01-03 22:39:27.000000000 -0600
++@@ -44,7 +44,8 @@
++     "return", "then", "true", "until", "while",
++     "//", "..", "...", "==", ">=", "<=", "~=",
++     "<<", ">>", "::", "<eof>",
++-    "<number>", "<integer>", "<name>", "<string>"
+++    "<number>", "<integer>", "<name>", "<string>",
+++    "+=", "-=", "*=", "/=", "<<=", ">>=", "&=", "|=", "^="
++ };
++ 
++ 
++@@ -453,6 +454,7 @@
++       }
++       case '-': {  /* '-' or '--' (comment) */
++         next(ls);
+++        if (check_next1(ls, '=')) return TK_MINUSEQ;
++         if (ls->current != '-') return '-';
++         /* else is a comment */
++         next(ls);
++@@ -488,20 +490,52 @@
++       case '<': {
++         next(ls);
++         if (check_next1(ls, '=')) return TK_LE;
++-        else if (check_next1(ls, '<')) return TK_SHL;
+++        else if (check_next1(ls, '<')) {
+++          if ( check_next1(ls, '=') ) return TK_SHLEQ;
+++          else return TK_SHL;
+++        }
++         else return '<';
++       }
++       case '>': {
++         next(ls);
++         if (check_next1(ls, '=')) return TK_GE;
++-        else if (check_next1(ls, '>')) return TK_SHR;
+++        else if (check_next1(ls, '>')) {
+++          if ( check_next1(ls, '=') ) return TK_SHREQ;
+++          else return TK_SHR;
+++        }
++         else return '>';
++       }
++       case '/': {
++         next(ls);
++         if (check_next1(ls, '/')) return TK_IDIV;
+++        if (check_next1(ls, '=')) return TK_DIVEQ;
++         else return '/';
++       }
+++      case '+': {
+++        next(ls);
+++        if (check_next1(ls, '=')) return TK_PLUSEQ;
+++        else return '+';
+++      }
+++      case '*': {
+++        next(ls);
+++        if (check_next1(ls, '=')) return TK_MULTEQ;
+++        else return '*';
+++      }
+++      case '&': {
+++        next(ls);
+++        if (check_next1(ls, '=')) return TK_BANDEQ;
+++        else return '*';
+++      }
+++      case '|': {
+++        next(ls);
+++        if (check_next1(ls, '=')) return TK_BOREQ;
+++        else return '|';
+++      }
+++      case '^': {
+++        next(ls);
+++        if (check_next1(ls, '=')) return TK_BXOREQ;
+++        else return '^';
+++      }
++       case '~': {
++         next(ls);
++         if (check_next1(ls, '=')) return TK_NE;
++diff -urN lua-5.4.0-beta/src/llex.h lua-5.4-test/src/llex.h
++--- lua-5.4.0-beta/src/llex.h	2019-09-30 18:52:15.000000000 -0500
+++++ lua-5.4-test/src/llex.h	2019-12-26 18:33:52.000000000 -0600
++@@ -33,7 +33,8 @@
++   TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
++   TK_SHL, TK_SHR,
++   TK_DBCOLON, TK_EOS,
++-  TK_FLT, TK_INT, TK_NAME, TK_STRING
+++  TK_FLT, TK_INT, TK_NAME, TK_STRING,
+++  TK_PLUSEQ, TK_MINUSEQ, TK_MULTEQ, TK_DIVEQ, TK_SHLEQ, TK_SHREQ, TK_BANDEQ, TK_BOREQ, TK_BXOREQ
++ };
++ 
++ /* number of reserved words */
++diff -urN lua-5.4.0-beta/src/lparser.c lua-5.4-test/src/lparser.c
++--- lua-5.4.0-beta/src/lparser.c	2019-10-08 05:18:16.000000000 -0500
+++++ lua-5.4-test/src/lparser.c	2020-01-03 22:46:21.000000000 -0600
++@@ -1206,6 +1206,15 @@
++     case TK_GE: return OPR_GE;
++     case TK_AND: return OPR_AND;
++     case TK_OR: return OPR_OR;
+++    case TK_PLUSEQ: return OPR_ADD;
+++    case TK_MINUSEQ: return OPR_SUB;
+++    case TK_MULTEQ: return OPR_MUL;
+++    case TK_DIVEQ: return OPR_DIV;
+++    case TK_SHLEQ: return OPR_SHL;
+++    case TK_SHREQ: return OPR_SHR;
+++    case TK_BANDEQ: return OPR_BAND;
+++    case TK_BOREQ: return OPR_BOR;
+++    case TK_BXOREQ: return OPR_BXOR;
++     default: return OPR_NOBINOPR;
++   }
++ }
++@@ -1345,12 +1354,55 @@
++   }
++ }
++ 
+++
+++static void compound_assignment(LexState *ls, expdesc* v) {
+++  BinOpr op = getbinopr(ls->t.token);
+++  FuncState * fs=ls->fs;
+++  int tolevel=fs->nactvar;
+++  int old_free=fs->freereg;
+++  expdesc e,infix;
+++  int line=ls->linenumber;
+++  int nextra, i;
+++  luaX_next(ls);
+++
+++  /* create temporary local variables to lock up any registers needed
+++     by indexed lvalues. */
+++  lu_byte top=fs->nactvar;
+++  /* protect both the table and index result registers,
+++  ** ensuring that they won't be overwritten prior to the
+++  ** storevar calls. */
+++  if (vkisindexed(v->k)) {
+++    if (v->u.ind.t>=top)
+++      top = v->u.ind.t+1;
+++    if (v->k == VINDEXED && v->u.ind.idx >= top)
+++      top = v->u.ind.idx+1;
+++  }
+++  nextra=top-fs->nactvar;
+++  if(nextra) {
+++    for(i=0;i<nextra;i++) {
+++      new_localvarliteral(ls,"(temp)");
+++    }
+++    adjustlocalvars(ls,nextra);
+++  }
+++
+++  infix = *v;
+++  luaK_infix(fs,op,&infix);
+++  expr(ls, &e);
+++  luaK_posfix(fs, op, &infix, &e, line);
+++  luaK_storevar(fs, v, &infix);
+++  removevars(fs,tolevel);
+++
+++  if(old_free<fs->freereg) {
+++    fs->freereg=old_free;
+++  }
+++}
+++
++ /*
++ ** Parse and compile a multiple assignment. The first "variable"
++ ** (a 'suffixedexp') was already read by the caller.
++ **
++ ** assignment -> suffixedexp restassign
++-** restassign -> ',' suffixedexp restassign | '=' explist
+++** restassign -> ',' suffixedexp restassign | '=' explist | opeq expr
++ */
++ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
++   expdesc e;
++@@ -1366,10 +1418,8 @@
++     restassign(ls, &nv, nvars+1);
++     leavelevel(ls);
++   }
++-  else {  /* restassign -> '=' explist */
++-    int nexps;
++-    checknext(ls, '=');
++-    nexps = explist(ls, &e);
+++  else if (testnext(ls, '=')) {  /* restassign -> '=' explist */
+++    int nexps = explist(ls, &e);
++     if (nexps != nvars)
++       adjust_assign(ls, nvars, nexps, &e);
++     else {
++@@ -1378,6 +1428,11 @@
++       return;  /* avoid default */
++     }
++   }
+++  else if ( ls->t.token >= TK_PLUSEQ && ls->t.token <= TK_BXOREQ ) { /* restassign -> opeq expr */
+++	  check_condition(ls, nvars == 1, "compound assignment not allowed on tuples");
+++	  compound_assignment(ls,&lh->v);
+++      return;
+++  }
++   init_exp(&e, VNONRELOC, ls->fs->freereg-1);  /* default assignment */
++   luaK_storevar(ls->fs, &lh->v, &e);
++ }
++@@ -1816,7 +1871,7 @@
++   FuncState *fs = ls->fs;
++   struct LHS_assign v;
++   suffixedexp(ls, &v.v);
++-  if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
+++  if (ls->t.token == '=' || ls->t.token == ',' || (ls->t.token >= TK_PLUSEQ && ls->t.token <= TK_BXOREQ) ) { /* stat -> assignment ? */
++     v.prev = NULL;
++     restassign(ls, &v, 1);
++   }
+\ No newline at end of file
