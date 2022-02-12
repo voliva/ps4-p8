@@ -399,15 +399,22 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
         int c;  /* final character to be saved */
         save_and_next(ls);  /* keep '\\' for error messages */
         switch (ls->current) {
+          case '\0': c = '\0'; goto read_save;
+          case '*': c = 1; goto read_save;
+          case '#': c = 2; goto read_save;
+          case '-': c = 3; goto read_save;
+          case '|': c = 4; goto read_save;
+          case '+': c = 5; goto read_save;
+          case '^': c = 6; goto read_save;
           case 'a': c = '\a'; goto read_save;
           case 'b': c = '\b'; goto read_save;
-          case 'f': c = '\f'; goto read_save;
-          case 'n': c = '\n'; goto read_save;
-          case 'r': c = '\r'; goto read_save;
           case 't': c = '\t'; goto read_save;
+          case 'n': c = '\n'; goto read_save;
           case 'v': c = '\v'; goto read_save;
+          case 'f': c = '\f'; goto read_save;
+          case 'r': c = '\r'; goto read_save;
           case 'x': c = readhexaesc(ls); goto read_save;
-          case 'u': utf8esc(ls);  goto no_save;
+          case 'u': utf8esc(ls); goto no_save;
           case '\n': case '\r':
             inclinenumber(ls); c = '\n'; goto only_save;
           case '\\': case '\"': case '\'':

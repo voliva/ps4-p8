@@ -247,53 +247,7 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
 
 #define SPECIAL_CHAR_OFFSET 0x7E
 
-char command_chars[] = {
-    '*', '#', '-', '|', '+', '^'
-};
-
 #include <algorithm>
-std::string replace_escape_chars(std::string& line) {
-    // Biggest conflict I can think of is print(200\103) prints 1 (integer division), print("200\103") prints 200G (escaped character)
-    // I'll *try* to solve this by tracking if we're inside a string or not.
-    // In fact, P8SCII only applies when we're inside a string! `asdf=123 \n print(200\asdf)` is also an integer division. `\a` is also a P8SCII control character, but because it's not inside a string it doesn't apply
-    // Hopefully keeping track of quote marks will be enough... TODO print("123\"456")
-    unsigned char string_char = 0;
-
-    for (int i = 0; i < line.size(); i++) {
-        if (line[i] == '"' || line[i] == '\'') {
-            if (string_char == line[i]) {
-                string_char = 0;
-                continue;
-            }
-            if (string_char == 0) {
-                string_char = line[i];
-                continue;
-            }
-        }
-
-        if (line[i] == '\\') {
-            if (string_char == 0) {
-                // Assume integer division
-                line.replace(i, 1, "//");
-            } else {
-                // We don't need to replace special characters e.g. \126, lua already parses them correctly
-                char next = line[i + 1];
-                if (next == '\\') {
-                    line.replace(i, 2, "\\\\/" + next);
-                } else {
-                    for (int j = 0; j < 6; j++) {
-                        if (command_chars[j] == next) {
-                            line.replace(i, 1, "\\\\");
-                            i += 2;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return line;
-}
 
 std::string p8lua_to_std_lua(std::string& s) {
     std::ostringstream out;
@@ -309,8 +263,6 @@ std::string p8lua_to_std_lua(std::string& s) {
         if (nilchar != std::string::npos) {
             line = line.substr(0, nilchar);
         }
-
-        line = replace_escape_chars(line);
 
         if (((pos = line.find("for")) != std::string::npos) &&
             ((pos = line.find("do", pos)) != std::string::npos) &&
