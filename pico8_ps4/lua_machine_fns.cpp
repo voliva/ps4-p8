@@ -7,7 +7,7 @@
 
 int peek(lua_State* L)
 {
-	int addr = luaL_checkinteger(L, 1);
+	unsigned short addr = luaL_checkinteger(L, 1);
 	int n = luaL_optinteger(L, 2, 1);
 
 	for (int i = 0; i < n; i++) {
@@ -19,7 +19,7 @@ int peek(lua_State* L)
 
 int peek2(lua_State* L)
 {
-	int addr = luaL_checkinteger(L, 1);
+	unsigned short addr = luaL_checkinteger(L, 1);
 	int n = luaL_optinteger(L, 2, 1);
 
 	for (int i = 0; i < n; i++) {
@@ -32,7 +32,7 @@ int peek2(lua_State* L)
 
 int peek4(lua_State* L)
 {
-	int addr = luaL_checkinteger(L, 1);
+	unsigned short addr = luaL_checkinteger(L, 1);
 	int n = luaL_optinteger(L, 2, 1);
 
 	for (int i = 0; i < n; i++) {
@@ -165,9 +165,9 @@ int cartdata(lua_State* L) {
 }
 
 int memset(lua_State* L) {
-	int destaddr = lua_tointeger(L, 1);
+	unsigned short destaddr = lua_tointeger(L, 1);
 	unsigned char val = lua_tointeger(L, 2);
-	int len = lua_tointeger(L, 3);
+	unsigned short len = lua_tointeger(L, 3);
 
 	for (int i = 0; i < len; i++) {
 		poke_memory(destaddr + i, val);
@@ -228,9 +228,9 @@ int reload(lua_State* L) {
 		return 0;
 	}
 
-	int destaddr = luaL_checkinteger(L, 1);
-	int sourceaddr = luaL_checkinteger(L, 2);
-	int len = luaL_checkinteger(L, 3);
+	unsigned short destaddr = luaL_checkinteger(L, 1);
+	unsigned short sourceaddr = luaL_checkinteger(L, 2);
+	unsigned short len = luaL_checkinteger(L, 3);
 	runningCart->reload(destaddr, sourceaddr, len);
 }
 
@@ -240,9 +240,9 @@ int noop(lua_State* L) {
 }
 
 int _memcpy(lua_State* L) {
-	int destaddr = luaL_checkinteger(L, 1);
-	int sourceaddr = luaL_checkinteger(L, 2);
-	int len = luaL_checkinteger(L, 3);
+	unsigned short destaddr = luaL_checkinteger(L, 1);
+	unsigned short sourceaddr = luaL_checkinteger(L, 2);
+	unsigned short len = luaL_checkinteger(L, 3);
 
 	memcpy(&p8_memory[destaddr], &p8_memory[sourceaddr], len);
 	return 0;
