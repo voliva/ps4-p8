@@ -541,7 +541,12 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '/': {
         next(ls);
-        if (check_next1(ls, '/')) return TK_IDIV;  /* '//' */
+        if (check_next1(ls, '/')) {
+            // Copied from --
+            while (!currIsNewline(ls) && ls->current != EOZ)
+                next(ls);  /* skip until end of line (or end of file) */
+            break;
+        }
         if (check_next1(ls, '=')) return TK_ASSIGN_DIV;
         else return '/';
       }

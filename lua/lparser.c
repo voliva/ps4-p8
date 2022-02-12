@@ -1257,6 +1257,7 @@ static BinOpr getbinopr (int op) {
     case '^': return OPR_POW;
     case '/': return OPR_DIV;
     case TK_IDIV: return OPR_IDIV;
+    case '\\': return OPR_IDIV;
     case '&': return OPR_BAND;
     case '|': return OPR_BOR;
     case '~': return OPR_BXOR;
