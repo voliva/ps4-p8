@@ -179,6 +179,11 @@ int memset(lua_State* L) {
 int stat(lua_State* L) {
 	int n = luaL_checkinteger(L, 1);
 
+	if (n == 6) {
+		lua_pushstring(L, machineState->breadcrumb.c_str());
+		return 1;
+	}
+
 	if (16 <= n && n <= 26) {
 		// Deprecated, bump to 46..56
 		n += 30;
@@ -234,6 +239,15 @@ int reload(lua_State* L) {
 	runningCart->reload(destaddr, sourceaddr, len);
 }
 
+int run(lua_State* L) {
+	std::string val = luaL_optstring(L, 1, "");
+
+	machineState->breadcrumb = val;
+	runningCart->restart();
+
+	return 0;
+}
+
 int noop(lua_State* L) {
 	alert_todo("noop");
 	return 0;
@@ -268,6 +282,7 @@ void load_machine_fns(lua_State* L)
 	register_fn(L, "memset", memset);
 	register_fn(L, "stat", stat);
 	register_fn(L, "reload", reload);
+	register_fn(L, "run", run);
 	register_fn(L, "menuitem", noop);
 	register_fn(L, "memcpy", _memcpy);
 }

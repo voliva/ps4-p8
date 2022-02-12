@@ -17,6 +17,9 @@ MachineState::MachineState()
 			this->btn_countdown[p][b] = 0;
 		}
 	}
+
+	// Breadcrumb should not be reset when initializing
+	this->breadcrumb = "";
 }
 
 void MachineState::initialize()

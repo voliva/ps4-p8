@@ -23,6 +23,8 @@ public:
 	unsigned int getRnd();
 	void setRndSeed(unsigned int n);
 
+	std::string breadcrumb;
+
 private:
 	int btn_countdown[8][8]; // [player] => [button] => frames for next tick. 0 = it wasn't pressed before, 1 = tick now, reset to 5.
 	timestamp_t started;
