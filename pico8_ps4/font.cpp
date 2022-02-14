@@ -158,7 +158,7 @@ int Font::print(std::string c, int x, int y, bool scroll)
 		}
 
 		if (!this->charData.count(character)) {
-			DEBUGLOG << "print: Couldn't find CharData for <" << (unsigned char)(character) << ">" << ENDL;
+			alert_todo("print: Couldn't find CharData for <" + std::to_string((unsigned char)character) + ">");
 			start++;
 			continue;
 		}

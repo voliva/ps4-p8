@@ -1,18 +1,8 @@
 #include "lua_fns.h"
-#include <set>
 #include <sstream>
 #include "log.h"
 
 Log DEBUGLOG = logger.log("LuaFns");
-
-// Global FNs
-std::set<std::string> alerted;
-void alert_todo(std::string key) {
-	if (alerted.count(key) == 0) {
-		DEBUGLOG << "TODO called: " << key << ENDL;
-		alerted.insert(key);
-	}
-}
 
 void register_fn(lua_State* L, std::string name, lua_CFunction fn)
 {

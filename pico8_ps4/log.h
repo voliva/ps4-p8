@@ -26,6 +26,7 @@ public:
 };
 
 extern Logger logger;
+void alert_todo(std::string key);
 
 class Log
 {

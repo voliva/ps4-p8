@@ -1,5 +1,6 @@
 #include "log.h"
 #include <thread>
+#include <set>
 
 #ifdef __PS4__
 #define FILENAME "/data/debug.log"
@@ -44,4 +45,13 @@ Log::Log(std::string name, Logger *logger)
 	this->name = name;
 	this->logger = logger;
 	setvbuf(stdout, NULL, _IONBF, 0);
+}
+
+
+std::set<std::string> alerted;
+void alert_todo(std::string key) {
+	if (alerted.count(key) == 0) {
+		logger << "TODO called: " << key << ENDL;
+		alerted.insert(key);
+	}
 }

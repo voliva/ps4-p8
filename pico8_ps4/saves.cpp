@@ -78,7 +78,7 @@ void SaveManager::persist()
 			fclose(f);
 		}
 		else {
-			DEBUGLOG << "Could not save, error: " << errno << ENDL;
+			alert_todo("Could not save, error: " + std::to_string(errno));
 		}
 	}
 }
