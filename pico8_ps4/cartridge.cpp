@@ -35,7 +35,7 @@ Cartridge* load_from_memory(unsigned char* data, int width, int height) {
     ret->music = std::vector<unsigned char>(p8_bytes.begin() + 0x3100, p8_bytes.begin() + 0x3200);
     ret->sfx = std::vector<unsigned char>(p8_bytes.begin() + 0x3200, p8_bytes.begin() + 0x4300);
 
-    std::vector<unsigned char> compressed_lua(p8_bytes.begin() + 0x4300, p8_bytes.begin() + 0x7FFF);
+    std::vector<unsigned char> compressed_lua(p8_bytes.begin() + 0x4300, p8_bytes.begin() + 0x8000);
     std::string p8_lua = decompress_lua(compressed_lua);
 
     ret->lua = p8lua_to_std_lua(p8_lua);
@@ -187,25 +187,37 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
                 }
 
                 unsigned int offset = br.next_int(offset_bits) + 1;
-                unsigned int length = 3;
-                unsigned char part = 0;
-                do {
-                    part = br.next_u8(3);
-                    length += part;
-                } while (part == 7);
-                unsigned int start = d_i - offset;
 
-                if (length > decompressed_length - d_i) {
-                    logger << "Error when decompressing: it would overflow the buffer" << ENDL;
-                    break;
+                if (offset == 1 && offset_bits == 10) {
+                    char read = 0;
+                    do {
+                        read = br.next_u8(8);
+                        if (read != 0) {
+                            decompressed[d_i++] = read;
+                        }
+                    } while (d_i < decompressed_length && read != 0);
                 }
-                if (start >= d_i) {
-                    logger << "Error when decompressing: reading from uninitialized data" << ENDL;
-                    break;
-                }
+                else {
+                    unsigned int length = 3;
+                    unsigned char part = 0;
+                    do {
+                        part = br.next_u8(3);
+                        length += part;
+                    } while (part == 7);
+                    unsigned int start = d_i - offset;
 
-                for (int i = 0; i < length; i++) {
-                    decompressed[d_i++] = decompressed[start + i];
+                    if (length > decompressed_length - d_i) {
+                        logger << "Error when decompressing: it would overflow the buffer" << ENDL;
+                        break;
+                    }
+                    if (start >= d_i) {
+                        logger << "Error when decompressing: reading from uninitialized data" << ENDL;
+                        break;
+                    }
+
+                    for (int i = 0; i < length; i++) {
+                        decompressed[d_i++] = decompressed[start + i];
+                    }
                 }
             }
         }
