@@ -94,29 +94,89 @@ int Font::print(std::string c, int x, int y, bool scroll)
 	int y_original = y;
 	int prev_width = 0; // Needed for backspace
 	int bg_color = -1;
+	int repeats = 1;
 
 	while (start < c.length()) {
 		max_x = std::max(x, max_x);
 		unsigned char character = c[start];
 
 		// Inline modifiers https://pico-8.fandom.com/wiki/P8SCII_Control_Codes
-		if (character == '\\') {
-			if (c[start + 1] == '-') {
-				int offset = read_param(c[start+2]) - 16;
-				x += offset;
+		if (character == 1) {
+			repeats = read_param(c[start + 1]);
+			start += 2;
+			continue;
+		}
+		if (character == 2) {
+			bg_color = read_param(c[start + 1]);
+			start += 2;
+			continue;
+		}
+		else if (character == 3) {
+			int offset = read_param(c[start + 1]) - 16;
+			x += offset;
+			start += 2;
+			continue;
+		}
+		else if (character == 4) {
+			int offset = read_param(c[start + 1]) - 16;
+			y += offset;
+			start += 2;
+			continue;
+		}
+		else if (character == 5) {
+			int x_offset = read_param(c[start + 1]) - 16;
+			int y_offset = read_param(c[start + 2]) - 16;
+			x += x_offset;
+			y += y_offset;
+			start += 3;
+			continue;
+		}
+		else if (character == 6) {
+			char next = c[++start];
+			if (next == 'c') {
+				alert_todo("font: clear command");
+				int color = read_param(c[start + 1]);
+				renderer->clear_screen(color);
+				x = 0; y = 0;
+				start += 2;
+				continue;
+			}
+			else if (next == 'g') {
+				x = initial_x;
+				y = y_original;
+				start++;
+				continue;
+			}
+			else if (next == 'h') {
+				alert_todo("font: home command");
+				initial_x = x;
+				y_original = y;
+				start++;
+				continue;
+			}
+			else if (next == 'j') {
+				x = read_param(c[start + 1]) * 4;
+				y = read_param(c[start + 2]) * 4;
 				start += 3;
 				continue;
 			}
-			else if (c[start+1] == '#') {
-				bg_color = read_param(c[start + 2]);
-				start += 3;
-				continue;
+			else if (next == '-') {
+				next = c[++start];
+				if (next == '#') {
+					bg_color = -1;
+					start++;
+					continue;
+				}
+				else {
+					alert_todo("font: unknown disable command <" + std::to_string(next) + ">");
+				}
 			}
-			//else if (grapheme == '\*') {
-			//	repeats = read_param(c[start + 1]);
-			//	start += 2;
-			//	continue;
-			//}
+			else {
+				alert_todo("font: unknown command <" + std::to_string(next) + ">");
+			}
+
+			start++;
+			continue;
 		}
 		else if (character == '\a') {
 			// TODO Audio command
@@ -164,15 +224,19 @@ int Font::print(std::string c, int x, int y, bool scroll)
 		}
 
 		CharData c = this->charData[character];
-		if (bg_color >= 0) {
-			unsigned char original_color = p8_memory[ADDR_DS_COLOR];
-			p8_memory[ADDR_DS_COLOR] = bg_color;
-			renderer->draw_rectangle(x-1, y-1, x + 3, y + 5, true);
-			p8_memory[ADDR_DS_COLOR] = original_color;
+		for (int i = 0; i < repeats; i++) {
+			if (bg_color >= 0) {
+				unsigned char original_color = p8_memory[ADDR_DS_COLOR];
+				p8_memory[ADDR_DS_COLOR] = bg_color;
+				renderer->draw_rectangle(x - 1, y - 1, x + c.size, y + 5, true);
+				p8_memory[ADDR_DS_COLOR] = original_color;
+			}
+			this->drawChar(character, x, y);
+			x += c.size + 1;
 		}
-		this->drawChar(character, x, y);
 		prev_width = c.size + 1;
-		x += c.size + 1;
+		repeats = 1;
+
 		start++;
 	}
 
