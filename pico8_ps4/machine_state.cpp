@@ -60,7 +60,7 @@ bool MachineState::isButtonPressed(int p, P8_Key key)
 bool MachineState::wasButtonPressed(int p, P8_Key btn)
 {
 	int cd = this->btn_countdown[p][(int)btn];
-	if (cd <= 1) {
+	if (cd == 0 || cd == 1) {
 		return this->isButtonPressed(p, btn);
 	}
 
