@@ -446,18 +446,22 @@ function foreach(tbl, fn)
 end
 	)V0G0N");
 
-	// It needs to count from the end of the table in case the elements get removed in-between
 	register_lua_fn(L, "all", R"V0G0N(
 function all(t)
 	if t == nil then return function() end end
-	local n = #t
+
+	local prevLength = #t
+	local i = 0
 	return function()
-		local v = nil
-		while n >= 0 and v == nil do
-			v = t[#t-n]
-			n = n - 1
+		if #t >= prevLength then
+			i += 1
 		end
-		return v
+		prevLength = #t
+
+		while i <= #t and t[i] == nil do
+			i += 1
+		end
+		return t[i]
 	end
 end
 	)V0G0N");
