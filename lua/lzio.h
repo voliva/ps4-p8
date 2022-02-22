@@ -19,6 +19,7 @@ typedef struct Zio ZIO;
 
 #define zgetc(z)  (((z)->n--)>0 ?  cast_uchar(*(z)->p++) : luaZ_fill(z))
 
+LUAI_FUNC void luaZ_pushBack(ZIO *z, const char *src, int length);
 
 typedef struct Mbuffer {
   char *buffer;

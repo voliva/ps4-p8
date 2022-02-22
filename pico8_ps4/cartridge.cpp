@@ -10,7 +10,6 @@
 #include "events.h"
 #include "http.h"
 
-std::string p8lua_to_std_lua(std::string& s);
 std::string decompress_lua(std::vector<unsigned char> &compressed_lua);
 
 Cartridge* load_from_memory(unsigned char* data, int width, int height) {
@@ -36,9 +35,7 @@ Cartridge* load_from_memory(unsigned char* data, int width, int height) {
     ret->sfx = std::vector<unsigned char>(p8_bytes.begin() + 0x3200, p8_bytes.begin() + 0x4300);
 
     std::vector<unsigned char> compressed_lua(p8_bytes.begin() + 0x4300, p8_bytes.begin() + 0x8000);
-    std::string p8_lua = decompress_lua(compressed_lua);
-
-    ret->lua = p8lua_to_std_lua(p8_lua);
+    ret->lua = decompress_lua(compressed_lua);
 
     return ret;
 }
@@ -260,31 +257,3 @@ std::string decompress_lua(std::vector<unsigned char> &compressed_lua) {
 #define SPECIAL_CHAR_OFFSET 0x7E
 
 #include <algorithm>
-
-std::string p8lua_to_std_lua(std::string& s) {
-    std::ostringstream out;
-    std::istringstream in(s);
-
-    std::string line;
-    int line_num = 1;
-    while (std::getline(in, line)) {
-        int pos;
-
-        // Remove trailing \0
-        int nilchar = line.find(std::string("\0", 1));
-        if (nilchar != std::string::npos) {
-            line = line.substr(0, nilchar);
-        }
-
-        if (((pos = line.find("for")) != std::string::npos) &&
-            ((pos = line.find("do", pos)) != std::string::npos) &&
-            line[pos - 1] >= '0' && line[pos - 1] <= '9') {
-            line = line.replace(pos, 0, " ");
-        }
-
-        out << line << ENDL;
-        line_num++;
-    }
-
-    return out.str();
-}

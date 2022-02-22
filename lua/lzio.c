@@ -11,6 +11,7 @@
 
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "lua.h"
 
@@ -19,6 +20,27 @@
 #include "lstate.h"
 #include "lzio.h"
 
+void luaZ_pushBack(ZIO *z, const char *src, int length) {
+  if (length <= 0) {
+    return;
+  }
+
+  if (z->n == 0 || z->n == EOZ) {
+      char* new_buff = malloc(length);
+      memcpy(&new_buff[0], src, length);
+
+      z->n = length;
+      z->p = new_buff;
+  }
+  else {
+      char* new_buff = malloc(z->n + length);
+      memcpy(&new_buff[0], src, length);
+      memcpy(&new_buff[length], z->p, z->n);
+
+      z->n += length;
+      z->p = new_buff;
+  }
+}
 
 int luaZ_fill (ZIO *z) {
   size_t size;
