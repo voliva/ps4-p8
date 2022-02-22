@@ -357,7 +357,7 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
     }
   }
   while (lisspace(cast_uchar(*s))) s++;  /* skip trailing spaces */
-  if (empty || *s != '\0') return NULL;  /* something wrong in the numeral */
+  if (empty) return NULL;  /* something wrong in the numeral */
   else {
     *result = l_castU2S((neg) ? 0u - a : a);
     return s;
