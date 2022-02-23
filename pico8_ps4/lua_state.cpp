@@ -19,6 +19,8 @@ LuaState::LuaState()
 
 	luaL_requiref(this->state, LUA_GNAME, luaopen_base, 1);
 	lua_pop(this->state, 1);
+	luaL_requiref(this->state, PREFIXED(LUA_ERISLIBNAME), luaopen_eris, 1);
+	lua_pop(this->state, 1);
 	luaL_requiref(this->state, PREFIXED(LUA_TABLIBNAME), luaopen_table, 1);
 	lua_pop(this->state, 1);
 	luaL_requiref(this->state, PREFIXED(LUA_MATHLIBNAME), luaopen_math, 1);
@@ -35,11 +37,62 @@ LuaState::LuaState()
 	load_sound_fns(this->state); // sfx, music, etc.
 	load_machine_fns(this->state); // peek, poke, stat, extcmd, etc.
 	load_math_fns(this->state); // sin, max, rnd, etc.
+
+	lua_getglobal(this->state, "__lua_eris");
+	lua_getfield(this->state, -1, "init_persist_all");
+	if (lua_pcall(this->state, 0, 0, 0) != 0) {
+		std::string e = lua_tostring(this->state, -1);
+		DEBUGLOG << "init persist all: " << e << ENDL;
+	}
+	lua_pop(this->state, 1);
 }
 
 LuaState::~LuaState()
 {
 	lua_close(this->state);
+}
+
+unsigned int LuaState::getSize()
+{
+	return 1024 * 1024; // 1MB enough ?
+}
+void LuaState::serialize(unsigned char* dest)
+{
+	lua_getglobal(this->state, "__lua_eris");
+	lua_getfield(this->state, -1, "persist_all");
+	if (lua_pcall(this->state, 0, 1, 0) != 0) {
+		std::string e = lua_tostring(this->state, -1);
+		lua_pop(this->state, 1);  // pop error message from the stack *
+		DEBUGLOG << "serialize: " << e << ENDL;
+
+		return;
+	}
+
+	size_t len;
+	const char* result = lua_tolstring(this->state, -1, &len);
+	lua_pop(this->state, 2);
+
+	memcpy(dest, &len, sizeof(len));
+	dest += sizeof(len);
+	memcpy(dest, result, len);
+}
+void LuaState::deserialize(unsigned char* src)
+{
+	size_t len;
+	memcpy(&len, src, sizeof(len));
+	src += sizeof(len);
+
+	lua_getglobal(this->state, "__lua_eris");
+	lua_getfield(this->state, -1, "restore_all");
+	lua_pushlstring(this->state, (const char*)src, len);
+	if (lua_pcall(this->state, 1, 0, 0) != 0) {
+		std::string e = lua_tostring(this->state, -1);
+		lua_pop(this->state, 1);  // pop error message from the stack *
+		DEBUGLOG << "deserialize: " << e << ENDL;
+
+		return;
+	}
+	lua_pop(this->state, 1);
 }
 
 bool LuaState::loadProgram(std::string& program)

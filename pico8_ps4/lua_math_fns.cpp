@@ -1,6 +1,7 @@
 #include "lua_fns.h"
 #include "machine_state.h"
 #include <math.h>
+#include "lua_state.h"
 
 int rnd(lua_State* L) {
 	fix16_t max = 0;
