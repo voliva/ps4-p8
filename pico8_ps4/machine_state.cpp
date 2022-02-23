@@ -39,6 +39,21 @@ void MachineState::initialize()
 	}
 }
 
+unsigned int MachineState::getSize()
+{
+	return P8_TOTAL_MEMORY;
+}
+
+void MachineState::serialize(unsigned char* dest)
+{
+	memcpy(dest, p8_memory, P8_TOTAL_MEMORY);
+}
+
+void MachineState::deserialize(unsigned char* src)
+{
+	memcpy(p8_memory, src, P8_TOTAL_MEMORY);
+}
+
 void MachineState::processKeyEvent(KeyEvent evt)
 {
 	int btnBit = 1 << (int)evt.key;

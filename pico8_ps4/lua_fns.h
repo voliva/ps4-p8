@@ -2,6 +2,7 @@
 
 #include <string>
 #include "log.h"
+#include <fix16.h>
 
 extern "C" {
 	#include <lua.h>

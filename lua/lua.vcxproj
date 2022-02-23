@@ -84,6 +84,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="eris.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="lapi.h" />
     <ClInclude Include="lauxlib.h" />
@@ -115,9 +116,11 @@
     <ClInclude Include="lzio.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="eris.c" />
     <ClCompile Include="lapi.c" />
     <ClCompile Include="lauxlib.c" />
     <ClCompile Include="lbaselib.c" />
+    <ClCompile Include="lbitlib.c" />
     <ClCompile Include="lcode.c" />
     <ClCompile Include="lcorolib.c" />
     <ClCompile Include="lctype.c" />
