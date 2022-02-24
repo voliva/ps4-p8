@@ -594,6 +594,18 @@ static int block_follow (LexState *ls, int withuntil) {
   }
 }
 
+static void retstat_line(LexState* ls, int line_num);
+static void statlist_line (LexState *ls, int line) {
+  /* statlist -> { stat [';'] } */
+  while (ls->linenumber == line && !block_follow(ls, 1)) {
+    if (ls->t.token == TK_RETURN) {
+      luaX_next(ls); // skip return
+      retstat_line(ls, line);
+      return;  /* 'return' must be last statement */
+    }
+    statement(ls);
+  }
+}
 
 static void statlist (LexState *ls) {
   /* statlist -> { stat [';'] } */
@@ -1428,16 +1440,26 @@ static void forstat (LexState *ls, int line) {
   leaveblock(fs);  /* loop scope ('break' jumps to this point) */
 }
 
-
-static void test_then_block (LexState *ls, int *escapelist) {
+static char test_then_block (LexState *ls, int *escapelist) {
   /* test_then_block -> [IF | ELSEIF] cond THEN block */
   BlockCnt bl;
   FuncState *fs = ls->fs;
   expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
   luaX_next(ls);  /* skip IF or ELSEIF */
+  char is_shorthand = ls->t.token == '(';
+  int line_num = ls->linenumber; // On the same line of shorthand we can have an else block
+
   expr(ls, &v);  /* read condition */
-  checknext(ls, TK_THEN);
+  // p8-lua custom if: `if (cond) expr` => `if (cond) then expr end`
+  // This implementation is more permissive than p8's, but I don't know how to do it without refactoring all of this.
+  // This implementation will accept `if (cond) or (cond) expr`, whereas p8 doesn't.
+  if (is_shorthand) {
+    is_shorthand = ls->t.token != TK_THEN;
+  }
+  if (!is_shorthand) {
+    checknext(ls, TK_THEN);
+  }
   if (ls->t.token == TK_GOTO || ls->t.token == TK_BREAK) {
     luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
     enterblock(fs, &bl, 0);  /* must enter block before 'goto' */
@@ -1445,7 +1467,7 @@ static void test_then_block (LexState *ls, int *escapelist) {
     while (testnext(ls, ';')) {}  /* skip colons */
     if (block_follow(ls, 0)) {  /* 'goto' is the entire block? */
       leaveblock(fs);
-      return;  /* and that is it */
+      return is_shorthand;  /* and that is it */
     }
     else  /* must skip over 'then' part if condition is false */
       jf = luaK_jump(fs);
@@ -1455,12 +1477,23 @@ static void test_then_block (LexState *ls, int *escapelist) {
     enterblock(fs, &bl, 0);
     jf = v.f;
   }
-  statlist(ls);  /* 'then' part */
-  leaveblock(fs);
-  if (ls->t.token == TK_ELSE ||
+  if (is_shorthand) {
+    statlist_line(ls, line_num);
+
+    leaveblock(fs);
+    if (ls->t.token == TK_ELSE && ls->linenumber == line_num)
+      luaK_concat(fs, escapelist, luaK_jump(fs));
+    luaK_patchtohere(fs, jf);
+  }
+  else {
+    statlist(ls);  /* 'then' part */
+    leaveblock(fs);
+    if (ls->t.token == TK_ELSE ||
       ls->t.token == TK_ELSEIF)  /* followed by 'else'/'elseif'? */
-    luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
-  luaK_patchtohere(fs, jf);
+      luaK_concat(fs, escapelist, luaK_jump(fs));  /* must jump over it */
+    luaK_patchtohere(fs, jf);
+  }
+  return is_shorthand;
 }
 
 
@@ -1468,7 +1501,14 @@ static void ifstat (LexState *ls, int line) {
   /* ifstat -> IF cond THEN block {ELSEIF cond THEN block} [ELSE block] END */
   FuncState *fs = ls->fs;
   int escapelist = NO_JUMP;  /* exit list for finished parts */
-  test_then_block(ls, &escapelist);  /* IF cond THEN block */
+  int line_num = ls->linenumber; // On the same line of shorthand we can have an else block
+  char is_shorthand = test_then_block(ls, &escapelist);  /* IF cond THEN block */
+  if (is_shorthand) {
+    if (ls->linenumber == line_num && testnext(ls, TK_ELSE))
+      statlist_line(ls, line_num);  /* 'else' part */
+    luaK_patchtohere(fs, escapelist);  /* patch escape list to 'if' end */
+    return;
+  }
   while (ls->t.token == TK_ELSEIF)
     test_then_block(ls, &escapelist);  /* ELSEIF cond THEN block */
   if (testnext(ls, TK_ELSE))
@@ -1550,6 +1590,37 @@ static void exprstat (LexState *ls) {
   }
 }
 
+static void retstat_line (LexState *ls, int line_num) {
+  /* stat -> RETURN [explist] [';'] */
+  FuncState *fs = ls->fs;
+  expdesc e;
+  int first, nret;  /* registers with returned values */
+  if (block_follow(ls, 1) || ls->t.token == ';' || ls->linenumber != line_num)
+    first = nret = 0;  /* return no values */
+  else {
+    nret = explist(ls, &e);  /* optional return values */
+    if (hasmultret(e.k)) {
+      luaK_setmultret(fs, &e);
+      if (e.k == VCALL && nret == 1) {  /* tail call? */
+        SET_OPCODE(getinstruction(fs,&e), OP_TAILCALL);
+        lua_assert(GETARG_A(getinstruction(fs,&e)) == fs->nactvar);
+      }
+      first = fs->nactvar;
+      nret = LUA_MULTRET;  /* return all values */
+    }
+    else {
+      if (nret == 1)  /* only one single value? */
+        first = luaK_exp2anyreg(fs, &e);
+      else {
+        luaK_exp2nextreg(fs, &e);  /* values must go to the stack */
+        first = fs->nactvar;  /* return all active values */
+        lua_assert(nret == fs->freereg - first);
+      }
+    }
+  }
+  luaK_ret(fs, first, nret);
+  testnext(ls, ';');  /* skip optional semicolon */
+}
 
 static void retstat (LexState *ls) {
   /* stat -> RETURN [explist] [';'] */
