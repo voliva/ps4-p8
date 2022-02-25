@@ -394,8 +394,8 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     if (ttnov(t1) != ttnov(t2) || ttnov(t1) != LUA_TNUMBER)
       return 0;  /* only numbers can be equal with different variants */
     else {  /* two numbers with different variants */
-      lua_Integer i1, i2;  /* compare them as integers */
-      return (tointeger(t1, &i1) && tointeger(t2, &i2) && i1 == i2);
+      lua_Number i1, i2;  /* compare them as numbers */
+      return (tonumberns(t1, i1) && tonumberns(t2, i2) && i1 == i2);
     }
   }
   /* values have same type and same variant */
