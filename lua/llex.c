@@ -213,15 +213,12 @@ static int check_next2 (LexState *ls, const char *set) {
 */
 static int read_numeral (LexState *ls, SemInfo *seminfo) {
   TValue obj;
-  const char *expo = "Ee";
   int first = ls->current;
   lua_assert(lisdigit(ls->current));
   save_and_next(ls);
-  if (first == '0' && check_next2(ls, "xX"))  /* hexadecimal? */
-    expo = "Pp";
+  if (first == '0')
+    check_next2(ls, "xXbB");
   for (;;) {
-    if (check_next2(ls, expo))  /* exponent part? */
-      check_next2(ls, "-+");  /* optional exponent sign */
     if (lisxdigit(ls->current))
       save_and_next(ls);
     else if (ls->current == '.')

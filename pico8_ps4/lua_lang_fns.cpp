@@ -454,12 +454,12 @@ function all(t)
 	local i = 0
 	return function()
 		if #t >= prevLength then
-			i += 1
+			i = i + 1
 		end
 		prevLength = #t
 
 		while i <= #t and t[i] == nil do
-			i += 1
+			i = i + 1
 		end
 		return t[i]
 	end

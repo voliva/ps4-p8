@@ -43,23 +43,7 @@
 */
 #if !defined(l_intfitsf)
 
-/* number of bits in the mantissa of a float */
-#define NBM		(l_mathlim(MANT_DIG))
-
-/*
-** Check whether some integers may not fit in a float, that is, whether
-** (maxinteger >> NBM) > 0 (that implies (1 << NBM) <= maxinteger).
-** (The shifts are done in parts to avoid shifting by more than the size
-** of an integer. In a worst case, NBM == 113 for long double and
-** sizeof(integer) == 32.)
-*/
-#if ((((LUA_MAXINTEGER >> (NBM / 4)) >> (NBM / 4)) >> (NBM / 4)) \
-	>> (NBM - (3 * (NBM / 4))))  >  0
-
-#define l_intfitsf(i)  \
-  (-((lua_Integer)1 << NBM) <= (i) && (i) <= ((lua_Integer)1 << NBM))
-
-#endif
+#define l_intfitsf(i)	(i >= fix16_minimum && i <= fix16_maximum)
 
 #endif
 
@@ -104,7 +88,7 @@ int luaV_tointeger (const TValue *obj, lua_Integer *p, int mode) {
     }
     return lua_numbertointeger(f, p);
   }
-  else if (ttisinteger(obj)) {
+  else if (ttisinteger(obj) || ttisboolean(obj)) {
     *p = ivalue(obj);
     return 1;
   }
