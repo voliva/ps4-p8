@@ -596,6 +596,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (check_next1(ls, '=')) return TK_ASSIGN_BAND;
         return '&';
       }
+      case 0:
       case EOZ: {
         return TK_EOS;
       }
