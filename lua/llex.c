@@ -43,6 +43,7 @@ static const char *const luaX_tokens [] = {
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
+    "^^", "<<>", ">><", ">>>",
     "<<", ">>", "::", "<eof>",
     "<number>", "<integer>", "<name>", "<string>"
 };
@@ -476,21 +477,37 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (check_next1(ls, '=')) return TK_EQ;
         else return '=';
       }
+      case '^': {
+        next(ls);
+        if (check_next1(ls, '^')) return TK_XOR;
+        else return '^';
+      }
       case '<': {
         next(ls);
         if (check_next1(ls, '=')) return TK_LE;
-        else if (check_next1(ls, '<')) return TK_SHL;
-        else return '<';
+        else if (check_next1(ls, '<')) {
+          if (check_next1(ls, '>')) return TK_ROTL;
+          return TK_SHL;
+        } else return '<';
       }
       case '>': {
         next(ls);
         if (check_next1(ls, '=')) return TK_GE;
-        else if (check_next1(ls, '>')) return TK_SHR;
+        else if (check_next1(ls, '>')) {
+          if (check_next1(ls, '>')) return TK_LSHR;
+          if (check_next1(ls, '<')) return TK_ROTR;
+          return TK_SHR;
+        }
         else return '>';
       }
       case '/': {
         next(ls);
-        if (check_next1(ls, '/')) return TK_IDIV;
+        if (check_next1(ls, '/')) {
+          // Copied from --
+          while (!currIsNewline(ls) && ls->current != EOZ)
+            next(ls);  /* skip until end of line (or end of file) */
+          break;
+        }
         else return '/';
       }
       case '~': {

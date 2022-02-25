@@ -1156,9 +1156,8 @@ void luaK_posfix (FuncState *fs, BinOpr op,
     case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
     case OPR_IDIV: case OPR_MOD: case OPR_POW:
     case OPR_BAND: case OPR_BOR: case OPR_BXOR:
-    case OPR_SHL: case OPR_SHR: {
-      if (!constfolding(fs, op + LUA_OPADD, e1, e2))
-        codebinexpval(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
+    case OPR_SHL: case OPR_SHR: case OPR_ROTL: case OPR_ROTR: case OPR_LSHR: {
+      codebinexpval(fs, cast(OpCode, op + OP_ADD), e1, e2, line);
       break;
     }
     case OPR_EQ: case OPR_LT: case OPR_LE:

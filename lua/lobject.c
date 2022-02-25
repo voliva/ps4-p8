@@ -93,6 +93,9 @@ static lua_Integer intarith (lua_State *L, int op, lua_Integer v1,
     case LUA_OPBXOR: return intop(^, v1, v2);
     case LUA_OPSHL: return luaV_shiftl(v1, v2);
     case LUA_OPSHR: return luaV_shiftl(v1, -v2);
+    case LUA_OPLSHR: return luaV_lshiftr(v1, v2 >> 16);
+    case LUA_OPROTR: return luaV_rotr(v1, v2 >> 16);
+    case LUA_OPROTL: return luaV_rotl(v1, v2 >> 16);
     case LUA_OPUNM: return intop(-, 0, v1);
     case LUA_OPBNOT: return intop(^, ~l_castS2U(0), v1);
     default: lua_assert(0); return 0;
@@ -115,6 +118,14 @@ static lua_Number numarith (lua_State *L, int op, lua_Number v1,
       luai_nummod(L, v1, v2, m);
       return m;
     }
+    case LUA_OPBAND: return v1 & v2;
+    case LUA_OPBOR: return v1 | v2;
+    case LUA_OPBXOR: return v1 ^ v2;
+    case LUA_OPSHL: return luaV_shiftl(v1, (v2 >> 16));
+    case LUA_OPSHR: return luaV_shiftl(v1, -(v2 >> 16));
+    case LUA_OPLSHR: return luaV_lshiftr(v1, v2 >> 16);
+    case LUA_OPROTR: return luaV_rotr(v1, v2 >> 16);
+    case LUA_OPROTL: return luaV_rotl(v1, v2 >> 16);
     default: lua_assert(0); return 0;
   }
 }
@@ -124,15 +135,9 @@ void luaO_arith (lua_State *L, int op, const TValue *p1, const TValue *p2,
                  TValue *res) {
   switch (op) {
     case LUA_OPBAND: case LUA_OPBOR: case LUA_OPBXOR:
+    case LUA_OPROTL: case LUA_OPROTR: case LUA_OPLSHR:
     case LUA_OPSHL: case LUA_OPSHR:
-    case LUA_OPBNOT: {  /* operate only on integers */
-      lua_Integer i1; lua_Integer i2;
-      if (tointeger(p1, &i1) && tointeger(p2, &i2)) {
-        setivalue(res, intarith(L, op, i1, i2));
-        return;
-      }
-      else break;  /* go to the end */
-    }
+    case LUA_OPBNOT:
     case LUA_OPDIV: case LUA_OPPOW: {  /* operate only on floats */
       lua_Number n1; lua_Number n2;
       if (tonumber(p1, &n1) && tonumber(p2, &n2)) {

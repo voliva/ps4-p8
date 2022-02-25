@@ -1047,9 +1047,14 @@ static BinOpr getbinopr (int op) {
     case '^': return OPR_POW;
     case '/': return OPR_DIV;
     case TK_IDIV: return OPR_IDIV;
+    case '\\': return OPR_IDIV;
     case '&': return OPR_BAND;
     case '|': return OPR_BOR;
     case '~': return OPR_BXOR;
+    case TK_XOR: return OPR_BXOR;
+    case TK_ROTL: return OPR_ROTL;
+    case TK_ROTR: return OPR_ROTR;
+    case TK_LSHR: return OPR_LSHR;
     case TK_SHL: return OPR_SHL;
     case TK_SHR: return OPR_SHR;
     case TK_CONCAT: return OPR_CONCAT;
@@ -1075,6 +1080,7 @@ static const struct {
    {14, 13},                  /* '^' (right associative) */
    {11, 11}, {11, 11},           /* '/' '//' */
    {6, 6}, {4, 4}, {5, 5},   /* '&' '|' '~' */
+   {7, 7}, {7, 7}, {7, 7},   // OPR_ROTL, OPR_ROTR, OPR_LSHR,
    {7, 7}, {7, 7},           /* '<<' '>>' */
    {9, 8},                   /* '..' (right associative) */
    {3, 3}, {3, 3}, {3, 3},   /* ==, <, <= */
