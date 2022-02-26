@@ -5,6 +5,7 @@
 #include "running-cart.h"
 #include "lua_state.h"
 #include "machine_state.h"
+#include "save_states.h"
 
 #define DEFAULT_LINES 5
 
@@ -44,11 +45,11 @@ void PauseMenu::manageEvent(KeyEvent& e)
 			runningCart->restart();
 			break;
 		case 2:
-			machineState->saveState();
+			save_state(runningCart->getName());
 			runningCart->resume();
 			break;
 		case 3:
-			machineState->loadState();
+			load_state(runningCart->getName());
 			runningCart->resume();
 			break;
 		case 4:

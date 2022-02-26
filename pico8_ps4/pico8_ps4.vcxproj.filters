@@ -87,6 +87,9 @@
     <ClCompile Include="lua_math_fns.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="save_states.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -150,6 +153,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="lua_fns.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="save_states.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

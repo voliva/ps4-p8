@@ -3,6 +3,7 @@
 #include "lua_fns.h"
 #include "chrono.h"
 #include "running-cart.h"
+#include "save_states.h"
 
 #define DEBUGLOG LuaState_DEBUGLOG
 Log DEBUGLOG = logger.log("LuaState");
@@ -72,15 +73,16 @@ void LuaState::serialize(unsigned char* dest)
 	const char* result = lua_tolstring(this->state, -1, &len);
 	lua_pop(this->state, 2);
 
-	memcpy(dest, &len, sizeof(len));
-	dest += sizeof(len);
-	memcpy(dest, result, len);
+	int offset = 0;
+	write_state(dest, &offset, &len, sizeof(len));
+	write_state(dest, &offset, result, len);
 }
 void LuaState::deserialize(unsigned char* src)
 {
 	size_t len;
-	memcpy(&len, src, sizeof(len));
-	src += sizeof(len);
+	int offset = 0;
+	read_state(&len, src, &offset, sizeof(len));
+	src += offset;
 
 	lua_getglobal(this->state, "__lua_eris");
 	lua_getfield(this->state, -1, "restore_all");

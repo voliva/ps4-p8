@@ -48,7 +48,7 @@ void Splore::key_down(Key k)
 		break;
 	case Key::cross:
 		Cartridge* r = load_from_url("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + this->cartridges[this->focus].lid);
-		run_cartridge(r);
+		run_cartridge(r, this->cartridges[this->focus].lid);
 		delete r;
 		break;
 	}

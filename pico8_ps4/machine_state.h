@@ -16,9 +16,6 @@ public:
 	void serialize(unsigned char* dest);
 	void deserialize(unsigned char* src);
 
-	void saveState();
-	void loadState();
-
 	void processKeyEvent(KeyEvent evt);
 	bool isButtonPressed(int p, P8_Key btn);
 	bool wasButtonPressed(int p, P8_Key btn);
@@ -34,7 +31,6 @@ public:
 private:
 	int btn_countdown[8][8]; // [player] => [button] => frames for next tick. 0 = it wasn't pressed before, 1 = tick now, reset to 5.
 	timestamp_t started;
-	unsigned char* state;
 };
 
 extern MachineState* machineState;

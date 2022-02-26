@@ -42,6 +42,10 @@ public:
 
 	void logStats();
 
+	unsigned int getSize();
+	void serialize(unsigned char* dest);
+	void deserialize(unsigned char* src);
+
 	Channel channels[4];
 
 	ConcurrentQueue<bool> music_notifier;

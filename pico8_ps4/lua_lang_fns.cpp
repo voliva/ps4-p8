@@ -348,9 +348,19 @@ __lua_eris.unperm = {}
 __lua_eris.original_G = {}
 
 __lua_eris.init_persist_all = function()
-  local i=0
+  -- lua pairs is not sorted. The order is actually random, changes on every execution (wtf?)
+  local keyset={}
+  local n=0
   for k,v in pairs(_G) do
-    i = i + 1
+    n=n+1
+    keyset[n]=k
+  end
+  __lua_table.sort(keyset)
+
+  local i=0
+  for i=1,n do
+    local k=keyset[i]
+    local v=_G[k]
     __lua_eris.perm[v] = i
     __lua_eris.unperm[i] = v
     __lua_eris.original_G[k] = v

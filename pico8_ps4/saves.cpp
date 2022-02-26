@@ -31,7 +31,7 @@ void SaveManager::open(std::string name)
 
 	memset(&p8_memory[ADDR_PERSISTENT], 0, PERSISTENT_SIZE);
 	std::string path = std::string(SAVE_FOLDER) + "/" + name + ".dat";
-	FILE* f = fopen(path.c_str(), "r");
+	FILE* f = fopen(path.c_str(), "rb");
 	if (f) {
 		DEBUGLOG << "Loaded" << ENDL;
 		fread(&p8_memory[ADDR_PERSISTENT], 1, PERSISTENT_SIZE, f);
@@ -72,7 +72,7 @@ void SaveManager::persist()
 	if (this->dirty && this->name != "") {
 		this->dirty = false;
 		std::string path = std::string(SAVE_FOLDER) + "/" + name + ".dat";
-		FILE* f = fopen(path.c_str(), "w");
+		FILE* f = fopen(path.c_str(), "wb");
 		if (f) {
 			fwrite(&p8_memory[ADDR_PERSISTENT], 1, PERSISTENT_SIZE, f);
 			fclose(f);

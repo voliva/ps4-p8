@@ -13,7 +13,7 @@ enum RunningStatus {
 class RunningCart
 {
 public:
-	bool load(Cartridge* cartridge);
+	bool load(Cartridge* cartridge, std::string name);
 	void reload(int dest, int source, int length);
 	void run();
 	void stop();
@@ -21,16 +21,18 @@ public:
 	void pause();
 	void resume();
 	void warnError();
+	std::string getName();
 
 private:
 	Cartridge* loadedCartridge;
 	RunningStatus status = RunningStatus::None;
 	bool paused = false;
 	timestamp_t lastWarning = nilTimestamp();
+	std::string name;
 
 	void runOnce();
 	void dismissError();
 };
 extern RunningCart *runningCart;
 
-void run_cartridge(Cartridge* r);
+void run_cartridge(Cartridge* r, std::string name);
