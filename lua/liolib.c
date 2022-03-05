@@ -285,7 +285,7 @@ static int io_popen (lua_State *L) {
 
 static int io_tmpfile (lua_State *L) {
   LStream *p = newfile(L);
-  p->f = tmpfile();
+  // p->f = tmpfile();
   return (p->f == NULL) ? luaL_fileresult(L, 0, NULL) : 1;
 }
 

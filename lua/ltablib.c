@@ -256,7 +256,7 @@ typedef unsigned int IdxT;
 ** is to copy them to an array of a known type and use the array values.
 */
 static unsigned int l_randomizePivot (void) {
-  clock_t c = clock();
+  clock_t c = 0;
   time_t t = time(NULL);
   unsigned int buff[sof(c) + sof(t)];
   unsigned int i, rnd = 0;
