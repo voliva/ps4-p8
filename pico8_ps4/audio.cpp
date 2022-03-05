@@ -274,7 +274,7 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 	this->channels[channel].previousSample2 = 0;
 
 	SDL_UnlockAudioDevice(this->deviceId);
-	SDL_PauseAudioDevice(this->deviceId, 0);
+	// SDL_PauseAudioDevice(this->deviceId, 0);
 }
 
 void AudioManager::playMusic(int n, unsigned char channelmask)
@@ -308,7 +308,7 @@ void AudioManager::pause()
 
 void AudioManager::resume()
 {
-	SDL_PauseAudioDevice(this->deviceId, 0);
+	// SDL_PauseAudioDevice(this->deviceId, 0);
 }
 
 void AudioManager::playNextPattern()
@@ -468,7 +468,7 @@ void AudioManager::playPatternSfx(int n, int timing_length)
 	this->channels[channel].offset = 0;
 	this->channels[channel].isMusic = true;
 	this->channels[channel].music_timing = timing_length;
-	SDL_PauseAudioDevice(this->deviceId, 0);
+	// SDL_PauseAudioDevice(this->deviceId, 0);
 }
 
 void AudioManager::stopPattern()
