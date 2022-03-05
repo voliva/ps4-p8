@@ -6,6 +6,8 @@ Project based on [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbi
 
 Pico-8 is a Fantasy Programmable Console made by Lexaloffle Games. This emulator is compatible with built pico-8 cartridges in PNG format, to build your own games you will need the original [Pico-8 console](https://www.lexaloffle.com/pico-8.php)
 
+![screenshot](https://user-images.githubusercontent.com/5365487/149617734-24f0ad26-4d66-4d49-85c7-a7fd0bbe2765.png)
+
 ## Status
 
 Not finished - Compatibility is still limited, but there are many cartridges it can run already.
