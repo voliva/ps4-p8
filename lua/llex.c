@@ -219,21 +219,32 @@ static int check_next2 (LexState *ls, const char *set) {
 */
 static int read_numeral (LexState *ls, SemInfo *seminfo) {
   TValue obj;
+  int total_length = 0;
   int first = ls->current;
   lua_assert(lisdigit(ls->current));
   save_and_next(ls);
+  total_length++;
   if (first == '0')
-    check_next2(ls, "xXbB");
+    total_length += check_next2(ls, "xXbB");
   for (;;) {
     if (lisxdigit(ls->current))
-      save_and_next(ls);
+      { save_and_next(ls); total_length++; }
     else if (ls->current == '.')
-      save_and_next(ls);
+      { save_and_next(ls); total_length++; }
     else break;
   }
   save(ls, '\0');
-  if (luaO_str2num(luaZ_buffer(ls->buff), &obj) == 0)  /* format error? */
+  total_length++;
+  int length_read = luaO_str2num(luaZ_buffer(ls->buff), &obj);
+  if (length_read == 0)  /* format error? */
     lexerror(ls, "malformed number", TK_FLT);
+  
+  if (length_read < total_length) {
+    // We need to push back all the characters not used
+    luaZ_pushBack(ls->z, &(ls->current), 1);
+    luaZ_pushBack(ls->z, &(luaZ_buffer(ls->buff))[length_read-1], total_length - length_read);
+    next(ls);
+  }
   if (ttisinteger(&obj)) {
     seminfo->i = ivalue(&obj);
     return TK_INT;
