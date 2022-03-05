@@ -11,5 +11,6 @@ pkg.gp4
 ps4_int
 /p8-cartridges/*
 /p8-saves/*
+/p8-savestates/*
 !.gitkeep
 mac_build

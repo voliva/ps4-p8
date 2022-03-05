@@ -16,6 +16,7 @@ This is a list of some of the cartridges that have been tested and they are play
 - [Pengo](https://www.lexaloffle.com/bbs/?tid=45605)
 - [High Stakes](https://www.lexaloffle.com/bbs/?tid=40099)
 - [III Demake](https://www.lexaloffle.com/bbs/?pid=81257)
+- [Pico Dino](https://www.lexaloffle.com/bbs/?pid=85303)
 - [Grid Based Puzzler](https://www.lexaloffle.com/bbs/?pid=106456)
 - [Frog adventure](https://www.lexaloffle.com/bbs/?pid=104185)
 - [Alpine Ascent](https://www.lexaloffle.com/bbs/?tid=40791)

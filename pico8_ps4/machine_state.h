@@ -12,6 +12,9 @@ public:
 	MachineState();
 
 	void initialize();
+	unsigned int getSize();
+	void serialize(unsigned char* dest);
+	void deserialize(unsigned char* src);
 
 	void processKeyEvent(KeyEvent evt);
 	bool isButtonPressed(int p, P8_Key btn);

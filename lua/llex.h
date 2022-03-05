@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h $
+** $Id: llex.h,v 1.79.1.1 2017/04/19 17:20:42 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -7,17 +7,11 @@
 #ifndef llex_h
 #define llex_h
 
-#include <limits.h>
-
 #include "lobject.h"
 #include "lzio.h"
 
 
-/*
-** Single-char tokens (terminal symbols) are represented by their own
-** numeric code. Other tokens start at the following value.
-*/
-#define FIRST_RESERVED	(UCHAR_MAX + 1)
+#define FIRST_RESERVED	257
 
 
 #if !defined(LUA_ENV)
@@ -49,14 +43,14 @@ enum RESERVED {
 };
 
 static int tk_is_assignment_op(int token) {
-    return token >= TK_ASSIGN_ADD && token <= TK_ASSIGN_ROTR;
+  return token >= TK_ASSIGN_ADD && token <= TK_ASSIGN_ROTR;
 }
 static int tk_is_assignment(int token) {
-    return token == '=' || tk_is_assignment_op(token);
+  return token == '=' || tk_is_assignment_op(token);
 }
 
 /* number of reserved words */
-#define NUM_RESERVED	(cast_int(TK_WHILE-FIRST_RESERVED + 1))
+#define NUM_RESERVED	(cast(int, TK_WHILE-FIRST_RESERVED+1))
 
 
 typedef union {

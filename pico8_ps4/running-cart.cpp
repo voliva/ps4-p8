@@ -27,7 +27,7 @@ SDL_Texture* warningTexture = NULL;
 unsigned char memory_snapshot[P8_TOTAL_MEMORY];
 
 LuaState* luaState = NULL;
-bool RunningCart::load(Cartridge* cartridge)
+bool RunningCart::load(Cartridge* cartridge, std::string name)
 {
     if (this->status != RunningStatus::None && this->status != RunningStatus::Loaded) {
         DEBUGLOG << "Can't load new cartridge: Already running another one." << ENDL;
@@ -67,6 +67,7 @@ bool RunningCart::load(Cartridge* cartridge)
     this->loadedCartridge = cartridge;
 	this->paused = false;
     this->status = RunningStatus::Loaded;
+	this->name = name;
 
     return true;
 }
@@ -267,6 +268,11 @@ void RunningCart::warnError() {
 	SDL_RenderSetViewport(renderer->renderer, &viewport);
 }
 
+std::string RunningCart::getName()
+{
+	return this->name;
+}
+
 void RunningCart::dismissError() {
 	SDL_Rect viewport{};
 	SDL_RenderGetViewport(renderer->renderer, &viewport);
@@ -314,9 +320,9 @@ void blocking_alert(std::string str)
 	}
 }
 
-void run_cartridge(Cartridge* r)
+void run_cartridge(Cartridge* r, std::string name)
 {
-	if (runningCart->load(r)) {
+	if (runningCart->load(r, name)) {
 		runningCart->run();
 		SDL_RenderSetLogicalSize(renderer->renderer, FRAME_WIDTH, FRAME_HEIGHT);
 		SDL_RenderSetViewport(renderer->renderer, NULL);

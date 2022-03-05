@@ -102,6 +102,9 @@
     <ClInclude Include="lzio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="eris.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lapi.c">
@@ -204,6 +207,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="lzio.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lbitlib.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="eris.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

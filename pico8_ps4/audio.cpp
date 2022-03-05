@@ -3,6 +3,7 @@
 #include <cmath>
 #include "log.h"
 #include "memory.h"
+#include "save_states.h"
 
 #define M_PI 3.14159265358979323
 
@@ -579,6 +580,34 @@ void AudioManager::music_loop()
 
 		SDL_UnlockAudioDevice(this->deviceId);
 	}
+}
+
+unsigned int AudioManager::getSize()
+{
+	return sizeof(this->channels) + sizeof(this->pattern);
+}
+
+void AudioManager::serialize(unsigned char* dest)
+{
+	SDL_LockAudioDevice(this->deviceId);
+
+	int offset = 0;
+	write_state(dest, &offset, this->channels, sizeof(this->channels));
+	write_state(dest, &offset, &this->pattern, sizeof(this->pattern));
+
+	SDL_UnlockAudioDevice(this->deviceId);
+}
+
+void AudioManager::deserialize(unsigned char* src)
+{
+	SDL_LockAudioDevice(this->deviceId);
+
+	int offset = 0;
+	read_state(this->channels, src, &offset, sizeof(this->channels));
+	read_state(&this->pattern, src, &offset, sizeof(this->pattern));
+
+	SDL_UnlockAudioDevice(this->deviceId);
+	SDL_PauseAudioDevice(this->deviceId, 0);
 }
 
 float base_frequencies[] = {

@@ -8,7 +8,14 @@ Pico-8 is a Fantasy Programmable Console made by Lexaloffle Games. This emulator
 
 ## Status
 
-Not finished - Currently it's complete just enough so that it can run a few games, but some of them don't fully work just yet.
+Not finished - Compatibility is still limited, but there are many cartridges it can run already.
+
+### Features
+
+- Modified lua interpreter compatible with pico8's lua.
+- 16-bit fixed point decimal arithemtic just like pico8.
+- Save states (at the moment simplistic, one save state per cartridge).
+- The most used predefined pico8 functions are implemented: 90 functions implemented out of 105
 
 It comes with a set of bundled games which have been used to improve the compatibility.
 
@@ -21,7 +28,7 @@ More .p8.png cartridges can be bundled with the .pkg file by adding them into `/
 - Menu: WIP.
 - Memory manipulation: Almost complete.
 - Maps: Done
-- Custom P8-Lua: WIP
+- Custom P8-Lua: Done
 
 A list of some playable cartridges can be found [here](https://github.com/voliva/ps4-p8/blob/main/PlayableCartridges.md)
 
@@ -62,6 +69,7 @@ Special thanks to:
 
 - [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) GPL v3
 - [Lua](https://www.lua.org/) MIT
+- [Eris](https://github.com/fnuecke/eris) MIT
 - [libfixmath](https://code.google.com/archive/p/libfixmath/) MIT
 - [plusequals powerpatch](http://lua-users.org/wiki/LuaPowerPatches)
 - [STB](https://github.com/nothings/stb) MIT

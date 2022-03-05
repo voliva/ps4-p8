@@ -3,6 +3,8 @@
 #include "font.h";
 #include "log.h"
 #include "memory.h"
+#include "lua_state.h"
+#include "save_states.h"
 
 Font f;
 #define DEBUGLOG MachineStateState_DEBUGLOG
@@ -37,6 +39,27 @@ void MachineState::initialize()
 			this->btn_countdown[p][b] = 0;
 		}
 	}
+}
+
+unsigned int MachineState::getSize()
+{
+	return P8_TOTAL_MEMORY + sizeof(this->btn_countdown) + sizeof(this->started);
+}
+
+void MachineState::serialize(unsigned char* dest)
+{
+	int offset = 0;
+	write_state(dest, &offset, p8_memory, P8_TOTAL_MEMORY);
+	write_state(dest, &offset, this->btn_countdown, sizeof(this->btn_countdown));
+	write_state(dest, &offset, &this->started, sizeof(this->started));
+}
+
+void MachineState::deserialize(unsigned char* src)
+{
+	int offset = 0;
+	read_state(p8_memory, src, &offset, P8_TOTAL_MEMORY);
+	read_state(this->btn_countdown, src, &offset, sizeof(this->btn_countdown));
+	read_state(&this->started, src, &offset, sizeof(this->started));
 }
 
 void MachineState::processKeyEvent(KeyEvent evt)

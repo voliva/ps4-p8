@@ -342,6 +342,49 @@ void load_lang_fns(lua_State* L)
 	register_lua_fn(L, "constant 0x98", constant_assignment(0x98, "0x0F0F.8"));
 	register_lua_fn(L, "constant 0x99", constant_assignment(0x99, "0x5555.8"));
 
+	register_lua_fn(L, "save_states", R"V0G0N(
+__lua_eris.perm = {}
+__lua_eris.unperm = {}
+__lua_eris.original_G = {}
+
+__lua_eris.init_persist_all = function()
+  -- lua pairs is not sorted. The order is actually random, changes on every execution (wtf?)
+  local keyset={}
+  local n=0
+  for k,v in pairs(_G) do
+    n=n+1
+    keyset[n]=k
+  end
+  __lua_table.sort(keyset)
+
+  local i=0
+  for i=1,n do
+    local k=keyset[i]
+    local v=_G[k]
+    __lua_eris.perm[v] = i
+    __lua_eris.unperm[i] = v
+    __lua_eris.original_G[k] = v
+  end
+end
+
+__lua_eris.persist_all = function()
+  local new_symbols = {}
+  for k,v in pairs(_G) do
+    if __lua_eris.original_G[k] != v then
+       new_symbols[k] = v
+    end
+  end
+  return __lua_eris.persist(__lua_eris.perm, new_symbols)
+end
+
+__lua_eris.restore_all = function(persisted)
+  local new_symbols = __lua_eris.unpersist(__lua_eris.unperm, persisted)
+  for k,v in pairs(new_symbols) do
+    _G[k] = v
+  end
+end
+	)V0G0N");
+
 	register_lua_fn(L, "add", R"V0G0N(
 function add(tbl, val, idx)
 	if idx != nil then
@@ -454,12 +497,12 @@ function all(t)
 	local i = 0
 	return function()
 		if #t >= prevLength then
-			i += 1
+			i = i + 1
 		end
 		prevLength = #t
 
 		while i <= #t and t[i] == nil do
-			i += 1
+			i = i + 1
 		end
 		return t[i]
 	end

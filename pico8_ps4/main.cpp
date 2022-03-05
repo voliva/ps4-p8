@@ -54,13 +54,22 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory);
 #include "http.h"
 #include "splore_loader.h"
 #include "splore.h"
+#include "save_states.h"
 
 bool isSplore(int screen) {
 	return screen == 2 || screen == 3;
 }
 
+std::string name_from_path(std::string path) {
+	std::string filename = path.substr(path.find_last_of("/") + 1);
+	return filename.substr(0, filename.length() - 7);
+}
+
 int main(void)
 {
+	DEBUGLOG << "Initializing save states..." << ENDL;
+	initialize_save_states();
+
 	DEBUGLOG << "Initializing renderer..." << ENDL;
 	renderer = new Renderer();
 
@@ -177,8 +186,9 @@ int main(void)
 					selectedCart++;
 					break;
 				case Key::cross:
-					Cartridge* r = load_from_png(screens[currentScreen].cartridges[selectedCart].path);
-					run_cartridge(r);
+					std::string path = screens[currentScreen].cartridges[selectedCart].path;
+					Cartridge* r = load_from_png(path);
+					run_cartridge(r, name_from_path(path));
 					delete r;
 					break;
 				}
@@ -259,8 +269,7 @@ int main(void)
 				SDL_RenderCopy(renderer->renderer, srf, NULL, &dest);
 			}
 			std::string currentPath = scr.cartridges[round(renderingTargetCart)].path;
-			std::string filename = currentPath.substr(currentPath.find_last_of("/") + 1);
-			std::string name = filename.substr(0, filename.length() - 7);
+			std::string name = name_from_path(currentPath);
 			font->sys_print(
 				name,
 				(FRAME_WIDTH - SYS_CHAR_WIDTH * name.length()) / 2,

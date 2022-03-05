@@ -3,8 +3,11 @@
 #include "memory.h"
 #include "font.h"
 #include "running-cart.h"
+#include "lua_state.h"
+#include "machine_state.h"
+#include "save_states.h"
 
-#define DEFAULT_LINES 3
+#define DEFAULT_LINES 5
 
 void PauseMenu::initialize()
 {
@@ -42,6 +45,14 @@ void PauseMenu::manageEvent(KeyEvent& e)
 			runningCart->restart();
 			break;
 		case 2:
+			save_state(runningCart->getName());
+			runningCart->resume();
+			break;
+		case 3:
+			load_state(runningCart->getName());
+			runningCart->resume();
+			break;
+		case 4:
 			runningCart->stop();
 			break;
 		}
@@ -89,6 +100,12 @@ void PauseMenu::draw()
 			font->print("reset cart", text_x, text_top, false);
 			break;
 		case 2:
+			font->print("save state", text_x, text_top, false);
+			break;
+		case 3:
+			font->print("load state", text_x, text_top, false);
+			break;
+		case 4:
 			font->print("quit", text_x, text_top, false);
 			break;
 		}
