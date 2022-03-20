@@ -304,12 +304,12 @@ int pal(lua_State* L) {
 
 		return 0;
 	}
-	int addr = ADDR_DS_DRAW_PAL;
-	if (p == 1) {
-		addr = ADDR_DS_SCREEN_PAL;
-	}
 
-	p8_memory[addr + c0] = c1;
+	if (p == 0) {
+		p8_memory[ADDR_DS_DRAW_PAL + c0] = (p8_memory[ADDR_DS_DRAW_PAL + c0] & 0xf0) | (c1 & 0x0f);
+	} else if (p == 1) {
+		p8_memory[ADDR_DS_SCREEN_PAL + c0] = c1;
+	}
 
 	return 0;
 }

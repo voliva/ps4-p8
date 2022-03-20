@@ -7,8 +7,6 @@
 #include <math.h>
 #include <functional>
 
-std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input);
-
 #define DEBUGLOG Renderer_DEBUGLOG
 Log DEBUGLOG = logger.log("renderer");
 
@@ -52,48 +50,6 @@ SDL_Color EXTENDED_PALETTE[] = {
 	SDL_Color { 0xFF, 0x6E, 0x59, 0xff },
 	SDL_Color { 0xFF, 0x9D, 0x81, 0xff },
 };
-
-#define SPRITESHEET_LENGTH 0x2000
-std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input)
-{
-	// TODO palt to change transparency
-	std::vector<unsigned char> ret(SPRITESHEET_LENGTH * 2 * 4); // Every byte encodes two pixels, each pixel is 4 bytes in RGBA
-
-	int p = 0;
-	for (int i = 0; i < SPRITESHEET_LENGTH; i++) {
-		unsigned char left = input[i] & 0x0F;
-		if (left == 0) {
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-		}
-		else {
-			SDL_Color c = DEFAULT_PALETTE[left];
-			ret[p++] = c.a;
-			ret[p++] = c.b;
-			ret[p++] = c.g;
-			ret[p++] = c.r;
-		}
-
-		unsigned char right = input[i] >> 4;
-		if (right == 0) {
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-		}
-		else {
-			SDL_Color c = DEFAULT_PALETTE[right];
-			ret[p++] = c.a;
-			ret[p++] = c.b;
-			ret[p++] = c.g;
-			ret[p++] = c.r;
-		}
-	}
-
-	return ret;
-}
 
 Renderer::Renderer()
 {
