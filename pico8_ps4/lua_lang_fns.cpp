@@ -277,10 +277,11 @@ int printh(lua_State* L) {
 }
 
 int ord(lua_State* L) {
-	std::string str = luaL_checkstring(L, 1);
+	size_t len = 0;
+	const char *str = luaL_checklstring(L, 1, &len);
 	int idx = luaL_optinteger(L, 2, 1) - 1;
 	
-	if (idx >= str.size()) {
+	if (idx >= len) {
 		return 0;
 	}
 	lua_pushinteger(L, str[idx]);
