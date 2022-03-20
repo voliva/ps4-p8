@@ -426,8 +426,13 @@ end
 	)V0G0N");
 
 	register_lua_fn(L, "sub", R"V0G0N(
-function sub(str, pos0, pos1)
-	return __lua_string.sub(str, pos0, pos1)
+function sub(...)
+	local args = {...}
+	if (args[3] == nil) then -- sub(something, 2, nil) != sub(something, 2)
+		return __lua_string.sub(args[1], args[2], args[2])
+	end
+
+	return __lua_string.sub(...)
 end
 	)V0G0N");
 
