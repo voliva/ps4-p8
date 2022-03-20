@@ -412,6 +412,12 @@ function del(table, value)
 end
 	)V0G0N");
 
+	register_lua_fn(L, "pack", R"V0G0N(
+function pack(...)
+	return __lua_table.pack(...)
+end
+	)V0G0N");
+
 	register_lua_fn(L, "unpack", R"V0G0N(
 function unpack(tbl, i, j)
 	return __lua_table.unpack(tbl, i, j)
