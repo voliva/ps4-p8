@@ -274,6 +274,12 @@ int color(lua_State* L) {
 	return 0;
 }
 
+void set_draw_pal(int c0, int c1) {
+	p8_memory[ADDR_DS_DRAW_PAL + c0] = (p8_memory[ADDR_DS_DRAW_PAL + c0] & 0xf0) | (c1 & 0x0f);
+}
+void set_screen_pal(int c0, int c1) {
+	p8_memory[ADDR_DS_SCREEN_PAL + c0] = c1;
+}
 int pal(lua_State* L) {
 	if (lua_gettop(L) == 0) {
 		renderer->reset_draw_pal();
@@ -282,7 +288,24 @@ int pal(lua_State* L) {
 	}
 
 	if (lua_istable(L, 1)) {
-		alert_todo("pal with table");
+		int p = luaL_optinteger(L, 2, 0);
+		lua_pushvalue(L, 1);
+		lua_pushnil(L); // push key
+		while (lua_next(L, -2) != 0) {
+			int c0 = lua_tointeger(L, -2) & 0x0FF;
+			int c1 = lua_tointeger(L, -1);
+
+			if (p == 0) {
+				set_draw_pal(c0, c1);
+			}
+			else if (p == 1) {
+				set_screen_pal(c0, c1);
+			}
+
+			/* removes 'value'; keeps 'key' for next iteration */
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 1); // pop key
 
 		return 0;
 	}
@@ -306,9 +329,9 @@ int pal(lua_State* L) {
 	}
 
 	if (p == 0) {
-		p8_memory[ADDR_DS_DRAW_PAL + c0] = (p8_memory[ADDR_DS_DRAW_PAL + c0] & 0xf0) | (c1 & 0x0f);
+		set_draw_pal(c0, c1);
 	} else if (p == 1) {
-		p8_memory[ADDR_DS_SCREEN_PAL + c0] = c1;
+		set_screen_pal(c0, c1);
 	}
 
 	return 0;
