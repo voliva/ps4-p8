@@ -252,6 +252,44 @@ void Renderer::draw_line(int x0, int y0, int x1, int y1)
 	this->draw_points(points);
 }
 
+void Renderer::draw_textured_line(int x0, int y0, int x1, int y1, float mx, float my, float mdx, float mdy)
+{
+	Renderer_Point sc0 = this->coord_to_screen(x0, y0);
+	Renderer_Point sc1 = this->coord_to_screen(x1, y1);
+
+	std::vector<Renderer_Point> points = efla_small_line(sc0.x, sc0.y, sc1.x, sc1.y);
+	for (int i = 0; i < points.size(); i++) {
+		if (mx < 0 || mx >= 128) break; // TODO overflow?
+		if (my < 0 || my >= 64) break;
+
+		if (this->is_drawable(points[i].x, points[i].y)) {
+			int row_offset = ADDR_MAP + my * 128;
+			if (my >= 32) {
+				row_offset = ADDR_MAP_SHARED + (my - 32) * 128;
+			}
+			int spr = p8_memory[row_offset + (int)my];
+			int sx = 8 * (mx - (int)mx);
+			int sy = 8 * (my - (int)my);
+
+			int px = (spr / 16) * 8 + sx;
+			int py = (spr % 16) * 8 + sy;
+
+			unsigned char color = p8_memory[ADDR_SPRITE_SHEET + py * LINE_JMP + px / 2];
+			if (px % 2 == 0) {
+				color = color & 0x0F;
+			}
+			else {
+				color = color >> 4;
+			}
+
+			this->set_pixel(points[i].x, points[i].y, color);
+		}
+
+		mx += mdx;
+		my += mdy;
+	}
+}
+
 void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)
 {
 	int width = x1 - x0;
