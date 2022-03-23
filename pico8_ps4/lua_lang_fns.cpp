@@ -284,7 +284,7 @@ int ord(lua_State* L) {
 	if (idx >= len) {
 		return 0;
 	}
-	lua_pushinteger(L, str[idx]);
+	lua_pushinteger(L, (unsigned char)str[idx]);
 
 	return 1;
 }
