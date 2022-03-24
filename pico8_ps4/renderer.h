@@ -39,6 +39,7 @@ public:
 	void draw_point(int x, int y);
 	void draw_points(std::vector<Renderer_Point> &points);
 	void draw_line(int x0, int y0, int x1, int y1);
+	void draw_textured_line(int x0, int y0, int x1, int y1, float mx, float my, float mdx, float mdy);
 	void draw_oval(int x0, int y0, int x1, int y1, bool fill);
 	void draw_rectangle(int x0, int y0, int x1, int y1, bool fill);
 	void scroll(unsigned char lines);
