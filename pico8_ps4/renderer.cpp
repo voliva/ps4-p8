@@ -7,8 +7,6 @@
 #include <math.h>
 #include <functional>
 
-std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input);
-
 #define DEBUGLOG Renderer_DEBUGLOG
 Log DEBUGLOG = logger.log("renderer");
 
@@ -52,48 +50,6 @@ SDL_Color EXTENDED_PALETTE[] = {
 	SDL_Color { 0xFF, 0x6E, 0x59, 0xff },
 	SDL_Color { 0xFF, 0x9D, 0x81, 0xff },
 };
-
-#define SPRITESHEET_LENGTH 0x2000
-std::vector<unsigned char> transform_spritesheet_data(std::vector<unsigned char>& input)
-{
-	// TODO palt to change transparency
-	std::vector<unsigned char> ret(SPRITESHEET_LENGTH * 2 * 4); // Every byte encodes two pixels, each pixel is 4 bytes in RGBA
-
-	int p = 0;
-	for (int i = 0; i < SPRITESHEET_LENGTH; i++) {
-		unsigned char left = input[i] & 0x0F;
-		if (left == 0) {
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-		}
-		else {
-			SDL_Color c = DEFAULT_PALETTE[left];
-			ret[p++] = c.a;
-			ret[p++] = c.b;
-			ret[p++] = c.g;
-			ret[p++] = c.r;
-		}
-
-		unsigned char right = input[i] >> 4;
-		if (right == 0) {
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-			ret[p++] = 0x00;
-		}
-		else {
-			SDL_Color c = DEFAULT_PALETTE[right];
-			ret[p++] = c.a;
-			ret[p++] = c.b;
-			ret[p++] = c.g;
-			ret[p++] = c.r;
-		}
-	}
-
-	return ret;
-}
 
 Renderer::Renderer()
 {
@@ -233,7 +189,7 @@ void Renderer::draw_from_spritesheet(int sx, int sy, int sw, int sh, int dx, int
 	for (int _y = 0; _y < dh; _y++) {
 		int sprite_y = _y * sh / dh;
 		if (flip_y) {
-			sprite_y = sh - sprite_y;
+			sprite_y = sh - sprite_y - 1;
 		}
 		for (int _x = s_offset; _x < dw + s_offset; _x++) {
 			int sprite_x = _x * sw / dw;
@@ -294,6 +250,51 @@ void Renderer::draw_line(int x0, int y0, int x1, int y1)
 	}
 	std::vector<Renderer_Point> points = efla_small_line(x0, y0, x1, y1);
 	this->draw_points(points);
+}
+
+void Renderer::draw_textured_line(int x0, int y0, int x1, int y1, float mx, float my, float mdx, float mdy)
+{
+	Renderer_Point sc0 = this->coord_to_screen(x0, y0);
+	Renderer_Point sc1 = this->coord_to_screen(x1, y1);
+
+	std::vector<Renderer_Point> points = efla_small_line(sc0.x, sc0.y, sc1.x, sc1.y);
+	for (int i = 0; i < points.size(); i++, mx += mdx, my += mdy) {
+		if (mx < 0 || mx >= 128) continue;
+		if (my < 0 || my >= 64) continue;
+
+		if (this->is_drawable(points[i].x, points[i].y)) {
+			int row_offset = ADDR_MAP + (int)my * 128;
+			if (my >= 32) {
+				row_offset = ADDR_MAP_SHARED + ((int)my - 32) * 128;
+			}
+			int spr = p8_memory[row_offset + (int)mx];
+			if (spr == 0) {
+				continue;
+			}
+
+			int sx = 8 * (mx - (int)mx);
+			int sy = 8 * (my - (int)my);
+
+			int px = (spr % 16) * 8 + sx;
+			int py = (spr / 16) * 8 + sy;
+
+			unsigned char color = p8_memory[ADDR_SPRITE_SHEET + py * LINE_JMP + px / 2];
+			if (px % 2 == 0) {
+				color = color & 0x0F;
+			}
+			else {
+				color = color >> 4;
+			}
+
+			unsigned char mapped_color = this->get_screen_color(color);
+			// Skip if it's transparent
+			if (mapped_color >= 0x10) {
+				continue;
+			}
+
+			this->set_pixel(points[i].x, points[i].y, mapped_color);
+		}
+	}
 }
 
 void Renderer::draw_oval(int x0, int y0, int x1, int y1, bool fill)

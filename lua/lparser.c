@@ -919,6 +919,9 @@ static void reg_global_fn(LexState* ls, expdesc* v, const char* fn_name) {
   luaK_exp2nextreg(fs, v);
 }
 
+// ORDER UNOPR
+const char* custom_unopr_fns[] = { "peek", "peek2", "peek4" };
+
 static void suffixedexp (LexState *ls, expdesc *v) {
   /* suffixedexp ->
        primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
@@ -1048,6 +1051,9 @@ static UnOpr getunopr (int op) {
     case '-': return OPR_MINUS;
     case '~': return OPR_BNOT;
     case '#': return OPR_LEN;
+    case '@': return OPR_PEEK;
+    case '%': return OPR_PEEK2;
+    case '$': return OPR_PEEK4;
     default: return OPR_NOUNOPR;
   }
 }
@@ -1115,7 +1121,24 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   UnOpr uop;
   enterlevel(ls);
   uop = getunopr(ls->t.token);
-  if (uop != OPR_NOUNOPR) {
+  if (uop >= OPR_PEEK && uop <= OPR_PEEK4) { // ORDER UNOPR
+    FuncState* fs = ls->fs;
+
+    // Get peek2 function
+    expdesc var, arg;
+    reg_global_fn(ls, &var, custom_unopr_fns[uop - OPR_PEEK]); // ORDER UNOPR
+
+    luaX_next(ls);  // skip operator
+    subexpr(ls, &arg, UNARY_PRIORITY);
+    luaK_exp2nextreg(fs, &arg); // Set it as an argument
+
+    // Call the function, set code output to `v`
+    int nparams = 1;
+    init_exp(v, VCALL, luaK_codeABC(fs, OP_CALL, var.u.info, nparams + 1, 2));
+
+    // It will leave the result in one register after the base one (not sure... but following same steps as in funcargs)
+    fs->freereg = var.u.info + 1;
+  }else if (uop != OPR_NOUNOPR) {
     int line = ls->linenumber;
     luaX_next(ls);
     subexpr(ls, v, UNARY_PRIORITY);

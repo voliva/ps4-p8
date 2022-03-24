@@ -44,6 +44,21 @@ int line(lua_State* L) {
 	return 0;
 }
 
+int tline(lua_State* L) {
+	int x0 = lua_tointeger(L, 1);
+	int y0 = lua_tointeger(L, 2);
+	int x1 = lua_tointeger(L, 3);
+	int y1 = lua_tointeger(L, 4);
+	fix16_t mx = lua_tonumber(L, 5);
+	fix16_t my = lua_tonumber(L, 6);
+	fix16_t mdx = luaL_optnumber(L, 7, 0x2000); // 0x2000 is 1/8 in fix16
+	fix16_t mdy = luaL_optnumber(L, 8, 0);
+
+	renderer->draw_textured_line(x0, y0, x1, y1, fix16_to_float(mx), fix16_to_float(my), fix16_to_float(mdx), fix16_to_float(mdy));
+
+	return 0;
+}
+
 int rectfill(lua_State* L) {
 	int x0 = lua_tointeger(L, 1);
 	int y0 = lua_tointeger(L, 2);
@@ -274,6 +289,12 @@ int color(lua_State* L) {
 	return 0;
 }
 
+void set_draw_pal(int c0, int c1) {
+	p8_memory[ADDR_DS_DRAW_PAL + c0] = (p8_memory[ADDR_DS_DRAW_PAL + c0] & 0xf0) | (c1 & 0x0f);
+}
+void set_screen_pal(int c0, int c1) {
+	p8_memory[ADDR_DS_SCREEN_PAL + c0] = c1;
+}
 int pal(lua_State* L) {
 	if (lua_gettop(L) == 0) {
 		renderer->reset_draw_pal();
@@ -282,7 +303,24 @@ int pal(lua_State* L) {
 	}
 
 	if (lua_istable(L, 1)) {
-		alert_todo("pal with table");
+		int p = luaL_optinteger(L, 2, 0);
+		lua_pushvalue(L, 1);
+		lua_pushnil(L); // push key
+		while (lua_next(L, -2) != 0) {
+			int c0 = lua_tointeger(L, -2) & 0x0FF;
+			int c1 = lua_tointeger(L, -1);
+
+			if (p == 0) {
+				set_draw_pal(c0, c1);
+			}
+			else if (p == 1) {
+				set_screen_pal(c0, c1);
+			}
+
+			/* removes 'value'; keeps 'key' for next iteration */
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 1); // pop key
 
 		return 0;
 	}
@@ -304,12 +342,12 @@ int pal(lua_State* L) {
 
 		return 0;
 	}
-	int addr = ADDR_DS_DRAW_PAL;
-	if (p == 1) {
-		addr = ADDR_DS_SCREEN_PAL;
-	}
 
-	p8_memory[addr + c0] = c1;
+	if (p == 0) {
+		set_draw_pal(c0, c1);
+	} else if (p == 1) {
+		set_screen_pal(c0, c1);
+	}
 
 	return 0;
 }
@@ -500,6 +538,7 @@ void load_draw_fns(lua_State* L)
 	register_fn(L, "pset", pset);
 	register_fn(L, "fillp", fillp);
 	register_fn(L, "line", line);
+	register_fn(L, "tline", tline);
 	register_fn(L, "rect", rect);
 	register_fn(L, "rectfill", rectfill);
 	register_fn(L, "circ", circ);

@@ -58,7 +58,10 @@ static BinOpr assignment_to_opr[] = {
   OPR_ROTR
 };
 
-typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
+/*
+** grep "ORDER UNOPR" if you change these enums  (ORDER UNOPR)
+*/
+typedef enum UnOpr { OPR_MINUS, OPR_BNOT, OPR_NOT, OPR_LEN, OPR_PEEK, OPR_PEEK2, OPR_PEEK4, OPR_NOUNOPR } UnOpr;
 
 
 /* get (pointer to) instruction of given 'expdesc' */

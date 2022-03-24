@@ -237,6 +237,24 @@ int reload(lua_State* L) {
 	unsigned short sourceaddr = luaL_checkinteger(L, 2);
 	unsigned short len = luaL_checkinteger(L, 3);
 	runningCart->reload(destaddr, sourceaddr, len);
+	return 0;
+}
+
+int reset(lua_State* L) {
+	alert_todo("reset (undocumented)");
+	runningCart->reload(0, 0, 0x4300);
+
+	return 0;
+}
+
+int trace(lua_State* L) {
+	alert_todo("trace");
+
+	std::string str = luaL_optstring(L, 2, "TODO");
+
+	lua_pushstring(L, str.c_str());
+
+	return 1;
 }
 
 int run(lua_State* L) {
@@ -281,7 +299,9 @@ void load_machine_fns(lua_State* L)
 	register_fn(L, "cartdata", cartdata);
 	register_fn(L, "memset", memset);
 	register_fn(L, "stat", stat);
+	register_fn(L, "trace", trace);
 	register_fn(L, "reload", reload);
+	register_fn(L, "reset", reset);
 	register_fn(L, "run", run);
 	register_fn(L, "menuitem", noop);
 	register_fn(L, "memcpy", _memcpy);
