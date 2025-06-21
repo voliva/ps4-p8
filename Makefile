@@ -42,7 +42,7 @@ BUILD		:=	build
 SOURCES		:=	pico8_ps4 lua libfixmath
 DATA		:=	data
 INCLUDES	:=	include
-#ROMFS	:=	romfs
+ROMFS	    :=	assets
 
 #---------------------------------------------------------------------------------
 # options for code generation

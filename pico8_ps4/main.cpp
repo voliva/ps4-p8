@@ -24,6 +24,9 @@
 #ifdef __PS4__
 #define BUNDLED_FOLDER "/app0/assets/misc"
 #define CARTRIDGE_FOLDER "/data/p8-cartridges"
+#elif __SWITCH__
+#define BUNDLED_FOLDER "romfs:/misc"
+#define CARTRIDGE_FOLDER "/data/p8-cartridges"
 #else
 #define BUNDLED_FOLDER "../assets/misc"
 #define CARTRIDGE_FOLDER "../p8-cartridges"
@@ -69,8 +72,21 @@ std::string name_from_path(std::string path)
 	return filename.substr(0, filename.length() - 7);
 }
 
+#ifdef __SWITCH__
+#include <switch.h>
+
+void initFs()
+{
+	romfsInit();
+}
+#else
+void initFs(){ }
+#endif
+
 int main(void)
 {
+	initFs();
+
 	DEBUGLOG << "Initializing save states..." << ENDL;
 	initialize_save_states();
 
@@ -298,12 +314,16 @@ int main(void)
 					(int)h};
 				SDL_RenderCopy(renderer->renderer, srf, NULL, &dest);
 			}
-			std::string currentPath = scr.cartridges[round(renderingTargetCart)].path;
-			std::string name = name_from_path(currentPath);
-			font->sys_print(
-				name,
-				(FRAME_WIDTH - SYS_CHAR_WIDTH * name.length()) / 2,
-				30 + SYS_CHAR_HEIGHT + 100 + CAROUSEL_CART_HEIGHT + 100);
+
+			double idx = round(renderingTargetCart);
+			if (scr.cartridges.size() > idx) {
+				std::string currentPath = scr.cartridges[round(renderingTargetCart)].path;
+				std::string name = name_from_path(currentPath);
+				font->sys_print(
+					name,
+					(FRAME_WIDTH - SYS_CHAR_WIDTH * name.length()) / 2,
+					30 + SYS_CHAR_HEIGHT + 100 + CAROUSEL_CART_HEIGHT + 100);
+			}
 		}
 
 		std::string github = "github.com/voliva/ps4-p8";

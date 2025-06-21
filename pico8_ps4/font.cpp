@@ -6,6 +6,8 @@
 
 #ifdef __PS4__
 #define PATH "/app0/assets/misc/p8_font.txt"
+#elif __SWITCH__
+#define PATH "romfs:/misc/p8_font.txt"
 #else
 #define PATH "../assets/misc/p8_font.txt"
 #endif
