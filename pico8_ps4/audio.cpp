@@ -186,14 +186,21 @@ AudioManager::AudioManager()
 	audio_spec->userdata = &this->channels;
 
 	this->spec = audio_spec;
+	DEBUGLOG << "open audio device" << ENDL;
 	this->deviceId = SDL_OpenAudioDevice(NULL, 0, audio_spec, NULL, 0);
 
+	DEBUGLOG << "create music thread" << ENDL;
 	this->music_thread = std::thread(&AudioManager::music_loop, this);
 	this->pattern = -1;
 }
 AudioManager::~AudioManager()
 {
+	DEBUGLOG << "destroy audio device" << ENDL;
 	SDL_CloseAudioDevice(this->deviceId);
+	DEBUGLOG << "clear and join" << ENDL;
+	this->music_notifier.clear();
+	this->music_thread.join();
+	DEBUGLOG << "joined" << ENDL;
 	delete this->spec;
 }
 

@@ -32,7 +32,11 @@
 #define CARTRIDGE_FOLDER "../p8-cartridges"
 #endif
 
+#if __SWITCH__
+#define CAROUSEL_CART_HEIGHT 350
+#else
 #define CAROUSEL_CART_HEIGHT 400
+#endif
 
 #define DEBUGLOG Rom_DEBUGLOG
 Log DEBUGLOG = logger.log("ROM");
@@ -75,18 +79,25 @@ std::string name_from_path(std::string path)
 #ifdef __SWITCH__
 #include <switch.h>
 
-void initFs()
+void initSystem()
 {
 	romfsInit();
 	socketInitializeDefault();
 }
+void closeSystem()
+{
+	socketExit();
+	romfsExit();
+	consoleExit(NULL);
+}
 #else
-void initFs(){ }
+void initSystem() {}
+void closeSystem() {}
 #endif
 
 int main(void)
 {
-	initFs();
+	initSystem();
 
 	DEBUGLOG << "Initializing save states..." << ENDL;
 	initialize_save_states();
@@ -97,12 +108,14 @@ int main(void)
 	DEBUGLOG << "Initializing audio..." << ENDL;
 	audioManager = new AudioManager();
 
+	DEBUGLOG << "Initializing state..." << ENDL;
 	machineState = new MachineState();
 	font = new Font();
 	pauseMenu = new PauseMenu();
 	runningCart = new RunningCart();
 	saveManager = new SaveManager();
 
+	DEBUGLOG << "Initializing http..." << ENDL;
 	http_init();
 
 	// Initialize input / joystick
@@ -113,6 +126,7 @@ int main(void)
 		SDL_JoystickOpen(0);
 	}
 
+	DEBUGLOG << "Begin rendering" << ENDL;
 	SDL_Surface *screenSurface = SDL_GetWindowSurface(renderer->window);
 
 	std::vector<LocalCartridge> bundledCartridges = load_local_cartridges(BUNDLED_FOLDER);
@@ -280,7 +294,7 @@ int main(void)
 		if (canDecScreen)
 		{
 #ifdef __SWITCH__
-			font->sys_print("<lz", FRAME_WIDTH / 3 - 3 * SYS_CHAR_WIDTH, 30);
+			font->sys_print("<lz", FRAME_WIDTH / 4 - 3 * SYS_CHAR_WIDTH, 30);
 #else
 			font->sys_print("<l2", FRAME_WIDTH / 3 - 3 * SYS_CHAR_WIDTH, 30);
 #endif
@@ -288,7 +302,7 @@ int main(void)
 		if (canIncScreen)
 		{
 #ifdef __SWITCH__
-			font->sys_print("rz>", 2 * FRAME_WIDTH / 3, 30);
+			font->sys_print("rz>", 3 * FRAME_WIDTH / 4, 30);
 #else
 			font->sys_print("r2>", 2 * FRAME_WIDTH / 3, 30);
 #endif
@@ -355,7 +369,9 @@ int main(void)
 		SDL_UpdateWindowSurface(renderer->window);
 	}
 
+	delete audioManager;
 	SDL_Quit();
+	closeSystem();
 
 	return 0;
 }

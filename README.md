@@ -1,8 +1,8 @@
 # PS4-P8
 
-An emulator to run pico-8 cartridges on a PS4.
+An emulator to run pico-8 cartridges on a PS4 (or Switch).
 
-Project based on [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain)
+Project based on [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) (or [devkitPro](https://devkitpro.org))
 
 Pico-8 is a Fantasy Programmable Console made by Lexaloffle Games. This emulator is compatible with built pico-8 cartridges in PNG format, to build your own games you will need the original [Pico-8 console](https://www.lexaloffle.com/pico-8.php)
 
@@ -21,7 +21,7 @@ Not finished - Compatibility is still limited, but there are many cartridges it 
 
 It comes with a set of bundled games which have been used to improve the compatibility.
 
-More .p8.png cartridges can be bundled with the .pkg file by adding them into `/assets/misc` folder, or they will be loaded in runtime from PS4's `/data/p8-cartridges` folder.
+More .p8.png cartridges can be bundled with the .pkg file by adding them into `/assets/misc` folder, or they will be loaded in runtime from console's `/data/p8-cartridges` folder.
 
 - `print`: It prints text on the screen, but it's missing some P8SCII control codes, non-ascii characters.
 - Sprites: Done
@@ -30,13 +30,13 @@ More .p8.png cartridges can be bundled with the .pkg file by adding them into `/
 - Menu: WIP.
 - Memory manipulation: Almost complete.
 - Maps: Done
-- Custom P8-Lua: Done
+- Custom P8-Lua: Some edge cases missing
 
 A list of some playable cartridges can be found [here](https://github.com/voliva/ps4-p8/blob/main/PlayableCartridges.md)
 
 ## Building
 
-The project is cross-platform for Windows + MacOS + PS4.
+The project is cross-platform for Windows + MacOS + PS4 + Switch.
 
 You'll need [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) installed with its dependencies (.NET Core) and clang++.
 
@@ -59,6 +59,10 @@ Run with visual studio. First build `${SolutionDir}/lua` project, then `${Soluti
 
 Run `./build.bat` - First of `${SolutionDir}/lua` project, then `${SolutionDir}/pico8_ps4`.
 
+### Switch
+
+Run `make`
+
 ## License
 
 ### External code used
@@ -70,6 +74,7 @@ Special thanks to:
 ### External tools and dependencies used
 
 - [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) GPL v3
+- [devkitPro](https://devkitpro.org) GPL v2
 - [Lua](https://www.lua.org/) MIT
 - [Eris](https://github.com/fnuecke/eris) MIT
 - [libfixmath](https://code.google.com/archive/p/libfixmath/) MIT
@@ -96,7 +101,7 @@ Special thanks to:
 
 MIT
 
-Copyright 2021 Victor Oliva
+Copyright 2021-2025 Victor Oliva
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

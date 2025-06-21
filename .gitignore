@@ -15,4 +15,6 @@ ps4_int
 !.gitkeep
 mac_build
 /build
-/ps4-p8.*
+/*.elf
+/*.nacp
+/*.nro

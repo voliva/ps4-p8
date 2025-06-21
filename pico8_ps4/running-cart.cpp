@@ -18,7 +18,7 @@ Log DEBUGLOG = logger.log("Runtime");
 #define SKIPFRAME_LOG false
 #elif __SWITCH__
 #define IMAGE_FOLDER "romfs:/images"
-#define SKIPFRAME_LOG false
+#define SKIPFRAME_LOG true
 #else
 #define IMAGE_FOLDER "../assets/images"
 #define SKIPFRAME_LOG true

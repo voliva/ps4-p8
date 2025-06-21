@@ -37,14 +37,15 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   of a homebrew executable (.nro). This is intended to be used for sysmodules.
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
-TARGET		:=	$(notdir $(CURDIR))
+TARGET		:=	switch-p8
 BUILD		:=	build
 SOURCES		:=	pico8_ps4 lua libfixmath
 DATA		:=	data
 INCLUDES	:=	include
 ROMFS	    :=	assets
 APP_TITLE   :=  Switch P8
-APP_VERSION :=  0.1.0
+APP_VERSION :=  0.3.1
+APP_AUTHOR  :=  voliva
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -132,12 +133,12 @@ else
 endif
 
 ifeq ($(strip $(ICON)),)
-	icons := $(wildcard *.jpg)
-	ifneq (,$(findstring $(TARGET).jpg,$(icons)))
-		export APP_ICON := $(TOPDIR)/$(TARGET).jpg
+	icons := $(wildcard *.png)
+	ifneq (,$(findstring $(TARGET).png,$(icons)))
+		export APP_ICON := $(TOPDIR)/$(TARGET).png
 	else
-		ifneq (,$(findstring icon.jpg,$(icons)))
-			export APP_ICON := $(TOPDIR)/icon.jpg
+		ifneq (,$(findstring icon.png,$(icons)))
+			export APP_ICON := $(TOPDIR)/icon.png
 		endif
 	endif
 else
