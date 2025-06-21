@@ -33,19 +33,21 @@
 
 #define DEBUGLOG Rom_DEBUGLOG
 Log DEBUGLOG = logger.log("ROM");
-MachineState* machineState;
-AudioManager* audioManager;
-Renderer* renderer;
-Font* font;
-PauseMenu* pauseMenu;
-RunningCart* runningCart;
-SaveManager* saveManager;
+MachineState *machineState;
+AudioManager *audioManager;
+Renderer *renderer;
+Font *font;
+PauseMenu *pauseMenu;
+RunningCart *runningCart;
+SaveManager *saveManager;
 
-typedef struct {
-	SDL_Texture* surface;
+typedef struct
+{
+	SDL_Texture *surface;
 	std::string path;
 } LocalCartridge;
-typedef struct {
+typedef struct
+{
 	std::string name;
 	std::vector<LocalCartridge> cartridges;
 } Screen;
@@ -56,11 +58,13 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory);
 #include "splore.h"
 #include "save_states.h"
 
-bool isSplore(int screen) {
+bool isSplore(int screen)
+{
 	return screen == 2 || screen == 3;
 }
 
-std::string name_from_path(std::string path) {
+std::string name_from_path(std::string path)
+{
 	std::string filename = path.substr(path.find_last_of("/") + 1);
 	return filename.substr(0, filename.length() - 7);
 }
@@ -86,41 +90,38 @@ int main(void)
 
 	// Initialize input / joystick
 	if (SDL_NumJoysticks() > 0)
+
 	{
 		DEBUGLOG << "Initialize joysticks" << ENDL;
 		SDL_JoystickOpen(0);
 	}
 
-	SDL_Surface* screenSurface = SDL_GetWindowSurface(renderer->window);
+	SDL_Surface *screenSurface = SDL_GetWindowSurface(renderer->window);
 
 	std::vector<LocalCartridge> bundledCartridges = load_local_cartridges(BUNDLED_FOLDER);
 	std::vector<LocalCartridge> localCartridges = load_local_cartridges(CARTRIDGE_FOLDER);
 	std::vector<LocalCartridge> fakeBbs;
 	fakeBbs.push_back(LocalCartridge{
-		NULL, ""
-	});
+		NULL, ""});
 
 	Screen screens[] = {
 		Screen{
 			"bundled",
-			bundledCartridges
-		},
+			bundledCartridges},
 		Screen{
 			"local",
-			localCartridges
-		},
+			localCartridges},
 		Screen{
 			"bbs featured",
-			fakeBbs
-		},
+			fakeBbs},
 		Screen{
 			"bbs new",
-			fakeBbs
-		},
+			fakeBbs},
 	};
 	Splore splore;
 	int currentScreen = 1;
-	if (localCartridges.size() == 0) {
+	if (localCartridges.size() == 0)
+	{
 		currentScreen = 0;
 	}
 	int selectedCart = 0;
@@ -130,64 +131,80 @@ int main(void)
 	bool quit = false;
 
 	auto frame_start = getTimestamp();
-	while (!quit) {
+	while (!quit)
+	{
 		int prevScreen = currentScreen - 1;
-		while (prevScreen >= 0 && screens[prevScreen].cartridges.size() == 0) {
+		while (prevScreen >= 0 && screens[prevScreen].cartridges.size() == 0)
+		{
 			prevScreen--;
 		}
 		bool canDecScreen = prevScreen >= 0;
 		int nextScreen = currentScreen + 1;
-		while (nextScreen < 4 && screens[nextScreen].cartridges.size() == 0) {
+		while (nextScreen < 4 && screens[nextScreen].cartridges.size() == 0)
+		{
 			nextScreen++;
 		}
 		bool canIncScreen = nextScreen < 4;
 
 		while (SDL_PollEvent(&e) != 0)
+
 		{
-			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE)) {
+			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE))
+			{
 				quit = true;
 			}
 
 			Key k = getKeyDown(e);
-			switch (k) {
+			switch (k)
+			{
 			case Key::L2:
-				if (canDecScreen) {
+				if (canDecScreen)
+				{
 					currentScreen = prevScreen;
 					selectedCart = 0;
 					renderingTargetCart = 0;
 				}
 				break;
 			case Key::R2:
-				if (canIncScreen) {
+				if (canIncScreen)
+				{
 					currentScreen = nextScreen;
 					selectedCart = 0;
 					renderingTargetCart = 0;
 
-					if (currentScreen == 2) {
+					if (currentScreen == 2)
+					{
 						splore.initialize(Mode::Featured);
-					} else if(currentScreen == 3) {
+					}
+					else if (currentScreen == 3)
+					{
 						splore.initialize(Mode::New);
 					}
 				}
 				break;
 			}
 
-			if (isSplore(currentScreen)) {
+			if (isSplore(currentScreen))
+			{
 				splore.key_down(k);
 			}
-			else {
-				switch (k) {
+			else
+			{
+				switch (k)
+				{
 				case Key::left:
-					if (selectedCart == 0) break;
+					if (selectedCart == 0)
+						break;
 					selectedCart--;
 					break;
 				case Key::right:
-					if (selectedCart == screens[currentScreen].cartridges.size() - 1) break;
+					if (selectedCart == screens[currentScreen].cartridges.size() - 1)
+						break;
 					selectedCart++;
 					break;
 				case Key::cross:
 					std::string path = screens[currentScreen].cartridges[selectedCart].path;
-					Cartridge* r = load_from_png(path);
+					Cartridge *r = load_from_png(path);
 					run_cartridge(r, name_from_path(path));
 					delete r;
 					break;
@@ -201,19 +218,25 @@ int main(void)
 
 		double target_diff = selectedCart - renderingTargetCart;
 		double movement = target_diff * 0.1 * delta / 15;
-		if (movement > 0) {
-			if (movement < 0.01) {
+		if (movement > 0)
+		{
+			if (movement < 0.01)
+			{
 				movement = 0.01;
 			}
-			if (renderingTargetCart + movement > selectedCart) {
+			if (renderingTargetCart + movement > selectedCart)
+			{
 				movement = selectedCart - renderingTargetCart;
 			}
 		}
-		else if(movement < 0) {
-			if (movement > -0.01) {
+		else if (movement < 0)
+		{
+			if (movement > -0.01)
+			{
 				movement = -0.01;
 			}
-			if (renderingTargetCart + movement < selectedCart) {
+			if (renderingTargetCart + movement < selectedCart)
+			{
 				movement = selectedCart - renderingTargetCart;
 			}
 		}
@@ -227,32 +250,40 @@ int main(void)
 
 		font->sys_print(scr.name, (FRAME_WIDTH - SYS_CHAR_WIDTH * scr.name.length()) / 2, 30);
 
-		if (canDecScreen) {
-			font->sys_print("<l2", FRAME_WIDTH / 3 - 3*SYS_CHAR_WIDTH, 30);
+		if (canDecScreen)
+		{
+			font->sys_print("<l2", FRAME_WIDTH / 3 - 3 * SYS_CHAR_WIDTH, 30);
 		}
-		if (canIncScreen) {
+		if (canIncScreen)
+		{
 			font->sys_print("r2>", 2 * FRAME_WIDTH / 3, 30);
 		}
 
-		if (isSplore(currentScreen)) {
+		if (isSplore(currentScreen))
+		{
 			splore.render();
 		}
-		else {
-			for (int i = 0; i < scr.cartridges.size(); i++) {
+		else
+		{
+			for (int i = 0; i < scr.cartridges.size(); i++)
+			{
 				double rendering_diff = fabs(renderingTargetCart - i);
-				if (rendering_diff > 2.2) {
+				if (rendering_diff > 2.2)
+				{
 					continue;
 				}
 
-				SDL_Texture* srf = scr.cartridges[i].surface;
+				SDL_Texture *srf = scr.cartridges[i].surface;
 				int width = 160 * ((double)CAROUSEL_CART_HEIGHT / 205);
 
 				int alpha = 255 - 255 * rendering_diff / 2.2;
-				if (alpha < 0) alpha = 0;
+				if (alpha < 0)
+					alpha = 0;
 				SDL_SetTextureAlphaMod(srf, alpha);
 
 				double scale = 1.2 - 0.2 * rendering_diff;
-				if (scale < 1) scale = 1;
+				if (scale < 1)
+					scale = 1;
 
 				int x_center = FRAME_WIDTH / 2 + (width + 100) * ((double)i - renderingTargetCart);
 				double x = x_center - width * scale / 2;
@@ -264,8 +295,7 @@ int main(void)
 					(int)x,
 					(int)y,
 					(int)w,
-					(int)h
-				};
+					(int)h};
 				SDL_RenderCopy(renderer->renderer, srf, NULL, &dest);
 			}
 			std::string currentPath = scr.cartridges[round(renderingTargetCart)].path;
@@ -273,8 +303,7 @@ int main(void)
 			font->sys_print(
 				name,
 				(FRAME_WIDTH - SYS_CHAR_WIDTH * name.length()) / 2,
-				30 + SYS_CHAR_HEIGHT + 100 + CAROUSEL_CART_HEIGHT + 100
-			);
+				30 + SYS_CHAR_HEIGHT + 100 + CAROUSEL_CART_HEIGHT + 100);
 		}
 
 		std::string github = "github.com/voliva/ps4-p8";
@@ -282,8 +311,7 @@ int main(void)
 			github,
 			FRAME_WIDTH - SYS_CHAR_WIDTH * github.length() / 3,
 			FRAME_HEIGHT - SYS_CHAR_HEIGHT / 3,
-			0.33
-		);
+			0.33);
 
 		SDL_UpdateWindowSurface(renderer->window);
 	}
@@ -293,39 +321,44 @@ int main(void)
 	return 0;
 }
 
-SDL_Texture* surface_from_file(std::string path) {
+SDL_Texture *surface_from_file(std::string path)
+{
 	int width, height, channels;
-	unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+	unsigned char *data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
 	// For some reason stbi_load gives rgb_a as [a,b,g,r] stream
-	SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(data, width, height, 4 * 8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
-	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer->renderer, surface);
+	SDL_Surface *surface = SDL_CreateRGBSurfaceFrom(data, width, height, 4 * 8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
+	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer->renderer, surface);
 	SDL_FreeSurface(surface);
 
 	return texture;
 }
-std::vector<LocalCartridge> load_local_cartridges(std::string directory) {
+std::vector<LocalCartridge> load_local_cartridges(std::string directory)
+{
 	std::vector<LocalCartridge> result;
 
-	DIR* dir;
-	struct dirent* ent;
-	if ((dir = opendir(directory.c_str())) != NULL) {
-		while ((ent = readdir(dir)) != NULL) {
+	DIR *dir;
+	struct dirent *ent;
+	if ((dir = opendir(directory.c_str())) != NULL)
+	{
+		while ((ent = readdir(dir)) != NULL)
+		{
 			std::string filename = ent->d_name;
-			if (filename.find(".p8.png") != std::string::npos) {
+			if (filename.find(".p8.png") != std::string::npos)
+			{
 				std::string path = directory + "/" + filename;
-				SDL_Texture* surface = surface_from_file(path);
-				if (surface != NULL) {
-					result.push_back({
-						surface,
-						path
-					});
+				SDL_Texture *surface = surface_from_file(path);
+				if (surface != NULL)
+				{
+					result.push_back({surface,
+									  path});
 				}
 			}
 		}
 		closedir(dir);
 	}
-	else {
+	else
+	{
 		std::string err = strerror(errno);
 		DEBUGLOG << "Can't open dir " << directory << ": " << err << ENDL;
 	}

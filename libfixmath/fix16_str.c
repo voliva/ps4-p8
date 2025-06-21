@@ -78,7 +78,7 @@ size_t fix16_to_str(fix16_t value, char *buf)
 
     *buf = '\0';
 
-    return buf - start;
+    return (size_t)buf - start;
 }
 
 fix16_t fix16_from_str(const char *buf, char** end)

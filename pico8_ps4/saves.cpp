@@ -1,6 +1,7 @@
 #include "saves.h"
 #include "memory.h"
 #include "log.h"
+#include <cstring>
 
 #ifdef __PS4__
 #define SAVE_FOLDER "/data/p8-saves"

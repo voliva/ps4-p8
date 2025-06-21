@@ -5,7 +5,7 @@ typedef uint64_t timestamp_t;
 #else
 #include <chrono>
 
-typedef std::chrono::steady_clock::time_point timestamp_t;
+typedef std::chrono::system_clock::time_point timestamp_t;
 #endif
 
 timestamp_t getTimestamp();

@@ -5,6 +5,7 @@
 #include<queue>
 #include<chrono>
 #include<mutex>
+#include<atomic>
 
 template<typename dataType>
 class ConcurrentQueue

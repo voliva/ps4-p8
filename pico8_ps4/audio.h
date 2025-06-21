@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>;
+#include <vector>
 #include <SDL2/SDL_audio.h>
 #include <thread>
 #include "concurrent_queue.h"

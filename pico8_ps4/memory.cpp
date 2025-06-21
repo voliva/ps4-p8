@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "log.h"
+#include <cstring>
 
 unsigned char p8_memory[P8_TOTAL_MEMORY];
 
