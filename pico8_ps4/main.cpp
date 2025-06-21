@@ -165,7 +165,7 @@ int main(void)
 		while (SDL_PollEvent(&e) != 0)
 
 		{
-			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE))
+			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE) || (e.type == SDL_JOYBUTTONDOWN && e.jbutton.button == 11))
 			{
 				quit = true;
 			}

@@ -123,7 +123,7 @@ std::map<Uint8, Key> controller_to_sys_key = {
 	{1, Key::circle},
 	{2, Key::circle},
 	{10, Key::pause},
-	{11, Key::pause},
+	// {11, Key::pause}, this is quit
 	{17, Key::up},
 	{19, Key::down},
 	{16, Key::left},

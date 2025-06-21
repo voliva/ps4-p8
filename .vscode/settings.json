@@ -1,6 +1,7 @@
 {
   "editor.formatOnSave": false,
   "files.associations": {
-    "string": "cpp"
+    "string": "cpp",
+    "thread": "cpp"
   }
 }

@@ -4,6 +4,8 @@
 
 #ifdef __PS4__
 #define FILENAME "/data/debug.log"
+#elif __SWITCH__
+#define FILENAME "/debug.log"
 #else
 #define FILENAME "debug.log"
 #endif
