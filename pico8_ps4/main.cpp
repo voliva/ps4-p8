@@ -165,7 +165,7 @@ int main(void)
 		while (SDL_PollEvent(&e) != 0)
 
 		{
-			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE) || (e.type == SDL_JOYBUTTONDOWN && e.jbutton.button == 11))
+			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE))
 			{
 				quit = true;
 			}
@@ -173,6 +173,9 @@ int main(void)
 			Key k = getKeyDown(e);
 			switch (k)
 			{
+			case Key::pause:
+				quit = true;
+				break;
 			case Key::L2:
 				if (canDecScreen)
 				{
@@ -268,11 +271,19 @@ int main(void)
 
 		if (canDecScreen)
 		{
+#ifdef __SWITCH__
+			font->sys_print("<lz", FRAME_WIDTH / 3 - 3 * SYS_CHAR_WIDTH, 30);
+#else
 			font->sys_print("<l2", FRAME_WIDTH / 3 - 3 * SYS_CHAR_WIDTH, 30);
+#endif
 		}
 		if (canIncScreen)
 		{
+#ifdef __SWITCH__
+			font->sys_print("rz>", 2 * FRAME_WIDTH / 3, 30);
+#else
 			font->sys_print("r2>", 2 * FRAME_WIDTH / 3, 30);
+#endif
 		}
 
 		if (isSplore(currentScreen))

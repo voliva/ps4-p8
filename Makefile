@@ -43,6 +43,8 @@ SOURCES		:=	pico8_ps4 lua libfixmath
 DATA		:=	data
 INCLUDES	:=	include
 ROMFS	    :=	assets
+APP_TITLE   :=  Switch P8
+APP_VERSION :=  0.1.0
 
 #---------------------------------------------------------------------------------
 # options for code generation
