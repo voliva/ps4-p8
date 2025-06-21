@@ -183,6 +183,13 @@ int main(void)
 					currentScreen = prevScreen;
 					selectedCart = 0;
 					renderingTargetCart = 0;
+
+					if (currentScreen == 2) {
+						splore.initialize(Mode::Featured);
+					}
+					else if (currentScreen == 3) {
+						splore.initialize(Mode::New);
+					}
 				}
 				break;
 			case Key::R2:

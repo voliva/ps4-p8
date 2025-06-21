@@ -224,10 +224,18 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
   lua_assert(lisdigit(ls->current));
   save_and_next(ls);
   total_length++;
-  if (first == '0')
-    total_length += check_next2(ls, "xXbB");
+  char accept_hex = 0;
+  if (first == '0') {
+      if (check_next2(ls, "xX")) {
+          total_length++;
+          accept_hex = 1;
+      }
+      else if (check_next2(ls, "bB")) {
+          total_length++;
+      }
+  }
   for (;;) {
-    if (lisxdigit(ls->current))
+    if ((accept_hex && lisxdigit(ls->current)) || (!accept_hex && lisdigit(ls->current)))
       { save_and_next(ls); total_length++; }
     else if (ls->current == '.')
       { save_and_next(ls); total_length++; }

@@ -176,6 +176,9 @@ end
 
 	register_lua_fn(L, "mid", R"V0G0N(
 function mid(a, b, c)
+	a = a or 0
+	b = b or 0
+	c = c or 0
 	if b <= a and a <= c then return a end
 	if c <= a and a <= b then return a end
 	if a <= b and b <= c then return b end
@@ -184,6 +187,11 @@ function mid(a, b, c)
 end
 	)V0G0N");
 
+	register_lua_fn(L, "_set_fps", R"V0G0N(
+function _set_fps(a, b, c)
+	// TODO
+end
+	)V0G0N");
 
 	register_lua_fn(L, "abs", R"V0G0N(
 function abs(a)

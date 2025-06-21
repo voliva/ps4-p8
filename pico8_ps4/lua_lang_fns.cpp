@@ -247,7 +247,13 @@ std::string trim(const std::string& s) {
 }
 
 int tonum(lua_State* L) {
-	std::string str = luaL_checkstring(L, 1);
+	int type = lua_type(L, 1);
+	if (type == LUA_TBOOLEAN) {
+		lua_pushinteger(L, lua_toboolean(L, 1));
+		return 1;
+	}
+	std::string str = lua_tostring(L, 1);
+
 	fix16_t decimal_value;
 	short integer_value;
 
