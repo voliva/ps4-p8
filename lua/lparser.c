@@ -1187,6 +1187,15 @@ static void block (LexState *ls) {
   leaveblock(fs);
 }
 
+static void block_line(LexState* ls, int line_num) {
+    /* block -> statlist */
+    FuncState* fs = ls->fs;
+    BlockCnt bl;
+    enterblock(fs, &bl, 0);
+    statlist_line(ls, line_num);
+    leaveblock(fs);
+}
+
 
 /*
 ** structure to chain all variables in the left-hand side of an
@@ -1434,13 +1443,27 @@ static void whilestat (LexState *ls, int line) {
   int condexit;
   BlockCnt bl;
   luaX_next(ls);  /* skip WHILE */
+  char is_shorthand = ls->t.token == '(';
+  int line_num = ls->linenumber;
   whileinit = luaK_getlabel(fs);
   condexit = cond(ls);
   enterblock(fs, &bl, 1);
-  checknext(ls, TK_DO);
-  block(ls);
-  luaK_jumpto(fs, whileinit);
-  check_match(ls, TK_END, TK_WHILE, line);
+  if (is_shorthand) {
+      is_shorthand = ls->t.token != TK_DO;
+  }
+  if (!is_shorthand) {
+      checknext(ls, TK_DO);
+  }
+
+  if (is_shorthand) {
+      block_line(ls, line_num);
+      luaK_jumpto(fs, whileinit);
+  }
+  else {
+      block(ls);
+      luaK_jumpto(fs, whileinit);
+      check_match(ls, TK_END, TK_WHILE, line);
+  }
   leaveblock(fs);
   luaK_patchtohere(fs, condexit);  /* false conditions finish the loop */
 }
@@ -1585,7 +1608,9 @@ static char test_then_block (LexState *ls, int *escapelist) {
     is_shorthand = ls->t.token != TK_THEN;
   }
   if (!is_shorthand) {
-    checknext(ls, TK_THEN);
+    if (!testnext(ls, TK_DO)) {
+        checknext(ls, TK_THEN);
+    }
   }
   if (ls->t.token == TK_GOTO || ls->t.token == TK_BREAK) {
     luaK_goiffalse(ls->fs, &v);  /* will jump to label if condition is true */
