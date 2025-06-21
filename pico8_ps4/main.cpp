@@ -78,6 +78,7 @@ std::string name_from_path(std::string path)
 void initFs()
 {
 	romfsInit();
+	socketInitializeDefault();
 }
 #else
 void initFs(){ }
