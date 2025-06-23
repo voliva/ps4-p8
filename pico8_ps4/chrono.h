@@ -2,6 +2,10 @@
 #include <orbis/libkernel.h>
 
 typedef uint64_t timestamp_t;
+#elif __SWITCH__
+#include <chrono>
+
+typedef std::chrono::system_clock::time_point timestamp_t;
 #else
 #include <chrono>
 

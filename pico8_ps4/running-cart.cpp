@@ -16,6 +16,9 @@ Log DEBUGLOG = logger.log("Runtime");
 #ifdef __PS4__
 #define IMAGE_FOLDER "/app0/assets/images"
 #define SKIPFRAME_LOG false
+#elif __SWITCH__
+#define IMAGE_FOLDER "romfs:/images"
+#define SKIPFRAME_LOG true
 #else
 #define IMAGE_FOLDER "../assets/images"
 #define SKIPFRAME_LOG true

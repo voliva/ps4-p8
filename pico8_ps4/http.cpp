@@ -152,6 +152,7 @@ close_http:
 #else
 
 #include <curl/curl.h>
+#include <cstring>
 
 CURL* curl;
 

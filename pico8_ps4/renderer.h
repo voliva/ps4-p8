@@ -10,6 +10,9 @@
 
 #define FRAME_WIDTH     1920
 #define FRAME_HEIGHT    1080
+#elif __SWITCH__
+#define FRAME_WIDTH 	1280
+#define FRAME_HEIGHT	720
 #else
 // SDL messes up with the linker somehow on windows?
 #undef main

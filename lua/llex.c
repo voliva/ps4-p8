@@ -249,7 +249,7 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
   
   if (length_read < total_length) {
     // We need to push back all the characters not used
-    luaZ_pushBack(ls->z, &(ls->current), 1);
+    luaZ_pushBack(ls->z, (const char *)&(ls->current), 1);
     luaZ_pushBack(ls->z, &(luaZ_buffer(ls->buff))[length_read-1], total_length - length_read);
     next(ls);
   }

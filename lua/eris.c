@@ -30,9 +30,11 @@ THE SOFTWARE.
 
 /* Not using stdbool because Visual Studio lives in the past... */
 #ifndef __cplusplus
+#ifndef __SWITCH__
 typedef int bool;
 #define false 0
 #define true 1
+#endif
 #endif
 
 /* Mark us as part of the Lua core to get access to what we need. */

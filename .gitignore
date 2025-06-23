@@ -14,3 +14,7 @@ ps4_int
 /p8-savestates/*
 !.gitkeep
 mac_build
+/build
+/*.elf
+/*.nacp
+/*.nro

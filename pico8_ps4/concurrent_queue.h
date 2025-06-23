@@ -5,6 +5,7 @@
 #include<queue>
 #include<chrono>
 #include<mutex>
+#include<atomic>
 
 template<typename dataType>
 class ConcurrentQueue
@@ -97,9 +98,10 @@ public:
         std::unique_lock<std::mutex> lk(m_mutex);
         while (!m_queue.empty())
         {
-            delete m_queue.front();
+            delete (void *)m_queue.front();
             m_queue.pop();
         }
+        m_cv.notify_one();
     }
     /// <summary> Check queue in forced exit state. </summary>
     bool isExit() const
