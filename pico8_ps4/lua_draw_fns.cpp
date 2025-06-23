@@ -394,7 +394,13 @@ int camera(lua_State* L) {
 
 int fget(lua_State* L) {
 	unsigned char sprite = luaL_checkinteger(L, 1);
-	int8_t flag = luaL_optinteger(L, 2, -1);
+	int8_t flag;
+	if (lua_isnil(L, 2)) {
+		flag = 0;
+	}
+	else {
+		flag = luaL_optinteger(L, 2, -1);
+	}
 
 	unsigned char flags = p8_memory[ADDR_SPRITE_FLAGS + sprite];
 	if (flag == -1) {
