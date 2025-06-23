@@ -318,6 +318,7 @@ void load_lang_fns(lua_State* L)
 {
 	register_fn(L, "printh", printh);
 	register_fn(L, "tostr", tostr);
+	register_fn(L, "tostring", tostr);
 	register_fn(L, "tonum", tonum);
 	register_fn(L, "ord", ord);
 	register_fn(L, "chr", chr);

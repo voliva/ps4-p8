@@ -40,7 +40,7 @@ static char *itoa_loop(char *buf, uint32_t scale, uint32_t value, bool skip)
 #define MAX_DECIMALS 4
 size_t fix16_to_str(fix16_t value, char *buf)
 {
-    size_t start = (size_t)buf;
+    char *start = buf;
     uint32_t uvalue = (value >= 0) ? value : -value;
     if (value < 0)
         *buf++ = '-';
@@ -78,7 +78,7 @@ size_t fix16_to_str(fix16_t value, char *buf)
 
     *buf = '\0';
 
-    return (size_t)buf - start;
+    return buf - start;
 }
 
 fix16_t fix16_from_str(const char *buf, char** end)

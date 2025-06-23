@@ -173,6 +173,14 @@ int Font::print(std::string c, int x, int y, bool scroll)
 					alert_todo("font: unknown disable command <" + std::to_string(next) + ">");
 				}
 			}
+			else if (next == ':') {
+				alert_todo("font: hex character");
+				start += 16;
+			}
+			else if (next == '.') {
+				alert_todo("font: hex character");
+				start += 8;
+			}
 			else {
 				alert_todo("font: unknown command <" + std::to_string(next) + ">");
 			}
