@@ -252,6 +252,9 @@ int tonum(lua_State* L) {
 		lua_pushinteger(L, lua_toboolean(L, 1));
 		return 1;
 	}
+	if (type == LUA_TNIL) {
+		return 0;
+	}
 	std::string str = lua_tostring(L, 1);
 
 	fix16_t decimal_value;

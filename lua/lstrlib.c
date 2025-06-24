@@ -1544,13 +1544,24 @@ static const luaL_Reg strlib[] = {
 };
 
 
+static int string_index(lua_State* L) {
+    size_t len;
+    const char* str = luaL_checklstring(L, 1, &len);
+    lua_Integer idx = luaL_checkinteger(L, 2);
+    if (idx < 1 || idx >(lua_Integer)len)
+        lua_pushnil(L);
+    else
+        lua_pushlstring(L, str + idx - 1, 1);
+    return 1;
+}
+
 static void createmetatable (lua_State *L) {
   lua_createtable(L, 0, 1);  /* table to be metatable for strings */
   lua_pushliteral(L, "");  /* dummy string */
   lua_pushvalue(L, -2);  /* copy table */
   lua_setmetatable(L, -2);  /* set table as metatable for strings */
   lua_pop(L, 1);  /* pop dummy string */
-  lua_pushvalue(L, -2);  /* get string library */
+  lua_pushcfunction(L, string_index);
   lua_setfield(L, -2, "__index");  /* metatable.__index = string */
   lua_pop(L, 1);  /* pop metatable */
 }
@@ -1562,6 +1573,7 @@ static void createmetatable (lua_State *L) {
 LUAMOD_API int luaopen_string (lua_State *L) {
   luaL_newlib(L, strlib);
   createmetatable(L);
+
   return 1;
 }
 
