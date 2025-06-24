@@ -246,11 +246,14 @@ int cursor(lua_State* L) {
 
 int print(lua_State* L) {
 	std::string text;
+	size_t len;
 	if (!lua_isstring(L, 1)) {
 		text = "[]";
+		len = text.length();
 	}
 	else {
-		text = luaL_checkstring(L, 1);
+		const char* buff = luaL_checklstring(L, 1, &len);
+		text = std::string(buff, len);
 	}
 
 	int x, y;

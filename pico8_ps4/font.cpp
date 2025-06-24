@@ -46,16 +46,7 @@ void Font::initialize()
 	p8_memory[ADDR_DS_CURSOR_Y] = 0;
 }
 
-void Font::drawChar(unsigned char c, int x, int y)
-{
-	if (!this->charData.count(c)) {
-		logger << "Font::drawChar: Couldn't find CharData for " << c << ENDL;
-		return;
-	}
-
-	CharData charData = this->charData[c];
-	// logger << c.c_str() << " " << c.length() << " " << charData.coords.size() << ", " << x << " " << y << ENDL;
-
+void draw_char(CharData& charData, int x, int y) {
 	if (charData.coords.size() == 0) {
 		// Space :)
 		return;
@@ -73,6 +64,16 @@ void Font::drawChar(unsigned char c, int x, int y)
 		newCoords[i].y = y + original.y;
 	}
 	renderer->draw_points(newCoords);
+}
+
+void Font::drawChar(unsigned char c, int x, int y)
+{
+	if (!this->charData.count(c)) {
+		logger << "Font::drawChar: Couldn't find CharData for " << c << ENDL;
+		return;
+	}
+
+	draw_char(this->charData[c], x, y);
 }
 
 unsigned char read_param(char c) {
@@ -174,11 +175,51 @@ int Font::print(std::string c, int x, int y, bool scroll)
 				}
 			}
 			else if (next == ':') {
-				alert_todo("font: hex character");
+				CharData hexChar;
+				hexChar.coords = {};
+				hexChar.size = 8;
+
+				for (int y = 0; y < 8; y++) {
+					int val = strtol(c.substr(start+1+y*2, 2).c_str(), NULL, 16);
+					int x = 0;
+					while (val > 0) {
+						if (val % 2 == 1) {
+							hexChar.coords.push_back(Renderer_Point {
+								x,y
+							});
+						}
+						val /= 2;
+						x++;
+					}
+				}
+
+				draw_char(hexChar, x, y);
+				x += hexChar.size + 1;
+				y_offset = 8;
 				start += 16;
 			}
 			else if (next == '.') {
-				alert_todo("font: hex character");
+				CharData hexChar;
+				hexChar.coords = {};
+				hexChar.size = 8;
+
+				for (int y_c = 0; y_c < 8; y_c++) {
+					unsigned char val = (unsigned char)c[start+1 + y_c];
+					int x_c = 0;
+					while (val > 0) {
+						if (val % 2 == 1) {
+							hexChar.coords.push_back(Renderer_Point{
+								x_c, y_c
+							});
+						}
+						val /= 2;
+						x_c++;
+					}
+				}
+
+				draw_char(hexChar, x, y);
+				x += hexChar.size + 1;
+				y_offset = 8;
 				start += 8;
 			}
 			else {
