@@ -99,7 +99,7 @@ void LuaState::deserialize(unsigned char* src)
 
 bool LuaState::loadProgram(std::string& program)
 {
-	DEBUGLOG << "calling" << ENDL;
+	// DEBUGLOG << program << ENDL;
 	int error = luaL_loadbuffer(this->state, program.c_str(), program.length(), "program") || lua_pcall(this->state, 0, 0, 0);
 
 	if (error) {

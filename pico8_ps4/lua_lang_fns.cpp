@@ -480,7 +480,7 @@ function split(str, separator, convert_numbers)
 	if convert_numbers then
 		for i=1,#result do
 			local value = tonum(result[i])
-			if result[i] != "" and value ~= nil then
+			if result[i] != "" and result[i] != "-" and value ~= nil then
 				result[i] = value
 			end
 		end

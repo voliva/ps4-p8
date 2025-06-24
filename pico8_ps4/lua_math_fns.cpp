@@ -152,6 +152,7 @@ end
 
 	register_lua_fn(L, "min", R"V0G0N(
 function min(first, second)
+	first = first or 0
 	second = second or 0
 	if first < second then
 		return first
@@ -164,6 +165,7 @@ end
 
 	register_lua_fn(L, "max", R"V0G0N(
 function max(first, second)
+	first = first or 0
 	second = second or 0
 	if first > second then
 		return first
