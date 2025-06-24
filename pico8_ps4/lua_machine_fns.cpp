@@ -304,5 +304,6 @@ void load_machine_fns(lua_State* L)
 	register_fn(L, "reset", reset);
 	register_fn(L, "run", run);
 	register_fn(L, "menuitem", noop);
+	register_fn(L, "serial", noop);
 	register_fn(L, "memcpy", _memcpy);
 }

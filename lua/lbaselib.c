@@ -205,9 +205,15 @@ static int luaB_type (lua_State *L) {
   return 1;
 }
 
+static int noop(lua_State* L) { return 0; }
 
 static int pairsmeta (lua_State *L, const char *method, int iszero,
                       lua_CFunction iter) {
+  if (lua_isnil(L, 1)) {
+    lua_pushcfunction(L, noop);
+    return 1;
+  }
+
   luaL_checkany(L, 1);
   if (luaL_getmetafield(L, 1, method) == LUA_TNIL) {  /* no metamethod? */
     lua_pushcfunction(L, iter);  /* will return generator, */
