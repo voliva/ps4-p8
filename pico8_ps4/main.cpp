@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <thread>
-
 #include "chrono.h"
 #include "log.h"
 #include "cartridge.h"
@@ -21,6 +20,7 @@
 #include "running-cart.h"
 #include "saves.h"
 #include "file_paths.h"
+#include "system_menu.h"
 
 #if __SWITCH__
 #define CAROUSEL_CART_HEIGHT 350
@@ -179,7 +179,7 @@ int main(void)
 			Key k = getKeyDown(e);
 			switch (k)
 			{
-			case Key::pause:
+			case Key::quit:
 				quit = true;
 				break;
 			case Key::L2:
@@ -216,7 +216,9 @@ int main(void)
 				break;
 			}
 
-			if (isSplore(currentScreen))
+			if (activeSystemMenu) {
+				activeSystemMenu->keyDown(k);
+			} else if (isSplore(currentScreen))
 			{
 				splore.key_down(k);
 			}
@@ -234,12 +236,26 @@ int main(void)
 						break;
 					selectedCart++;
 					break;
-				case Key::cross:
+				case Key::cross: {
 					std::string path = screens[currentScreen].cartridges[selectedCart].path;
-					Cartridge *r = load_from_png(path);
+					Cartridge* r = load_from_png(path);
 					run_cartridge(r, name_from_path(path));
 					delete r;
 					break;
+				}
+				case Key::pause: {
+					if (currentScreen == 1) {
+						std::vector<MenuItem> items = {
+							MenuItem {
+								"Delete cartridge",
+								[]() {
+								}
+							}
+						};
+						activeSystemMenu = new SystemMenu(items);
+					}
+					break;
+				}
 				}
 			}
 		}
@@ -348,6 +364,10 @@ int main(void)
 					(FRAME_WIDTH - SYS_CHAR_WIDTH * name.length()) / 2,
 					30 + SYS_CHAR_HEIGHT + 100 + CAROUSEL_CART_HEIGHT + 100);
 			}
+		}
+
+		if (activeSystemMenu) {
+			activeSystemMenu->draw();
 		}
 
 		std::string github = "github.com/voliva/ps4-p8";

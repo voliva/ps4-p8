@@ -4,6 +4,7 @@
 #include "renderer.h"
 #include "cartridge.h"
 #include "running-cart.h"
+#include "system_menu.h"
 
 #define DEBUGLOG Splore_DEBUGLOG
 Log DEBUGLOG = logger.log("Splore");
@@ -47,10 +48,23 @@ void Splore::key_down(Key k)
 		this->focus++;
 		break;
 	case Key::cross:
+	{
 		Cartridge* r = load_from_url("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + this->cartridges[this->focus].lid);
 		run_cartridge(r, this->cartridges[this->focus].lid);
 		delete r;
 		break;
+	}
+	case Key::pause: {
+		std::vector<MenuItem> items = {
+			MenuItem {
+				"Save cartridge",
+				[]() {
+				}
+			}
+		};
+		activeSystemMenu = new SystemMenu(items);
+		break;
+	}
 	}
 }
 

@@ -178,6 +178,7 @@
     <ClCompile Include="save_states.cpp" />
     <ClCompile Include="splore.cpp" />
     <ClCompile Include="splore_loader.cpp" />
+    <ClCompile Include="system_menu.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
@@ -203,6 +204,7 @@
     <ClInclude Include="save_states.h" />
     <ClInclude Include="splore.h" />
     <ClInclude Include="splore_loader.h" />
+    <ClInclude Include="system_menu.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\assets\misc\p8_font.txt" />
