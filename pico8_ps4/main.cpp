@@ -168,8 +168,20 @@ int main(void)
 		}
 		bool canIncScreen = nextScreen < 4;
 
-		while (SDL_PollEvent(&e) != 0)
+		if (invalidateLocalCartridges) {
+			localCartridges = load_local_cartridges(CARTRIDGE_FOLDER);
+			screens[1].cartridges = localCartridges;
+			invalidateLocalCartridges = false;
+			if (localCartridges.size() == 0) {
+				currentScreen = 0;
+				selectedCart = 0;
+			}
+			else if (selectedCart >= localCartridges.size()) {
+				selectedCart = localCartridges.size() - 1;
+			}
+		}
 
+		while (SDL_PollEvent(&e) != 0)
 		{
 			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE))
 			{
@@ -248,7 +260,10 @@ int main(void)
 						std::vector<MenuItem> items = {
 							MenuItem {
 								"Delete cartridge",
-								[]() {
+								[screens, selectedCart]() {
+									std::string path = screens[1].cartridges[selectedCart].path;
+									remove(path.c_str());
+									invalidateLocalCartridges = true;
 								}
 							}
 						};

@@ -48,6 +48,8 @@ SploreResult* splore_load_from_url(std::string url) {
 			lid = read_png_line(data, width, x, line + 131);
 
 			SploreCartridge info{ row, col, title, author, lid, pid };
+			// DEBUGLOG << title << ", " << author << ", " << lid << ", " << pid << ENDL;
+
 			cartridges.push_back(info);
 		}
 	}

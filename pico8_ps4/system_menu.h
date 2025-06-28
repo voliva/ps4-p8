@@ -3,10 +3,11 @@
 #include "events.h"
 #include <vector>
 #include <string>
+#include <functional>
 
 typedef struct {
 	std::string label;
-	void(*callback)();
+	std::function<void()> callback;
 } MenuItem;
 
 class SystemMenu
