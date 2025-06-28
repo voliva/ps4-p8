@@ -20,17 +20,7 @@
 #include "pause_menu.h"
 #include "running-cart.h"
 #include "saves.h"
-
-#ifdef __PS4__
-#define BUNDLED_FOLDER "/app0/assets/misc"
-#define CARTRIDGE_FOLDER "/data/p8-cartridges"
-#elif __SWITCH__
-#define BUNDLED_FOLDER "romfs:/misc"
-#define CARTRIDGE_FOLDER "/data/p8-cartridges"
-#else
-#define BUNDLED_FOLDER "../assets/misc"
-#define CARTRIDGE_FOLDER "../p8-cartridges"
-#endif
+#include "file_paths.h"
 
 #if __SWITCH__
 #define CAROUSEL_CART_HEIGHT 350
@@ -98,6 +88,7 @@ void closeSystem() {}
 int main(void)
 {
 	initSystem();
+	prepareFilePaths();
 
 	DEBUGLOG << "Initializing save states..." << ENDL;
 	initialize_save_states();

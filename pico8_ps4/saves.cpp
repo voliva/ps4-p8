@@ -1,13 +1,8 @@
 #include "saves.h"
 #include "memory.h"
 #include "log.h"
+#include "file_paths.h"
 #include <cstring>
-
-#ifdef __PS4__
-#define SAVE_FOLDER "/data/p8-saves"
-#else
-#define SAVE_FOLDER "../p8-saves"
-#endif
 
 #define PERSISTENT_SIZE 256
 

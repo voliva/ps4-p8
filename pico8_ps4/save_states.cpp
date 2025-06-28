@@ -14,13 +14,7 @@
 #include "audio.h"
 #include "lua_state.h"
 #include "machine_state.h"
-
-#ifdef __PS4__
-#define SAVE_STATES_FOLDER "/data/p8-savestates"
-#else
-#define SAVE_STATES_FOLDER "../p8-savestates"
-#endif
-
+#include "file_paths.h"
 
 #define DEBUGLOG SaveStates_DEBUGLOG
 Log DEBUGLOG = logger.log("Save States");
