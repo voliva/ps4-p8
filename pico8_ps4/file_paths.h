@@ -1,6 +1,14 @@
 #pragma once
 
 #ifdef __PS4__
+#define FILENAME "/data/debug.log"
+#elif __SWITCH__
+#define FILENAME "/switch/switch-p8/debug.log"
+#else
+#define FILENAME "debug.log"
+#endif
+
+#ifdef __PS4__
 #define SAVE_FOLDER "/data/p8-saves"
 #elif __SWITCH__
 #define SAVE_FOLDER "/switch/switch-p8/saves"

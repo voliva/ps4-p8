@@ -1,14 +1,7 @@
 #include "log.h"
+#include "file_paths.h"
 #include <thread>
 #include <set>
-
-#ifdef __PS4__
-#define FILENAME "/data/debug.log"
-#elif __SWITCH__
-#define FILENAME "/debug.log"
-#else
-#define FILENAME "debug.log"
-#endif
 
 Logger logger;
 
