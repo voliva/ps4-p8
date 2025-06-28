@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
+#include <string>
 
 void createFolder(const char *path) {
 	DIR* dir = opendir(path);
@@ -48,8 +49,50 @@ void createFolderRec(const char* path) {
 	free(copiedPath);
 }
 
+void moveOldStuff(
+	const char *oldPath,
+	const char *path
+) {
+	DIR *dir = opendir(oldPath);
+	if (dir == NULL)
+		return;
+
+	std::string oldPathStr = oldPath;
+	std::string pathStr = path;
+
+	struct dirent *ent;
+	while ((ent = readdir(dir)) != NULL)
+	{
+		std::string filename = ent->d_name;
+		if (filename.find("moved_to_") != std::string::npos)
+			continue;
+		
+		rename(
+			(oldPathStr + filename).c_str(),
+			(pathStr + filename).c_str()
+		);
+	}
+	size_t k;
+	while ((k = pathStr.find("/")) != std::string::npos) {
+		pathStr.replace(k, 1, "_");
+	}
+	std::string moved_notice = oldPathStr + "/moved_to_" + pathStr;
+	FILE *f = fopen(moved_notice.c_str(), "wb");
+	if (f != NULL) {
+		fclose(f);
+	}
+
+	closedir(dir);
+}
+
 void prepareFilePaths() {
 	createFolderRec(SAVE_FOLDER);
 	createFolderRec(SAVE_STATES_FOLDER);
 	createFolderRec(CARTRIDGE_FOLDER);
+
+#ifdef __SWITCH__
+	moveOldStuff("/data/p8-saves", SAVE_FOLDER);
+	moveOldStuff("/data/p8-savestates", SAVE_STATES_FOLDER);
+	moveOldStuff("/data/p8-cartridges", CARTRIDGE_FOLDER);
+#endif
 }
