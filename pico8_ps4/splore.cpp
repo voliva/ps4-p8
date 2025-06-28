@@ -4,10 +4,14 @@
 #include "renderer.h"
 #include "cartridge.h"
 #include "running-cart.h"
+#include "system_menu.h"
+#include "http.h"
+#include "file_paths.h"
 
 #define DEBUGLOG Splore_DEBUGLOG
 Log DEBUGLOG = logger.log("Splore");
 
+bool invalidateLocalCartridges = false;
 void Splore::initialize(Mode m)
 {
 	if (this->texture != NULL) {
@@ -47,10 +51,32 @@ void Splore::key_down(Key k)
 		this->focus++;
 		break;
 	case Key::cross:
+	{
 		Cartridge* r = load_from_url("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + this->cartridges[this->focus].lid);
 		run_cartridge(r, this->cartridges[this->focus].lid);
 		delete r;
 		break;
+	}
+	case Key::pause: {
+		std::vector<MenuItem> items = {
+			MenuItem {
+				"Save cartridge",
+				[this]() {
+					std::vector<unsigned char> png_data = http_get("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + this->cartridges[this->focus].lid);
+					std::string filename = (std::string)CARTRIDGE_FOLDER + "/" + this->cartridges[this->focus].lid + ".p8.png";
+					FILE *file = fopen(filename.c_str(), "wb");
+					if (!file) {
+						return;
+					}
+					fwrite(&png_data[0], 1, png_data.size(), file);
+					fclose(file);
+					invalidateLocalCartridges = true;
+				}
+			}
+		};
+		activeSystemMenu = new SystemMenu(items);
+		break;
+	}
 	}
 }
 

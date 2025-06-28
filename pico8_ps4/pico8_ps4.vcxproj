@@ -157,6 +157,7 @@
     <ClCompile Include="chrono.cpp" />
     <ClCompile Include="efla.e.cpp" />
     <ClCompile Include="events.cpp" />
+    <ClCompile Include="file_paths.cpp" />
     <ClCompile Include="font.cpp" />
     <ClCompile Include="http.cpp" />
     <ClCompile Include="log.cpp" />
@@ -177,6 +178,7 @@
     <ClCompile Include="save_states.cpp" />
     <ClCompile Include="splore.cpp" />
     <ClCompile Include="splore_loader.cpp" />
+    <ClCompile Include="system_menu.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
@@ -186,6 +188,7 @@
     <ClInclude Include="concurrent_queue.h" />
     <ClInclude Include="efla.e.h" />
     <ClInclude Include="events.h" />
+    <ClInclude Include="file_paths.h" />
     <ClInclude Include="font.h" />
     <ClInclude Include="http.h" />
     <ClInclude Include="log.h" />
@@ -201,6 +204,7 @@
     <ClInclude Include="save_states.h" />
     <ClInclude Include="splore.h" />
     <ClInclude Include="splore_loader.h" />
+    <ClInclude Include="system_menu.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\assets\misc\p8_font.txt" />

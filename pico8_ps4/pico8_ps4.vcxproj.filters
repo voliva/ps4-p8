@@ -90,6 +90,12 @@
     <ClCompile Include="save_states.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="file_paths.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="system_menu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -156,6 +162,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="save_states.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="file_paths.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="system_menu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

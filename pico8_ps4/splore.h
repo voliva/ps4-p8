@@ -19,3 +19,4 @@ private:
 	SDL_Texture* texture = NULL;
 	int focus;
 };
+extern bool invalidateLocalCartridges;
