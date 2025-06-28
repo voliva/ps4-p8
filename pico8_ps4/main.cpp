@@ -264,7 +264,8 @@ int main(void)
 									std::string path = screens[1].cartridges[selectedCart].path;
 									remove(path.c_str());
 									invalidateLocalCartridges = true;
-								}
+								},
+								true
 							}
 						};
 						activeSystemMenu = new SystemMenu(items);

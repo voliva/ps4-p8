@@ -8,6 +8,7 @@
 typedef struct {
 	std::string label;
 	std::function<void()> callback;
+	bool confirm;
 } MenuItem;
 
 class SystemMenu
@@ -21,6 +22,6 @@ public:
 private:
 	std::vector<MenuItem> items;
 	unsigned char active_index;
-	bool pressed;
+	bool confirming;
 };
 extern SystemMenu* activeSystemMenu;

@@ -6,7 +6,7 @@ SystemMenu* activeSystemMenu = NULL;
 
 SystemMenu::SystemMenu(std::vector<MenuItem>& items) {
 	this->active_index = 0;
-	this->pressed = false;
+	this->confirming = false;
 	this->items = items;
 	this->items.push_back(MenuItem{
 		"Cancel",
@@ -20,9 +20,11 @@ void SystemMenu::keyDown(Key key)
 	switch (key) {
 	case Key::down:
 		this->active_index = (this->active_index + 1) % this->items.size();
+		this->confirming = false;
 		break;
 	case Key::up:
 		this->active_index--;
+		this->confirming = false;
 		if (this->active_index == 0xFF) {
 			this->active_index = this->items.size() - 1;
 		}
@@ -33,6 +35,10 @@ void SystemMenu::keyDown(Key key)
 		break;
 	case Key::circle:
 	case Key::cross:
+		if (!this->confirming && this->items[this->active_index].confirm) {
+			this->confirming = true;
+			break;
+		}
 		this->items[this->active_index].callback();
 		delete activeSystemMenu;
 		activeSystemMenu = NULL;
@@ -73,6 +79,9 @@ void SystemMenu::draw()
 	for (int i = 0; i < this->items.size(); ++i) {
 		SDL_Color textColor = { 255, 255, 255, 255 };
 		SDL_Color highlightColor = { 0, 128, 255, 255 };
+		if (this->confirming) {
+			highlightColor = { 255, 128, 128, 255 };
+		}
 
 		SDL_Rect itemRect = {
 			menuRect.x + border,
