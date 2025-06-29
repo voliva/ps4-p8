@@ -22,6 +22,7 @@
 #include "file_paths.h"
 #include "system_menu.h"
 #include "main.h"
+#include "carousel.h"
 
 #if __SWITCH__
 #define CAROUSEL_CART_HEIGHT 350
@@ -149,8 +150,8 @@ int main(void)
 	{
 		currentScreen = 0;
 	}
-	int selectedCart = 0;
-	double renderingTargetCart = 0;
+
+	Carousel* carousel = new Carousel(screens[currentScreen].cartridges.size(), 160 * ((double)CAROUSEL_CART_HEIGHT / 205), CAROUSEL_CART_HEIGHT);
 
 	SDL_Event e;
 
@@ -171,15 +172,20 @@ int main(void)
 		bool canIncScreen = nextScreen < 4;
 
 		if (invalidateLocalCartridges) {
+			invalidateLocalCartridges = false;
+
 			localCartridges = load_local_cartridges(CARTRIDGE_FOLDER);
 			screens[1].cartridges = localCartridges;
-			invalidateLocalCartridges = false;
-			if (localCartridges.size() == 0) {
-				currentScreen = 0;
-				selectedCart = 0;
-			}
-			else if (selectedCart >= localCartridges.size()) {
-				selectedCart = localCartridges.size() - 1;
+			if (currentScreen == 1) {
+				if (localCartridges.size() == 0) {
+					currentScreen = 0;
+
+					carousel->reset();
+					carousel->setItemcount(screens[currentScreen].cartridges.size());
+				}
+				else {
+					carousel->setItemcount(localCartridges.size());
+				}
 			}
 		}
 
@@ -200,8 +206,11 @@ int main(void)
 				if (canDecScreen)
 				{
 					currentScreen = prevScreen;
-					selectedCart = 0;
-					renderingTargetCart = 0;
+
+					if (currentScreen < 2) {
+						carousel->reset();
+						carousel->setItemcount(screens[currentScreen].cartridges.size());
+					}
 
 					if (currentScreen == 2) {
 						splore.initialize(Mode::Featured);
@@ -215,8 +224,11 @@ int main(void)
 				if (canIncScreen)
 				{
 					currentScreen = nextScreen;
-					selectedCart = 0;
-					renderingTargetCart = 0;
+
+					if (currentScreen < 2) {
+						carousel->reset();
+						carousel->setItemcount(screens[currentScreen].cartridges.size());
+					}
 
 					if (currentScreen == 2)
 					{
@@ -238,20 +250,11 @@ int main(void)
 			}
 			else
 			{
+				carousel->keyDown(k);
 				switch (k)
 				{
-				case Key::left:
-					if (selectedCart == 0)
-						break;
-					selectedCart--;
-					break;
-				case Key::right:
-					if (selectedCart == screens[currentScreen].cartridges.size() - 1)
-						break;
-					selectedCart++;
-					break;
 				case Key::cross: {
-					std::string path = screens[currentScreen].cartridges[selectedCart].path;
+					std::string path = screens[currentScreen].cartridges[carousel->getActiveIndex()].path;
 					Cartridge* r = load_from_png(path);
 					run_cartridge(r, name_from_path(path));
 					delete r;
@@ -259,11 +262,11 @@ int main(void)
 				}
 				case Key::pause: {
 					if (currentScreen == 1) {
+						std::string path = screens[1].cartridges[carousel->getActiveIndex()].path;
 						std::vector<MenuItem> items = {
 							MenuItem {
 								"Delete cartridge",
-								[screens, selectedCart]() {
-									std::string path = screens[1].cartridges[selectedCart].path;
+								[path]() {
 									remove(path.c_str());
 									invalidateLocalCartridges = true;
 								},
@@ -281,32 +284,6 @@ int main(void)
 		auto now = getTimestamp();
 		auto delta = getMillisecondsDiff(now, frame_start);
 		frame_start = now;
-
-		double target_diff = selectedCart - renderingTargetCart;
-		double movement = target_diff * 0.1 * delta / 15;
-		if (movement > 0)
-		{
-			if (movement < 0.01)
-			{
-				movement = 0.01;
-			}
-			if (renderingTargetCart + movement > selectedCart)
-			{
-				movement = selectedCart - renderingTargetCart;
-			}
-		}
-		else if (movement < 0)
-		{
-			if (movement > -0.01)
-			{
-				movement = -0.01;
-			}
-			if (renderingTargetCart + movement < selectedCart)
-			{
-				movement = selectedCart - renderingTargetCart;
-			}
-		}
-		renderingTargetCart += movement;
 
 		Screen scr = screens[currentScreen];
 
@@ -339,43 +316,20 @@ int main(void)
 		}
 		else
 		{
-			for (int i = 0; i < scr.cartridges.size(); i++)
-			{
-				double rendering_diff = fabs(renderingTargetCart - i);
-				if (rendering_diff > 2.2)
-				{
-					continue;
-				}
+			auto items = carousel->draw(delta);
 
-				SDL_Texture *srf = scr.cartridges[i].surface;
-				int width = 160 * ((double)CAROUSEL_CART_HEIGHT / 205);
+			for (int i = 0; i < items.size(); i++) {
+				auto item = items[i];
+				if (item.idx < 0 || item.idx >= scr.cartridges.size()) continue;
 
-				int alpha = 255 - 255 * rendering_diff / 2.2;
-				if (alpha < 0)
-					alpha = 0;
-				SDL_SetTextureAlphaMod(srf, alpha);
-
-				double scale = 1.2 - 0.2 * rendering_diff;
-				if (scale < 1)
-					scale = 1;
-
-				int x_center = FRAME_WIDTH / 2 + (width + 100) * ((double)i - renderingTargetCart);
-				double x = x_center - width * scale / 2;
-				double y = 30 + SYS_CHAR_HEIGHT + 100 + (1 - scale) * CAROUSEL_CART_HEIGHT / 2;
-				double w = (double)width * scale;
-				double h = (double)CAROUSEL_CART_HEIGHT * scale;
-
-				SDL_Rect dest{
-					(int)x,
-					(int)y,
-					(int)w,
-					(int)h};
-				SDL_RenderCopy(renderer->renderer, srf, NULL, &dest);
+				SDL_Texture* srf = scr.cartridges[item.idx].surface;
+				SDL_SetTextureAlphaMod(srf, item.alpha);
+				SDL_RenderCopy(renderer->renderer, srf, NULL, &item.destRect);
 			}
 
-			double idx = round(renderingTargetCart);
+			double idx = carousel->getActiveIndex();
 			if (scr.cartridges.size() > idx) {
-				std::string currentPath = scr.cartridges[round(renderingTargetCart)].path;
+				std::string currentPath = scr.cartridges[idx].path;
 				std::string name = name_from_path(currentPath);
 				font->sys_print(
 					name,

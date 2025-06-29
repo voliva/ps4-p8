@@ -153,6 +153,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="audio.cpp" />
+    <ClCompile Include="carousel.cpp" />
     <ClCompile Include="cartridge.cpp" />
     <ClCompile Include="chrono.cpp" />
     <ClCompile Include="efla.e.cpp" />
@@ -183,6 +184,7 @@
   <ItemGroup>
     <ClInclude Include="..\lib\include\stb\stb_image.h" />
     <ClInclude Include="audio.h" />
+    <ClInclude Include="carousel.h" />
     <ClInclude Include="cartridge.h" />
     <ClInclude Include="chrono.h" />
     <ClInclude Include="concurrent_queue.h" />
