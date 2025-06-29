@@ -15,6 +15,7 @@ class RunningCart
 public:
 	bool load(Cartridge* cartridge, std::string name);
 	void reload(int dest, int source, int length);
+	void replace(Cartridge* cartridge, std::string name);
 	void run();
 	void stop();
 	void restart();
@@ -29,6 +30,9 @@ private:
 	bool paused = false;
 	timestamp_t lastWarning = nilTimestamp();
 	std::string name;
+
+	Cartridge* replacingCartridge;
+	std::string replacingName;
 
 	void runOnce();
 	void dismissError();

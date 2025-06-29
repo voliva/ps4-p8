@@ -240,6 +240,32 @@ int reload(lua_State* L) {
 	return 0;
 }
 
+int load(lua_State* L) {
+	std::string filename = luaL_checkstring(L, 1);
+	std::string breadcrumb = luaL_optstring(L, 2, "");
+	std::string param = luaL_optstring(L, 3, "");
+
+	if (breadcrumb.size() > 0) {
+		// Hard to do with current architecture :(
+		// (carts are destroyed when unloaded)
+		alert_todo("load with breadcrumb (menu)");
+	}
+	if (param.size() > 0) {
+		alert_todo("load with param " + param);
+	}
+
+	if (filename.size() <= 1 || filename[0] != '#') {
+		alert_todo("load something that's not a forum cartridge: " + filename);
+		return 0;
+	}
+
+	std::string lid = filename.substr(1);
+	Cartridge* r = load_from_url("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + lid);
+	runningCart->replace(r, lid);
+
+	return 0;
+}
+
 int reset(lua_State* L) {
 	alert_todo("reset (undocumented)");
 	runningCart->reload(0, 0, 0x4300);
@@ -305,5 +331,6 @@ void load_machine_fns(lua_State* L)
 	register_fn(L, "run", run);
 	register_fn(L, "menuitem", noop);
 	register_fn(L, "serial", noop);
+	register_fn(L, "load", load);
 	register_fn(L, "memcpy", _memcpy);
 }

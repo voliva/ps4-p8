@@ -32,7 +32,7 @@ unsigned char memory_snapshot[P8_TOTAL_MEMORY];
 LuaState* luaState = NULL;
 bool RunningCart::load(Cartridge* cartridge, std::string name)
 {
-    if (this->status != RunningStatus::None && this->status != RunningStatus::Loaded) {
+    if (this->status != RunningStatus::None && this->status != RunningStatus::Loaded && this->status != RunningStatus::Stopping) {
         DEBUGLOG << "Can't load new cartridge: Already running another one." << ENDL;
         return false;
     }
@@ -68,6 +68,8 @@ bool RunningCart::load(Cartridge* cartridge, std::string name)
 
     DEBUGLOG << "Cartridge succesfully loaded" << ENDL;
     this->loadedCartridge = cartridge;
+	this->replacingCartridge = NULL;
+	this->replacingName = "";
 	this->paused = false;
     this->status = RunningStatus::Loaded;
 	this->name = name;
@@ -77,6 +79,11 @@ bool RunningCart::load(Cartridge* cartridge, std::string name)
 
 void RunningCart::reload(int dest, int source, int length) {
 	memcpy(&p8_memory[dest], &memory_snapshot[source], length);
+}
+
+void RunningCart::replace(Cartridge* cart, std::string name) {
+	this->replacingCartridge = cart;
+	this->replacingName = name;
 }
 
 void RunningCart::run()
@@ -160,7 +167,7 @@ void RunningCart::runOnce()
 	short ms_per_frame = millisecs_per_frame(luaState->is60FPS);
 
 	this->status = RunningStatus::Running;
-	int frame = 0;
+	unsigned int frame = 0;
 	while (this->status == RunningStatus::Running) {
 		frame++;
 		machineState->registerFrame();
@@ -217,6 +224,16 @@ void RunningCart::runOnce()
 
 		if (frame % 30 == 0) {
 			saveManager->persist();
+		}
+
+		if (this->replacingCartridge) {
+			this->stop();
+			Cartridge* cart = this->replacingCartridge;
+			this->load(cart, this->replacingName);
+			this->replacingCartridge = NULL;
+			this->run();
+			delete cart;
+			return;
 		}
 
 		// Get a temptative estimation of how much timeDebt we would have
