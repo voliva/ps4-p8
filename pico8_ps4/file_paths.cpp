@@ -91,8 +91,8 @@ void prepareFilePaths() {
 	createFolderRec(CARTRIDGE_FOLDER);
 
 #ifdef __SWITCH__
-	moveOldStuff("/data/p8-saves", SAVE_FOLDER);
-	moveOldStuff("/data/p8-savestates", SAVE_STATES_FOLDER);
+	moveOldStuff("/p8-saves", SAVE_FOLDER);
+	moveOldStuff("/p8-savestates", SAVE_STATES_FOLDER);
 	moveOldStuff("/data/p8-cartridges", CARTRIDGE_FOLDER);
 #endif
 }
