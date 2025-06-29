@@ -21,6 +21,7 @@
 #include "saves.h"
 #include "file_paths.h"
 #include "system_menu.h"
+#include "main.h"
 
 #if __SWITCH__
 #define CAROUSEL_CART_HEIGHT 350
@@ -84,6 +85,8 @@ void closeSystem()
 void initSystem() {}
 void closeSystem() {}
 #endif
+
+bool quit = false;
 
 int main(void)
 {
@@ -150,7 +153,6 @@ int main(void)
 	double renderingTargetCart = 0;
 
 	SDL_Event e;
-	bool quit = false;
 
 	auto frame_start = getTimestamp();
 	while (!quit)

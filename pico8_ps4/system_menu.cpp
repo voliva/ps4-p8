@@ -1,6 +1,7 @@
 #include "system_menu.h"
 #include "renderer.h"
 #include "font.h"
+#include "main.h"
 
 SystemMenu* activeSystemMenu = NULL;
 
@@ -8,6 +9,12 @@ SystemMenu::SystemMenu(std::vector<MenuItem>& items) {
 	this->active_index = 0;
 	this->confirming = false;
 	this->items = items;
+	this->items.push_back(MenuItem{
+		"Quit",
+		[]() {
+			quit = true;
+		}
+	});
 	this->items.push_back(MenuItem{
 		"Cancel",
 		[]() {

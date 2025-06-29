@@ -170,6 +170,9 @@
     <ClInclude Include="system_menu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\assets\misc\p8_font.txt">

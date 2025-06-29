@@ -195,6 +195,7 @@
     <ClInclude Include="lua_fns.h" />
     <ClInclude Include="lua_state.h" />
     <ClInclude Include="machine_state.h" />
+    <ClInclude Include="main.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="pause_menu.h" />
     <ClInclude Include="performance_monitor.h" />
