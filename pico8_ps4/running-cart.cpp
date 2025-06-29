@@ -18,7 +18,7 @@ Log DEBUGLOG = logger.log("Runtime");
 #define SKIPFRAME_LOG false
 #elif __SWITCH__
 #define IMAGE_FOLDER "romfs:/images"
-#define SKIPFRAME_LOG true
+#define SKIPFRAME_LOG false
 #else
 #define IMAGE_FOLDER "../assets/images"
 #define SKIPFRAME_LOG true
@@ -168,6 +168,7 @@ void RunningCart::runOnce()
 
 	this->status = RunningStatus::Running;
 	unsigned int frame = 0;
+	auto lastFrame = getTimestamp();
 	while (this->status == RunningStatus::Running) {
 		frame++;
 		machineState->registerFrame();
@@ -208,13 +209,16 @@ void RunningCart::runOnce()
 			else {
 				luaState->run_update();
 
-				if (time_debt < ms_per_frame / 2) {
+				// Enforce a min frame rate of 10 FPS
+				if (time_debt < ms_per_frame / 2 || getMillisecondsDiff(getTimestamp(), lastFrame) > 100)
+				{
 					if (!isTimestampNil(this->lastWarning) && getMillisecondsDiff(getTimestamp(), this->lastWarning) > 1000) {
 						this->dismissError();
 					}
 
 					luaState->run_draw();
 					renderer->present();
+					lastFrame = getTimestamp();
 				}
 				else if(SKIPFRAME_LOG) {
 					DEBUGLOG << "Skipped frame. time debt = " << time_debt << ENDL;

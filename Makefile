@@ -44,7 +44,7 @@ DATA		:=	data
 INCLUDES	:=	include
 ROMFS	    :=	assets
 APP_TITLE   :=  Switch P8
-APP_VERSION :=  0.3.2
+APP_VERSION :=  0.4.0
 APP_AUTHOR  :=  voliva
 
 #---------------------------------------------------------------------------------
