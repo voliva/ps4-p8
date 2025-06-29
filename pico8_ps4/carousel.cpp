@@ -1,6 +1,7 @@
 #include "carousel.h"
 #include "renderer.h"
 #include "font.h"
+#include <cmath>
 
 Carousel::Carousel(int itemCount, int itemWidth, int itemHeight) {
 	this->itemCount = itemCount;
