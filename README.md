@@ -21,7 +21,7 @@ Not finished - Compatibility is still limited, but there are many cartridges it 
 
 It comes with a set of bundled games which have been used to improve the compatibility.
 
-More .p8.png cartridges can be bundled with the .pkg file by adding them into `/assets/misc` folder, or they will be loaded in runtime from console's `/data/p8-cartridges` folder.
+More .p8.png cartridges can be bundled with the .pkg file by adding them into `/assets/misc` folder, or they will be loaded in runtime from console's `/data/p8-cartridges` folder for PS4, and `/switch/switch-p8/cartridges` on the SD card for switch.
 
 - `print`: It prints text on the screen, but it's missing some P8SCII control codes, non-ascii characters.
 - Sprites: Done
