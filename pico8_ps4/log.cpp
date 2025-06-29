@@ -7,16 +7,22 @@ Logger logger;
 
 Logger::Logger()
 {
-	this->file_handle = fopen(FILENAME, "w");
+	this->file_handle = NULL;
 }
 
 Logger::~Logger()
 {
-	fclose(this->file_handle);
+	if (this->file_handle != NULL)
+		fclose(this->file_handle);
 }
 
 Logger& Logger::operator<<(const char* v)
 {
+	if (this->file_handle == NULL) {
+		this->file_handle = fopen(FILENAME, "w");
+	}
+	if (this->file_handle == NULL) return *this;
+
 	printf("%s", v);
 
 	fputs(v, this->file_handle);

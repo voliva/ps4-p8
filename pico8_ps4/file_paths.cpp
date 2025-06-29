@@ -68,8 +68,8 @@ void moveOldStuff(
 			continue;
 		
 		rename(
-			(oldPathStr + filename).c_str(),
-			(pathStr + filename).c_str()
+			(oldPathStr + "/" + filename).c_str(),
+			(pathStr + "/" + filename).c_str()
 		);
 	}
 	size_t k;
