@@ -80,7 +80,7 @@ std::vector<DrawItem> Carousel::draw(long long delta) {
 		if (alpha < 0)
 			alpha = 0;
 
-		double scale = 1.2 - 0.2 * rendering_diff;
+		double scale = 1.2 - 0.4 * rendering_diff;
 		if (scale < 1)
 			scale = 1;
 

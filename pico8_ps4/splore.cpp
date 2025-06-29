@@ -11,6 +11,9 @@
 #define DEBUGLOG Splore_DEBUGLOG
 Log DEBUGLOG = logger.log("Splore");
 
+#define SCALE 2.5
+#define CART_SIZE 128
+
 bool invalidateLocalCartridges = false;
 void Splore::initialize(Mode m)
 {
@@ -19,7 +22,6 @@ void Splore::initialize(Mode m)
 		this->texture = NULL;
 	}
 	this->cartridges.clear();
-	this->focus = 0;
 
 	SploreResult* result;
 	if (m == Mode::Featured)
@@ -28,6 +30,7 @@ void Splore::initialize(Mode m)
 		result = splore_get_new();
 
 	if (result == NULL) {
+		this->carousel = NULL;
 		DEBUGLOG << "SploreLoader didn't return a result" << ENDL; // TODO show to the user
 		return;
 	}
@@ -36,34 +39,35 @@ void Splore::initialize(Mode m)
 	this->cartridges = result->cartridges;
 	SDL_FreeSurface(result->surface);
 
+	this->carousel = new Carousel(this->cartridges.size(), CART_SIZE * SCALE, CART_SIZE * SCALE);
+
 	delete result;
 }
 
 void Splore::key_down(Key k)
 {
+	if (this->carousel != NULL) {
+		this->carousel->keyDown(k);
+	}
+
 	switch (k) {
-	case Key::left:
-		if (this->focus == 0) break;
-		this->focus--;
-		break;
-	case Key::right:
-		if (this->focus == this->cartridges.size() - 1) break;
-		this->focus++;
-		break;
 	case Key::cross:
 	{
-		Cartridge* r = load_from_url("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + this->cartridges[this->focus].lid);
-		run_cartridge(r, this->cartridges[this->focus].lid);
+		if (this->carousel == NULL) break;
+		auto lid = this->cartridges[this->carousel->getActiveIndex()].lid;
+		Cartridge* r = load_from_url("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + lid);
+		run_cartridge(r, lid);
 		delete r;
 		break;
 	}
 	case Key::pause: {
+		auto lid = this->cartridges[this->carousel->getActiveIndex()].lid;
 		std::vector<MenuItem> items = {
 			MenuItem {
 				"Save cartridge",
-				[this]() {
-					std::vector<unsigned char> png_data = http_get("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + this->cartridges[this->focus].lid);
-					std::string filename = (std::string)CARTRIDGE_FOLDER + "/" + this->cartridges[this->focus].lid + ".p8.png";
+				[lid]() {
+					std::vector<unsigned char> png_data = http_get("https://www.lexaloffle.com/bbs/get_cart.php?cat=7&play_src=2&lid=" + lid);
+					std::string filename = (std::string)CARTRIDGE_FOLDER + "/" + lid + ".p8.png";
 					FILE *file = fopen(filename.c_str(), "wb");
 					if (!file) {
 						return;
@@ -80,76 +84,40 @@ void Splore::key_down(Key k)
 	}
 }
 
-#define SCALE 2.5
-void Splore::render()
+void Splore::render(long long delta)
 {
-	if (!this->texture) {
+	if (!this->texture || !this->carousel) {
 		return;
 	}
-	int width = 128;
-	int height = 128;
 
-	int x_center = FRAME_WIDTH / 2;
-	double x = x_center - width * SCALE / 2;
-	double y = 170;
 
-	SDL_SetTextureAlphaMod(this->texture, 64);
-	if (this->focus > 0) {
+	auto items = carousel->draw(delta);
+
+	for (int i = 0; i < items.size(); i++) {
+		auto item = items[i];
+		if (item.idx < 0 || item.idx >= this->cartridges.size()) continue;
+
 		SDL_Rect src{
-			this->cartridges[this->focus-1].col * 128,
-			this->cartridges[this->focus-1].row * 136,
-			width,
-			height
+			this->cartridges[item.idx].col * 128,
+			this->cartridges[item.idx].row * 136,
+			128,
+			128
 		};
-		SDL_Rect dest{
-			(int)(x_center - width * SCALE * 0.9 / 2 - width * SCALE * 0.5),
-			(int)y + 20,
-			(int)(width * SCALE * 0.9),
-			(int)(height * SCALE * 0.9)
-		};
-		SDL_RenderCopy(renderer->renderer, this->texture, &src, &dest);
-	}
-	if (this->focus < this->cartridges.size() - 1) {
-		SDL_Rect src{
-			this->cartridges[this->focus + 1].col * 128,
-			this->cartridges[this->focus + 1].row * 136,
-			width,
-			height
-		};
-		SDL_Rect dest{
-			(int)(x_center - width * SCALE * 0.9 / 2 + width * SCALE * 0.5),
-			(int)y + 20,
-			(int)(width * SCALE * 0.9),
-			(int)(height * SCALE * 0.9)
-		};
-		SDL_RenderCopy(renderer->renderer, this->texture, &src, &dest);
+		SDL_SetTextureAlphaMod(this->texture, item.alpha);
+		SDL_RenderCopy(renderer->renderer, this->texture, &src, &item.destRect);
 	}
 
-	SDL_SetTextureAlphaMod(this->texture, 255);
-	SploreCartridge focused = this->cartridges[this->focus];
-	SDL_Rect src{
-		focused.col * 128,
-		focused.row * 136,
-		width,
-		height
-	};
-	SDL_Rect dest{
-		(int)x,
-		(int)y,
-		(int)(width*SCALE),
-		(int)(height*SCALE)
-	};
-	SDL_RenderCopy(renderer->renderer, this->texture, &src, &dest);
+	SploreCartridge focused = this->cartridges[this->carousel->getActiveIndex()];
 
 	font->sys_print(
 		focused.title,
 		(FRAME_WIDTH - SYS_CHAR_WIDTH * focused.title.length()) / 2,
-		y + height*SCALE + 80
+		30 + SYS_CHAR_HEIGHT + 100 + CART_SIZE * SCALE + 80
 	);
 	std::string author = "by: " + focused.author;
 	font->sys_print(
 		author,
 		(FRAME_WIDTH - SYS_CHAR_WIDTH * author.length()) / 2,
-		y + height * SCALE + 80 + SYS_CHAR_HEIGHT + 10
+		30 + SYS_CHAR_HEIGHT + 100 + CART_SIZE * SCALE + 80 + SYS_CHAR_HEIGHT + 10
 	);
 }

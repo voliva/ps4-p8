@@ -312,7 +312,7 @@ int main(void)
 
 		if (isSplore(currentScreen))
 		{
-			splore.render();
+			splore.render(delta);
 		}
 		else
 		{
