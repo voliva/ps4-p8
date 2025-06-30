@@ -177,7 +177,13 @@ int memset(lua_State* L) {
 }
 
 int stat(lua_State* L) {
-	int n = luaL_checkinteger(L, 1);
+	int n;
+
+	int type = lua_type(L, 1);
+	if (type != LUA_TNUMBER)
+		n = 0;
+	else
+		n = luaL_checkinteger(L, 1);
 
 	if (n == 6) {
 		lua_pushstring(L, machineState->breadcrumb.c_str());
