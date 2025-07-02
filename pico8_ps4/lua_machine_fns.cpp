@@ -7,7 +7,7 @@
 
 int peek(lua_State* L)
 {
-	unsigned short addr = luaL_checkinteger(L, 1);
+	unsigned short addr = luaL_optinteger(L, 1, 0);
 	int n = luaL_optinteger(L, 2, 1);
 
 	for (int i = 0; i < n; i++) {

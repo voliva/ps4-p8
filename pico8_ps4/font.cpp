@@ -94,10 +94,13 @@ int Font::print(std::string c, int x, int y, bool scroll)
 	
 	//we will need to update the cursor. This can change with modifiers such as \^w \n \^g \| \+
 	int y_offset = 6;
+	int char_width_override = -1; // -1 means default/unset
+	int default_y_offset = 6;
 	int y_original = y;
 	int prev_width = 0; // Needed for backspace
 	int bg_color = -1;
 	int repeats = 1;
+	int border = 1;
 
 	while (start < c.length()) {
 		max_x = std::max(x, max_x);
@@ -167,12 +170,16 @@ int Font::print(std::string c, int x, int y, bool scroll)
 				next = c[++start];
 				if (next == '#') {
 					bg_color = -1;
-					start++;
-					continue;
+				}
+				else if (next == 'b') {
+					border = 0;
 				}
 				else {
 					alert_todo("font: unknown disable command <" + std::to_string(next) + ">");
 				}
+			}
+			else if (next == 'b') {
+				border = 1;
 			}
 			else if (next == ':') {
 				CharData hexChar;
@@ -194,7 +201,8 @@ int Font::print(std::string c, int x, int y, bool scroll)
 				}
 
 				draw_char(hexChar, x, y);
-				x += hexChar.size + 1;
+				prev_width = hexChar.size + border;
+				x += prev_width;
 				y_offset = 8;
 				start += 16;
 			}
@@ -218,9 +226,18 @@ int Font::print(std::string c, int x, int y, bool scroll)
 				}
 
 				draw_char(hexChar, x, y);
-				x += hexChar.size + 1;
+				prev_width = hexChar.size + border;
+				x += prev_width;
 				y_offset = 8;
 				start += 8;
+			}
+			else if (next == 'x') {
+				char_width_override = read_param(c[start + 1]);
+				start++;
+			}
+			else if (next == 'y') {
+				y_offset = default_y_offset = read_param(c[start + 1]);
+				start++;
 			}
 			else {
 				alert_todo("font: unknown command <" + std::to_string(next) + ">");
@@ -248,7 +265,7 @@ int Font::print(std::string c, int x, int y, bool scroll)
 			x = initial_x;
 			y += y_offset;
 			p8_memory[ADDR_DS_CURSOR_Y] = y;
-			y_offset = 6;
+			y_offset = default_y_offset;
 			start++;
 			continue;
 		}
@@ -283,9 +300,14 @@ int Font::print(std::string c, int x, int y, bool scroll)
 				p8_memory[ADDR_DS_COLOR] = original_color;
 			}
 			this->drawChar(character, x, y);
-			x += c.size + 1;
+			if (char_width_override != -1) {
+				prev_width = char_width_override + (c.size - 3);
+			}
+			else {
+				prev_width = c.size + border;
+			}
+			x += prev_width;
 		}
-		prev_width = c.size + 1;
 		repeats = 1;
 
 		start++;
