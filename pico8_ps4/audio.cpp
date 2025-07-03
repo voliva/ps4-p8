@@ -276,7 +276,7 @@ void AudioManager::playSfx(int n, int channel, int offset, int length)
 	int speed = get_sfx_speed(n);
 	this->channels[channel].isMusic = false;
 	this->channels[channel].offset = offset * speed * P8_TICKS_PER_T;
-	this->channels[channel].max = (offset+length) * speed * P8_TICKS_PER_T;
+	this->channels[channel].max = (offset+length);
 	this->channels[channel].previousSample = 0;
 	this->channels[channel].previousSample2 = 0;
 
@@ -718,7 +718,10 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 			channel->sfx = -1;
 			channel->offset = 0;
 		}
-		else if(length < data_points) {
+		else if (next_note == channel->max && !channel->isMusic) {
+			channel->sfx = -1;
+			channel->offset = 0;
+		} else if (length < data_points) {
 			// Try to fill in as much as posible from the next note
 			int t = audio_cb_channel(channel, &stream[length], data_points - length);
 			return length + t;
