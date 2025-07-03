@@ -122,7 +122,7 @@ void LuaState::run_init()
 			// Error
 			std::string e = lua_tostring(this->state, -1);
 			lua_pop(this->state, 1);
-			DEBUGLOG << e << ENDL;
+			DEBUGLOG << "_init " << e << ENDL;
 			runningCart->warnError();
 			return;
 		}
@@ -144,13 +144,22 @@ void LuaState::run_init()
 void LuaState::run_draw()
 {
 	lua_getglobal(this->state, "_draw");
-	if (lua_isfunction(this->state, 1)) {
+	if (lua_isfunction(this->state, -1)) {
+		/*lua_getglobal(this->state, "__lua_debug");
+		lua_getfield(this->state, -1, "traceback");
+		lua_remove(this->state, -2);
+		int errorFuncIndex = lua_gettop(this->state) - 1;
+		lua_insert(this->state, errorFuncIndex);
+		if (lua_pcall(this->state, 0, 0, errorFuncIndex)) {*/
+
 		if (lua_pcall(this->state, 0, 0, 0)) {
 			std::string e = lua_tostring(this->state, -1);
 			lua_pop(this->state, 1);
-			DEBUGLOG << e << ENDL;
+			DEBUGLOG << "_draw " << e << ENDL;
 			runningCart->warnError();
 		}
+
+		//lua_remove(this->state, errorFuncIndex);
 	}
 	else {
 		lua_pop(this->state, 1);
@@ -164,7 +173,7 @@ void LuaState::run_update()
 		if (lua_pcall(this->state, 0, 0, 0)) {
 			std::string e = lua_tostring(this->state, -1);
 			lua_pop(this->state, 1);
-			DEBUGLOG << e << ENDL;
+			DEBUGLOG << "_update60 " << e << ENDL;
 			runningCart->warnError();
 		}
 	}
@@ -174,7 +183,7 @@ void LuaState::run_update()
 			if (lua_pcall(this->state, 0, 0, 0)) {
 				std::string e = lua_tostring(this->state, -1);
 				lua_pop(this->state, 1);
-				DEBUGLOG << e << ENDL;
+				DEBUGLOG << "_update " << e << ENDL;
 				runningCart->warnError();
 			}
 		}

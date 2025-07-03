@@ -76,6 +76,31 @@ void Font::drawChar(unsigned char c, int x, int y)
 	draw_char(this->charData[c], x, y);
 }
 
+CharData read_binary_char(const unsigned char* vec, int x_offset, int y_offset) {
+	CharData charResult;
+	charResult.coords = {};
+	charResult.size = 8;
+
+	int y_end = y_offset + 8;
+	for (int y_c = y_offset; y_c < y_end; y_c++) {
+		unsigned char val = *vec;
+		vec++;
+		int x_c = x_offset;
+		while (val > 0) {
+			if (val % 2 == 1) {
+				charResult.coords.push_back(Renderer_Point{
+					x_c,
+					y_c
+				});
+			}
+			val /= 2;
+			x_c++;
+		}
+	}
+
+	return charResult;
+}
+
 unsigned char read_param(char c) {
 	if (c <= '9')
 		return c - '0';
@@ -101,6 +126,11 @@ int Font::print(std::string c, int x, int y, bool scroll)
 	int bg_color = -1;
 	int repeats = 1;
 	int border = 1;
+	bool custom_font = false;
+
+	if (p8_memory[ADDR_HW_PRINT_ATTRS] & 0x01) {
+		custom_font = (p8_memory[ADDR_HW_PRINT_ATTRS] & 0x80) > 0;
+	}
 
 	while (start < c.length()) {
 		max_x = std::max(x, max_x);
@@ -207,24 +237,7 @@ int Font::print(std::string c, int x, int y, bool scroll)
 				start += 16;
 			}
 			else if (next == '.') {
-				CharData hexChar;
-				hexChar.coords = {};
-				hexChar.size = 8;
-
-				for (int y_c = 0; y_c < 8; y_c++) {
-					unsigned char val = (unsigned char)c[start+1 + y_c];
-					int x_c = 0;
-					while (val > 0) {
-						if (val % 2 == 1) {
-							hexChar.coords.push_back(Renderer_Point{
-								x_c, y_c
-							});
-						}
-						val /= 2;
-						x_c++;
-					}
-				}
-
+				CharData hexChar = read_binary_char((const unsigned char *)c.c_str() + start + 1, 0, 0);
 				draw_char(hexChar, x, y);
 				prev_width = hexChar.size + border;
 				x += prev_width;
@@ -238,6 +251,28 @@ int Font::print(std::string c, int x, int y, bool scroll)
 			else if (next == 'y') {
 				y_offset = default_y_offset = read_param(c[start + 1]);
 				start++;
+			}
+			else if (next == '@') {
+				start++;
+				int addr = strtol(c.substr(start, 4).c_str(), NULL, 16);
+				start += 4;
+				int n = strtol(c.substr(start, 4).c_str(), NULL, 16);
+				start += 4;
+
+				for (int i = 0; i < n; i++) {
+					p8_memory[addr + i] = c[start];
+					start++;
+				}
+			}
+			else if (next == '!') {
+				start++;
+				int addr = strtol(c.substr(start, 4).c_str(), NULL, 16);
+				start += 4;
+
+				int i;
+				for (i = 0; start < c.length(); i++, start++) {
+					p8_memory[addr + i] = c[start];
+				}
 			}
 			else {
 				alert_todo("font: unknown command <" + std::to_string(next) + ">");
@@ -284,22 +319,85 @@ int Font::print(std::string c, int x, int y, bool scroll)
 			start++;
 			continue;
 		}
-
-		if (!this->charData.count(character)) {
-			alert_todo("print: Couldn't find CharData for <" + std::to_string((unsigned char)character) + ">");
+		else if (character == '\0') {
+			// Finish printing without even new line
+			// TODO bug: next time HOME_X is set to x, should be reset
+			p8_memory[ADDR_DS_CURSOR_X] = x;
+			max_x = std::max(x, max_x);
+			return max_x - initial_x;
+		}
+		else if (character == 14) {
+			custom_font = true;
+			start++;
+			continue;
+		}
+		else if (character == 15) {
+			custom_font = false;
 			start++;
 			continue;
 		}
 
-		CharData c = this->charData[character];
+		CharData c;
+		if (custom_font) {
+			unsigned char char_width;
+			if (character < 128) {
+				char_width = p8_memory[ADDR_CUSTOM_FONT];
+			} else {
+				char_width = p8_memory[ADDR_CUSTOM_FONT + 1];
+			}
+
+			unsigned char char_height = p8_memory[ADDR_CUSTOM_FONT + 2];
+			unsigned char char_x_offset = p8_memory[ADDR_CUSTOM_FONT + 3];
+			unsigned char char_y_offset = p8_memory[ADDR_CUSTOM_FONT + 4];
+
+			unsigned char modifier_data = p8_memory[ADDR_CUSTOM_FONT + 0x08 + (character-16) / 2];
+			unsigned char modifier_nibble = modifier_data & 0x0F;
+			if (character % 2 == 1) {
+				modifier_nibble = (modifier_data & 0xF0) >> 4;
+			}
+
+			unsigned char width_modifier = modifier_nibble & 0x07;
+			if (width_modifier < 4) {
+				char_width += width_modifier;
+			}
+			else {
+				char_width = char_width + width_modifier;
+				if (char_width >= 8) {
+					char_width -= 8;
+				}
+				else {
+					char_width = 0;
+				}
+			}
+			int y_offset_modifier = 0;
+			if (modifier_nibble & 0x08) {
+				y_offset_modifier = -1;
+			}
+
+			c = read_binary_char(&p8_memory[ADDR_CUSTOM_FONT + character * 8], char_x_offset, y_offset_modifier + (int)char_y_offset);
+
+			c.size = char_width;
+			y_offset = char_height;
+			border = 0;
+		}
+		else {
+			if (!this->charData.count(character)) {
+				alert_todo("print: Couldn't find CharData for <" + std::to_string((unsigned char)character) + ">");
+				start++;
+				continue;
+			}
+			c = this->charData[character];
+			border = 1;
+		}
+
 		for (int i = 0; i < repeats; i++) {
 			if (bg_color >= 0) {
 				unsigned char original_color = p8_memory[ADDR_DS_COLOR];
 				p8_memory[ADDR_DS_COLOR] = bg_color;
-				renderer->draw_rectangle(x - 1, y - 1, x + c.size, y + 5, true);
+				renderer->draw_rectangle(x - 1, y - 1, x + c.size, y + y_offset - 1, true);
 				p8_memory[ADDR_DS_COLOR] = original_color;
 			}
-			this->drawChar(character, x, y);
+			draw_char(c, x, y);
 			if (char_width_override != -1) {
 				prev_width = char_width_override + (c.size - 3);
 			}

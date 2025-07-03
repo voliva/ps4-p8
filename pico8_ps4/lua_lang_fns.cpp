@@ -398,6 +398,9 @@ end
 
 	register_lua_fn(L, "add", R"V0G0N(
 function add(tbl, val, idx)
+	if tbl == nil then
+		return val
+	end
 	if idx != nil then
 		__lua_table.insert(tbl, idx, val)
 	else
