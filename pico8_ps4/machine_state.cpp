@@ -12,7 +12,7 @@ Log DEBUGLOG = logger.log("MachineState");
 
 MachineState::MachineState()
 {
-	this->started = getTimestamp();
+	this->frames = 0;
 
 	for (int p = 0; p < 8; p++) {
 		for (int b = 0; b < 8; b++) {
@@ -33,7 +33,7 @@ void MachineState::initialize()
 	}
 
 	// Things that are not in p8's memory
-	this->started = getTimestamp();
+	this->frames = 0;
 	for (int p = 0; p < 8; p++) {
 		for (int b = 0; b < 8; b++) {
 			this->btn_countdown[p][b] = 0;
@@ -43,7 +43,7 @@ void MachineState::initialize()
 
 unsigned int MachineState::getSize()
 {
-	return P8_TOTAL_MEMORY + sizeof(this->btn_countdown) + sizeof(this->started);
+	return P8_TOTAL_MEMORY + sizeof(this->btn_countdown) + sizeof(timestamp_t);
 }
 
 void MachineState::serialize(unsigned char* dest)
@@ -51,7 +51,7 @@ void MachineState::serialize(unsigned char* dest)
 	int offset = 0;
 	write_state(dest, &offset, p8_memory, P8_TOTAL_MEMORY);
 	write_state(dest, &offset, this->btn_countdown, sizeof(this->btn_countdown));
-	write_state(dest, &offset, &this->started, sizeof(this->started));
+	write_state(dest, &offset, &this->frames, sizeof(timestamp_t));
 }
 
 void MachineState::deserialize(unsigned char* src)
@@ -59,7 +59,7 @@ void MachineState::deserialize(unsigned char* src)
 	int offset = 0;
 	read_state(p8_memory, src, &offset, P8_TOTAL_MEMORY);
 	read_state(this->btn_countdown, src, &offset, sizeof(this->btn_countdown));
-	read_state(&this->started, src, &offset, sizeof(this->started));
+	read_state(&this->frames, src, &offset, sizeof(timestamp_t));
 }
 
 void MachineState::processKeyEvent(KeyEvent evt)
@@ -121,12 +121,15 @@ void MachineState::registerFrame()
 			}
 		}
 	}
+	this->frames++;
 }
 
 float MachineState::getTime()
 {
-	auto timediff = getMillisecondsDiff(getTimestamp(), this->started);
-	return (float)timediff / 1000;
+	if (luaState->is60FPS) {
+		return (float)this->frames / 60.0;
+	}
+	return (float)this->frames / 30.0;
 }
 
 unsigned int MachineState::getRnd()
