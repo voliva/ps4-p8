@@ -108,6 +108,8 @@ bool hexint_to_num(std::string& hex, short* dest) {
 	return true;
 }
 bool decint_to_num(std::string& dec, short* dest) {
+	if (!dec.size()) return false;
+
 	*dest = 0;
 	for (int i = 0; i < dec.size(); i++) {
 		char c = dec[i];
@@ -271,7 +273,7 @@ int tonum(lua_State* L) {
 		lua_pushnumber(L, decimal_value);
 	}
 	else {
-		lua_pushnil(L);
+		return 0;
 	}
 
 	return 1;
