@@ -197,6 +197,7 @@ end
 
 	register_lua_fn(L, "abs", R"V0G0N(
 function abs(a)
+	a = a or 0
 	if a < 0 then return -a end
 	return a
 end

@@ -153,20 +153,75 @@ int millisecs_per_frame(bool is60Fps) {
 	return 1000 / fps;
 }
 
+void RunningCart::processEvents()
+{
+	SDL_Event e;
+	while (SDL_PollEvent(&e) != 0)
+	{
+		//DEBUGLOG << e.type << ENDL;
+		if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE)) {
+			this->stop();
+		}
+
+		KeyEvent* result = mapSdlEvent(e);
+
+		if (result != NULL) {
+			if (this->paused) {
+				pauseMenu->manageEvent(*result);
+			}
+			else if (result->down && result->key == P8_Key::pause) {
+				this->pause();
+			}
+			else {
+				machineState->processKeyEvent(*result);
+			}
+		}
+
+		delete result;
+	}
+}
+
+/*
+* Called in case lua has been stuck for a while
+* Might happen for games that implement their own game loop with flip
+*/
+void RunningCart::retakeControl()
+{
+	if (this->replacingCartridge) {
+		this->stop();
+		Cartridge* cart = this->replacingCartridge;
+		this->load(cart, this->replacingName);
+		this->replacingCartridge = NULL;
+		this->run();
+		delete cart;
+		return;
+	}
+
+	if (this->status == RunningStatus::Running) {
+		this->processEvents();
+		saveManager->persist();
+
+		while (this->paused && this->status == RunningStatus::Running) {
+			pauseMenu->draw();
+			std::this_thread::sleep_for(std::chrono::milliseconds(30));
+			this->processEvents();
+		}
+	}
+}
+
 void RunningCart::runOnce()
 {
+	this->status = RunningStatus::Running;
+
 	DEBUGLOG << "Run _init" << ENDL;
 	luaState->run_init();
 
 	// Enter the render loop
 	DEBUGLOG << "Entering render loop..." << ENDL;
 
-	SDL_Event e;
-
 	int time_debt = 0;
 	short ms_per_frame = millisecs_per_frame(luaState->is60FPS);
 
-	this->status = RunningStatus::Running;
 	unsigned int frame = 0;
 	auto lastFrame = getTimestamp();
 	while (this->status == RunningStatus::Running) {
@@ -177,29 +232,7 @@ void RunningCart::runOnce()
 		// When dragging the window the app pauses, on that case, ignore frame_start
 		// https://stackoverflow.com/questions/29552658/how-do-you-fix-a-program-from-freezing-when-you-move-the-window-in-sdl2
 		// auto frame_start = std::chrono::high_resolution_clock::now();
-		while (SDL_PollEvent(&e) != 0)
-		{
-			// DEBUGLOG << e.type << ENDL;
-			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_ESCAPE)) {
-				this->stop();
-			}
-
-			KeyEvent* result = mapSdlEvent(e);
-
-			if (result != NULL) {
-				if (this->paused) {
-					pauseMenu->manageEvent(*result);
-				}
-				else if (result->down && result->key == P8_Key::pause) {
-					this->pause();
-				}
-				else {
-					machineState->processKeyEvent(*result);
-				}
-			}
-
-			delete result;
-		}
+		this->processEvents();
 		auto frame_start = getTimestamp();
 
 		if (this->status == RunningStatus::Running) {

@@ -11,6 +11,16 @@ Log DEBUGLOG = logger.log("LuaState");
 std::string LUA_PREFIX = "__lua_";
 #define PREFIXED(n) (LUA_PREFIX + n).c_str()
 
+
+timestamp_t lua_last_hook = getTimestamp();
+void lua_count_hook(lua_State* L, lua_Debug* ar) {
+	auto now = getTimestamp();
+	if (getMillisecondsDiff(getTimestamp(), lua_last_hook) > 30) {
+		lua_last_hook = now;
+		runningCart->retakeControl();
+	}
+}
+
 LuaState::LuaState()
 {
 	srand(std::time(NULL));
@@ -116,6 +126,8 @@ bool LuaState::loadProgram(std::string& program)
 
 void LuaState::run_init()
 {
+	lua_sethook(this->state, lua_count_hook, LUA_MASKCOUNT, 100);
+
 	lua_getglobal(this->state, "_init");
 	if (lua_isfunction(this->state, 1)) {
 		if (lua_pcall(this->state, 0, 0, 0)) {
@@ -143,6 +155,8 @@ void LuaState::run_init()
 
 void LuaState::run_draw()
 {
+	lua_sethook(this->state, lua_count_hook, LUA_MASKCOUNT, 10000);
+
 	lua_getglobal(this->state, "_draw");
 	if (lua_isfunction(this->state, -1)) {
 		/*lua_getglobal(this->state, "__lua_debug");
@@ -168,14 +182,24 @@ void LuaState::run_draw()
 
 void LuaState::run_update()
 {
+	lua_sethook(this->state, lua_count_hook, LUA_MASKCOUNT, 10000);
+
 	if (this->is60FPS) {
 		lua_getglobal(this->state, "_update60");
+		/*lua_getglobal(this->state, "__lua_debug");
+		lua_getfield(this->state, -1, "traceback");
+		lua_remove(this->state, -2);
+		int errorFuncIndex = lua_gettop(this->state) - 1;
+		lua_insert(this->state, errorFuncIndex);
+		if (lua_pcall(this->state, 0, 0, errorFuncIndex)) {*/
 		if (lua_pcall(this->state, 0, 0, 0)) {
 			std::string e = lua_tostring(this->state, -1);
 			lua_pop(this->state, 1);
 			DEBUGLOG << "_update60 " << e << ENDL;
 			runningCart->warnError();
 		}
+
+		//lua_remove(this->state, errorFuncIndex);
 	}
 	else {
 		lua_getglobal(this->state, "_update");

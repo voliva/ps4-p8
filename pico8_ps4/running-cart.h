@@ -24,6 +24,8 @@ public:
 	void warnError();
 	std::string getName();
 
+	void retakeControl();
+
 private:
 	Cartridge* loadedCartridge;
 	RunningStatus status = RunningStatus::None;
@@ -36,6 +38,8 @@ private:
 
 	void runOnce();
 	void dismissError();
+
+	void processEvents();
 };
 extern RunningCart *runningCart;
 
