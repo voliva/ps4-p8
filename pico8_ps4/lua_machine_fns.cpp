@@ -149,7 +149,7 @@ int dset(lua_State* L) {
 }
 
 int dget(lua_State* L) {
-	int index = luaL_checkinteger(L, 1);
+	int index = luaL_optinteger(L, 1, 0);
 
 	lua_pushnumber(L, saveManager->read(index));
 
