@@ -86,5 +86,9 @@ private:
 
 	timestamp_t prev_frame;
 	int sync_delay;
+
+	SDL_Texture* canvas;
+	SDL_Texture* CRT_filter;
+	int canvas_size;
 };
 extern Renderer *renderer;

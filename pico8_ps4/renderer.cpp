@@ -83,30 +83,48 @@ Renderer::Renderer()
 		SDL_Quit();
 		exit(1);
 	}
+
+	this->canvas = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, P8_HEIGHT, P8_WIDTH);
+
+
+	// If we make a logical size of P8_HEIGHT, then SDL struggles with decimal scales and adds random black lines.
+	// So we need a logical size that divides P8_HEIGHT
+	unsigned int line_height = FRAME_HEIGHT / P8_HEIGHT;
+	// Assuming square, but logic should still work for other aspect ratios (but more complex)
+	this->canvas_size = line_height * P8_HEIGHT;
+	// unsigned int logicalSize = FRAME_HEIGHT / line_height;
+
+	this->CRT_filter = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
+	SDL_SetTextureBlendMode(this->CRT_filter, SDL_BLENDMODE_MUL);
+	SDL_SetRenderTarget(this->renderer, this->CRT_filter);
+	for (int i = 0; i < P8_HEIGHT; i++) {
+		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 32);
+		SDL_RenderDrawLine(this->renderer, 0, i * line_height-1, this->canvas_size, i * line_height-1);
+		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 63);
+		SDL_RenderDrawLine(this->renderer, 0, i * line_height, this->canvas_size, i * line_height);
+		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 32);
+		SDL_RenderDrawLine(this->renderer, 0, i * line_height+1, this->canvas_size, i * line_height+1);
+	}
+	SDL_SetRenderTarget(this->renderer, NULL);
 }
 
 void Renderer::initialize()
 {
-	// If we make a logical size of P8_HEIGHT, then SDL struggles with decimal scales and adds random black lines.
-	// So we need a logical size that divides P8_HEIGHT
-	unsigned int scale = FRAME_HEIGHT / P8_HEIGHT;
-	// Assuming square, but logic should still work for other aspect ratios (but more complex)
-	unsigned int logicalSize = FRAME_HEIGHT / scale;
-	SDL_RenderSetLogicalSize(this->renderer, logicalSize, logicalSize);
-
-	// Center the viewport as much as posible
-	SDL_Rect viewport{};
-	SDL_RenderGetViewport(this->renderer, &viewport);
-	viewport.y = (viewport.h - P8_HEIGHT) / 2;
-	SDL_RenderSetViewport(this->renderer, &viewport);
-
 	SDL_SetRenderDrawColor(this->renderer, 0x10, 0x10, 0x10, 0xFF);
+	SDL_RenderClear(this->renderer);
+	SDL_SetRenderTarget(this->renderer, this->canvas);
 	SDL_RenderClear(this->renderer);
 
 	// Inside area
 	SDL_SetRenderDrawColor(this->renderer, 0x00, 0x00, 0x00, 0xFF);
 	SDL_RenderFillRect(this->renderer, &p8_area);
 	SDL_SetRenderDrawColor(this->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+	SDL_SetRenderTarget(this->renderer, NULL);
+
+	SDL_Rect canvas_position = SDL_Rect{
+		(FRAME_WIDTH - this->canvas_size)/2, (FRAME_HEIGHT - this->canvas_size)/2, this->canvas_size, this->canvas_size
+	};
+	SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, &canvas_position);
 	SDL_UpdateWindowSurface(this->window);
 
 	this->reset_draw_pal();
@@ -530,6 +548,7 @@ void Renderer::present()
 		}
 	}
 
+	SDL_SetRenderTarget(this->renderer, this->canvas);
 	for (int i = 0; i < 16; i++) {
 		int size = points[i].size();
 		if (size == 0) {
@@ -544,6 +563,33 @@ void Renderer::present()
 		SDL_SetRenderDrawColor(this->renderer, color.r, color.g, color.b, 0xFF);
 		SDL_RenderDrawPoints(this->renderer, &points[i][0], size);
 	}
+	SDL_SetRenderTarget(this->renderer, NULL);
+
+	SDL_SetRenderDrawColor(this->renderer, 0x10, 0x10, 0x10, 0xFF);
+	SDL_RenderClear(this->renderer);
+
+	SDL_Rect canvas_position = SDL_Rect{
+		(FRAME_WIDTH - this->canvas_size) / 2, (FRAME_HEIGHT - this->canvas_size) / 2, this->canvas_size, this->canvas_size
+	};
+
+	SDL_SetTextureBlendMode(this->canvas, SDL_BLENDMODE_NONE);
+	SDL_RenderCopy(this->renderer, this->canvas, NULL, &canvas_position);
+
+	// TODO option
+	auto displacement = this->canvas_size / P8_WIDTH / 3;
+	SDL_SetTextureBlendMode(this->canvas, SDL_BLENDMODE_BLEND);
+	SDL_SetTextureAlphaMod(this->canvas, 100);
+	canvas_position.x -= displacement;
+	canvas_position.y -= displacement;
+	SDL_RenderCopy(this->renderer, this->canvas, NULL, &canvas_position);
+	canvas_position.x += 2*displacement;
+	canvas_position.y += 2*displacement;
+	SDL_RenderCopy(this->renderer, this->canvas, NULL, &canvas_position);
+	SDL_SetTextureAlphaMod(this->canvas, 255);
+
+	canvas_position.x -= displacement;
+	canvas_position.y -= displacement;
+	SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, &canvas_position);
 
 	SDL_UpdateWindowSurface(this->window);
 	memcpy(this->prev_screen, &p8_memory[ADDR_SCREEN], SCREEN_MEMORY_SIZE);
