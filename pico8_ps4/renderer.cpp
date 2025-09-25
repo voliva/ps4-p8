@@ -106,6 +106,49 @@ Renderer::Renderer()
 		SDL_RenderDrawLine(this->renderer, 0, i * line_height+1, this->canvas_size, i * line_height+1);
 	}
 	SDL_SetRenderTarget(this->renderer, NULL);
+
+	/*
+	* Texture to draw the flat image before distorting it to the actual screen.
+	*/
+	this->flat = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
+
+	const int NX = 32, NY = 32; // grid resolution
+	auto barrel = [&](float x, float y, float k) {   // x,y in [-1,1], k ~ 0.08
+		float r2 = x * x + y * y;
+		float f = 1.0f - k * r2;
+		return std::pair<float, float>(x * f, y * f);
+	};
+
+	for (int j = 0; j <= NY; ++j) {
+		for (int i = 0; i <= NX; ++i) {
+			float u = (float)i / (float)NX, v = (float)j / (float)NY;
+			// screen-space normalized [-1,1]
+			float x = (u * 2.f - 1.f), y = (v * 2.f - 1.f);
+			auto pair = barrel(x, y, 0.01);  // tweak k
+			// map back to pixels
+			float px = (pair.first * 0.5 + 0.5) * this->canvas_size + (FRAME_WIDTH - this->canvas_size) / 2;
+			float py = (pair.second * 0.5 + 0.5) * this->canvas_size + (FRAME_HEIGHT - this->canvas_size) / 2;
+
+			SDL_Vertex vert{};
+			vert.position.x = px;
+			vert.position.y = py;
+			vert.tex_coord.x = u;
+			vert.tex_coord.y = v;
+			vert.color = { 255,255,255,255 };
+			this->crt_verts.push_back(vert);
+		}
+	}
+	// indices for quads
+	for (int j = 0; j < NY; ++j) {
+		for (int i = 0; i < NX; ++i) {
+			int a = j * (NX + 1) + i;
+			int b = a + 1;
+			int c = a + (NX + 1);
+			int d = c + 1;
+			// two triangles: a,b,c and b,d,c
+			this->crt_indices.insert(this->crt_indices.end(), { a,b,c,  b,d,c });
+		}
+	}
 }
 
 void Renderer::initialize()
@@ -569,16 +612,18 @@ void Renderer::present()
 	SDL_RenderClear(this->renderer);
 
 	SDL_Rect canvas_position = SDL_Rect{
-		(FRAME_WIDTH - this->canvas_size) / 2, (FRAME_HEIGHT - this->canvas_size) / 2, this->canvas_size, this->canvas_size
+		0, 0, this->canvas_size, this->canvas_size
 	};
 
 	SDL_SetTextureBlendMode(this->canvas, SDL_BLENDMODE_NONE);
-	SDL_RenderCopy(this->renderer, this->canvas, NULL, &canvas_position);
+
+	SDL_SetRenderTarget(this->renderer, this->flat);
+	SDL_RenderCopy(this->renderer, this->canvas, NULL, NULL);
 
 	// TODO option
 	auto displacement = this->canvas_size / P8_WIDTH / 3;
 	SDL_SetTextureBlendMode(this->canvas, SDL_BLENDMODE_BLEND);
-	SDL_SetTextureAlphaMod(this->canvas, 100);
+	SDL_SetTextureAlphaMod(this->canvas, 127);
 	canvas_position.x -= displacement;
 	canvas_position.y -= displacement;
 	SDL_RenderCopy(this->renderer, this->canvas, NULL, &canvas_position);
@@ -590,6 +635,10 @@ void Renderer::present()
 	canvas_position.x -= displacement;
 	canvas_position.y -= displacement;
 	SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, &canvas_position);
+
+	SDL_SetRenderTarget(this->renderer, NULL);
+	SDL_RenderGeometry(renderer, this->flat, this->crt_verts.data(), (int)this->crt_verts.size(),
+		this->crt_indices.data(), (int)this->crt_indices.size());
 
 	SDL_UpdateWindowSurface(this->window);
 	memcpy(this->prev_screen, &p8_memory[ADDR_SCREEN], SCREEN_MEMORY_SIZE);

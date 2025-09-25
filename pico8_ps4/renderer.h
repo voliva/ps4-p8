@@ -89,6 +89,9 @@ private:
 
 	SDL_Texture* canvas;
 	SDL_Texture* CRT_filter;
+	SDL_Texture* flat;
+	std::vector<SDL_Vertex> crt_verts;
+	std::vector<int> crt_indices;
 	int canvas_size;
 };
 extern Renderer *renderer;
