@@ -99,7 +99,6 @@ private:
 	SDL_Texture* DOT_filter;
 	SDL_Texture* flat;
 	//SDL_Texture* distorted;
-	SDL_Texture* half_size;
 	//std::vector<SDL_Vertex> crt_verts;
 	//std::vector<int> crt_indices;
 };
