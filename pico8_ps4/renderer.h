@@ -25,6 +25,10 @@
 
 #define SCREEN_MEMORY_SIZE P8_HEIGHT * P8_WIDTH / 2
 
+#define FILTER_NONE 0
+#define FILTER_CRT 1
+#define FILTER_DOT 2
+
 typedef struct {
 	int x;
 	int y;
@@ -61,6 +65,8 @@ public:
 	SDL_Renderer* renderer;
 	SDL_Window* window;
 
+	unsigned int filter;
+
 private:
 	void set_pixel(int sx, int sy, unsigned char color);
 	void set_pixel_pair(int sx, int sy, unsigned char colors);
@@ -87,11 +93,14 @@ private:
 	timestamp_t prev_frame;
 	int sync_delay;
 
-	SDL_Texture* canvas;
-	SDL_Texture* CRT_filter;
-	SDL_Texture* flat;
-	std::vector<SDL_Vertex> crt_verts;
-	std::vector<int> crt_indices;
 	int canvas_size;
+	SDL_Texture* p8_viewport;
+	SDL_Texture* CRT_filter;
+	SDL_Texture* DOT_filter;
+	SDL_Texture* flat;
+	//SDL_Texture* distorted;
+	SDL_Texture* half_size;
+	//std::vector<SDL_Vertex> crt_verts;
+	//std::vector<int> crt_indices;
 };
 extern Renderer *renderer;

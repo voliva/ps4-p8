@@ -84,78 +84,107 @@ Renderer::Renderer()
 		exit(1);
 	}
 
-	this->canvas = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, P8_HEIGHT, P8_WIDTH);
-
+	this->p8_viewport = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, P8_HEIGHT, P8_WIDTH);
 
 	// If we make a logical size of P8_HEIGHT, then SDL struggles with decimal scales and adds random black lines.
 	// So we need a logical size that divides P8_HEIGHT
 	unsigned int line_height = FRAME_HEIGHT / P8_HEIGHT;
 	// Assuming square, but logic should still work for other aspect ratios (but more complex)
 	this->canvas_size = line_height * P8_HEIGHT;
-	// unsigned int logicalSize = FRAME_HEIGHT / line_height;
 
 	this->CRT_filter = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
-	SDL_SetTextureBlendMode(this->CRT_filter, SDL_BLENDMODE_MUL);
+	this->DOT_filter = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
+	this->flat = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
+	//this->distorted = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
+	this->half_size = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size/2, this->canvas_size/2);
+	SDL_SetTextureScaleMode(this->flat, SDL_ScaleModeBest);
+	SDL_SetTextureScaleMode(this->half_size, SDL_ScaleModeBest);
+
+	// Render CRT 
 	SDL_SetRenderTarget(this->renderer, this->CRT_filter);
 	for (int i = 0; i < P8_HEIGHT; i++) {
 		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 32);
-		SDL_RenderDrawLine(this->renderer, 0, i * line_height-1, this->canvas_size, i * line_height-1);
+		//SDL_RenderDrawLine(this->renderer, 0, i * line_height-1, this->canvas_size, i * line_height-1);
 		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 63);
 		SDL_RenderDrawLine(this->renderer, 0, i * line_height, this->canvas_size, i * line_height);
 		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 32);
-		SDL_RenderDrawLine(this->renderer, 0, i * line_height+1, this->canvas_size, i * line_height+1);
+		//SDL_RenderDrawLine(this->renderer, 0, i * line_height+1, this->canvas_size, i * line_height+1);
 	}
+
+	// Render DOT 
+	SDL_SetRenderTarget(this->renderer, this->DOT_filter);
+	// Copy horizontal lines
+	SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, NULL);
+	// Draw vertical lines
+	for (int i = 0; i < P8_WIDTH; i++) {
+		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 32);
+		SDL_RenderDrawLine(this->renderer, i * line_height - 1, 0, i * line_height - 1, this->canvas_size);
+		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 63);
+		SDL_RenderDrawLine(this->renderer, i * line_height, 0, i * line_height, this->canvas_size);
+		SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 32);
+		SDL_RenderDrawLine(this->renderer, i * line_height + 1, 0, i * line_height + 1, this->canvas_size);
+	}
+
+	// Prepare for apply
+	// no filter => screen/NONE, CRT => flat/NONE, DOT => flat/NONE
+	SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_NONE);
+	// no filter => N/A, CRT/DOT => flat/MUL
+	SDL_SetTextureBlendMode(this->CRT_filter, SDL_BLENDMODE_MUL);
+	SDL_SetTextureBlendMode(this->DOT_filter, SDL_BLENDMODE_MUL);
+	// no filter => N/A, CRT => distorted/NONE, DOT => screen/NONE
+	SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
+	// no filter => N/A, CRT => screen/BLEND*3, DOT => N/A
+	//SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_BLEND);
+
 	SDL_SetRenderTarget(this->renderer, NULL);
 
-	/*
-	* Texture to draw the flat image before distorting it to the actual screen.
-	*/
-	this->flat = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
+	this->filter = FILTER_CRT;
 
-	const int NX = 32, NY = 32; // grid resolution
-	auto barrel = [&](float x, float y, float k) {   // x,y in [-1,1], k ~ 0.08
-		float r2 = x * x + y * y;
-		float f = 1.0f - k * r2;
-		return std::pair<float, float>(x * f, y * f);
-	};
+	// Aliasing problems kill the vibe. Commenting out for now
+	//// Pre-calculate crt distortion geometry
+	//const int NX = 32, NY = 32; // grid resolution
+	//auto barrel = [&](float x, float y, float k) {   // x,y in [-1,1], k ~ 0.08
+	//	float r2 = x * x + y * y;
+	//	float f = 1.0f - k * r2;
+	//	return std::pair<float, float>(x * f, y * f);
+	//};
+	//for (int j = 0; j <= NY; ++j) {
+	//	for (int i = 0; i <= NX; ++i) {
+	//		float u = (float)i / (float)NX, v = (float)j / (float)NY;
+	//		// screen-space normalized [-1,1]
+	//		float x = (u * 2.f - 1.f), y = (v * 2.f - 1.f);
+	//		auto pair = barrel(x, y, 0.015);
+	//		// map back to pixels
+	//		float px = (pair.first * 0.5 + 0.5) * this->canvas_size;
+	//		float py = (pair.second * 0.5 + 0.5) * this->canvas_size;
 
-	for (int j = 0; j <= NY; ++j) {
-		for (int i = 0; i <= NX; ++i) {
-			float u = (float)i / (float)NX, v = (float)j / (float)NY;
-			// screen-space normalized [-1,1]
-			float x = (u * 2.f - 1.f), y = (v * 2.f - 1.f);
-			auto pair = barrel(x, y, 0.01);  // tweak k
-			// map back to pixels
-			float px = (pair.first * 0.5 + 0.5) * this->canvas_size + (FRAME_WIDTH - this->canvas_size) / 2;
-			float py = (pair.second * 0.5 + 0.5) * this->canvas_size + (FRAME_HEIGHT - this->canvas_size) / 2;
-
-			SDL_Vertex vert{};
-			vert.position.x = px;
-			vert.position.y = py;
-			vert.tex_coord.x = u;
-			vert.tex_coord.y = v;
-			vert.color = { 255,255,255,255 };
-			this->crt_verts.push_back(vert);
-		}
-	}
-	// indices for quads
-	for (int j = 0; j < NY; ++j) {
-		for (int i = 0; i < NX; ++i) {
-			int a = j * (NX + 1) + i;
-			int b = a + 1;
-			int c = a + (NX + 1);
-			int d = c + 1;
-			// two triangles: a,b,c and b,d,c
-			this->crt_indices.insert(this->crt_indices.end(), { a,b,c,  b,d,c });
-		}
-	}
+	//		SDL_Vertex vert{};
+	//		vert.position.x = px;
+	//		vert.position.y = py;
+	//		vert.tex_coord.x = u;
+	//		vert.tex_coord.y = v;
+	//		vert.color = { 255,255,255,255 };
+	//		this->crt_verts.push_back(vert);
+	//	}
+	//}
+	//// indices for quads
+	//for (int j = 0; j < NY; ++j) {
+	//	for (int i = 0; i < NX; ++i) {
+	//		int a = j * (NX + 1) + i;
+	//		int b = a + 1;
+	//		int c = a + (NX + 1);
+	//		int d = c + 1;
+	//		// two triangles: a,b,c and b,d,c
+	//		this->crt_indices.insert(this->crt_indices.end(), { a,b,c,  b,d,c });
+	//	}
+	//}
 }
 
 void Renderer::initialize()
 {
 	SDL_SetRenderDrawColor(this->renderer, 0x10, 0x10, 0x10, 0xFF);
 	SDL_RenderClear(this->renderer);
-	SDL_SetRenderTarget(this->renderer, this->canvas);
+	SDL_SetRenderTarget(this->renderer, this->p8_viewport);
 	SDL_RenderClear(this->renderer);
 
 	// Inside area
@@ -591,7 +620,7 @@ void Renderer::present()
 		}
 	}
 
-	SDL_SetRenderTarget(this->renderer, this->canvas);
+	SDL_SetRenderTarget(this->renderer, this->p8_viewport);
 	for (int i = 0; i < 16; i++) {
 		int size = points[i].size();
 		if (size == 0) {
@@ -612,33 +641,47 @@ void Renderer::present()
 	SDL_RenderClear(this->renderer);
 
 	SDL_Rect canvas_position = SDL_Rect{
-		0, 0, this->canvas_size, this->canvas_size
+		(FRAME_WIDTH - this->canvas_size)/2, (FRAME_HEIGHT - this->canvas_size) / 2, this->canvas_size, this->canvas_size
 	};
 
-	SDL_SetTextureBlendMode(this->canvas, SDL_BLENDMODE_NONE);
+	if (this->filter == FILTER_NONE) {
+		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &canvas_position);
+	}
+	else {
+		SDL_SetRenderTarget(this->renderer, this->flat);
+		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
 
-	SDL_SetRenderTarget(this->renderer, this->flat);
-	SDL_RenderCopy(this->renderer, this->canvas, NULL, NULL);
+		SDL_Texture* filter = this->filter == FILTER_CRT ? this->CRT_filter : this->DOT_filter;
+		SDL_RenderCopy(this->renderer, filter, NULL, NULL);
 
-	// TODO option
-	auto displacement = this->canvas_size / P8_WIDTH / 3;
-	SDL_SetTextureBlendMode(this->canvas, SDL_BLENDMODE_BLEND);
-	SDL_SetTextureAlphaMod(this->canvas, 127);
-	canvas_position.x -= displacement;
-	canvas_position.y -= displacement;
-	SDL_RenderCopy(this->renderer, this->canvas, NULL, &canvas_position);
-	canvas_position.x += 2*displacement;
-	canvas_position.y += 2*displacement;
-	SDL_RenderCopy(this->renderer, this->canvas, NULL, &canvas_position);
-	SDL_SetTextureAlphaMod(this->canvas, 255);
+		if (this->filter == FILTER_DOT) {
+			SDL_SetRenderTarget(this->renderer, NULL);
+			SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
+		}
+		else {
+			/*SDL_SetRenderTarget(this->renderer, this->distorted);
+			SDL_RenderGeometry(this->renderer, this->flat, this->crt_verts.data(), (int)this->crt_verts.size(),
+				this->crt_indices.data(), (int)this->crt_indices.size());*/
 
-	canvas_position.x -= displacement;
-	canvas_position.y -= displacement;
-	SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, &canvas_position);
+			SDL_SetRenderTarget(this->renderer, this->half_size);
+			SDL_RenderCopy(this->renderer, this->flat, NULL, NULL);
 
-	SDL_SetRenderTarget(this->renderer, NULL);
-	SDL_RenderGeometry(renderer, this->flat, this->crt_verts.data(), (int)this->crt_verts.size(),
-		this->crt_indices.data(), (int)this->crt_indices.size());
+			SDL_SetRenderTarget(this->renderer, NULL);
+			SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
+
+			SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_BLEND);
+			SDL_SetTextureAlphaMod(this->flat, 128);
+			auto displacement = 1;
+			canvas_position.x -= displacement;
+			canvas_position.y -= displacement;
+			SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
+			SDL_SetTextureAlphaMod(this->flat, 64);
+			canvas_position.y += 2*displacement;
+			canvas_position.x += 3*displacement;
+			SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
+			SDL_SetTextureAlphaMod(this->flat, 255);
+		}
+	}
 
 	SDL_UpdateWindowSurface(this->window);
 	memcpy(this->prev_screen, &p8_memory[ADDR_SCREEN], SCREEN_MEMORY_SIZE);
