@@ -51,6 +51,43 @@ SDL_Color EXTENDED_PALETTE[] = {
 	SDL_Color { 0xFF, 0x9D, 0x81, 0xff },
 };
 
+inline Uint8 clamp(int x, int max) {
+	return (Uint8)(x < 0 ? 0 : (x > max ? max : x));
+}
+
+void desat_color(SDL_Color* color, int sat255) {
+	// BT.601 luma with 8-bit weights: 0.299≈77/256, 0.587≈150/256, 0.114≈29/256
+	int gray = (77 * (color->r) + 150 * (color->g) + 29 * (color->b) + 128) >> 8;
+
+	// Move each channel toward gray by (1 - s)
+	// out = gray + s*(in-gray) -> out = in*s + gray*(1-s)
+	// sat255 ≈ s*255
+	int dr = color->r - gray, dg = color->g - gray, db = color->b - gray;
+
+	int r2 = gray + (sat255 * dr + 127) / 255;
+	int g2 = gray + (sat255 * dg + 127) / 255;
+	int b2 = gray + (sat255 * db + 127) / 255;
+
+	color->r = clamp(r2, 255);
+	color->g = clamp(g2, 255);
+	color->b = clamp(b2, 255);
+}
+
+void apply_filter(int filter, SDL_Color* color) {
+	if (filter == FILTER_DOT) {
+		color->r *= 0.9;
+		color->g += clamp((255 - color->g) * 0.2, 25);
+		color->b *= 0.9;
+		desat_color(color, 245);
+	}
+	else if (filter == FILTER_CRT) {
+		color->r += clamp((255 - color->r) * 0.1, 12);
+		color->g *= 0.95;
+		color->b *= 0.9;
+		desat_color(color, 215);
+	}
+}
+
 SDL_Texture* buildDotMask(SDL_Renderer* r, int w, int h, int cell) {
 	SDL_Texture* tex = SDL_CreateTexture(r, SDL_PIXELFORMAT_RGBA8888,
 		SDL_TEXTUREACCESS_STREAMING, w, h);
@@ -147,7 +184,7 @@ Renderer::Renderer()
 
 	SDL_SetRenderTarget(this->renderer, NULL);
 
-	this->filter = FILTER_CRT;
+	this->filter = FILTER_NONE;
 
 	// Aliasing problems kill the vibe. Commenting out for now
 	//// Pre-calculate crt distortion geometry
@@ -197,10 +234,13 @@ void Renderer::initialize()
 	SDL_RenderClear(this->renderer);
 
 	// Inside area
-	SDL_SetRenderDrawColor(this->renderer, 0x00, 0x00, 0x00, 0xFF);
+	SDL_Color color = {0,0,0};
+	apply_filter(this->filter, &color);
+	SDL_SetRenderDrawColor(this->renderer, color.r, color.g, color.b, 0xFF);
 	SDL_RenderFillRect(this->renderer, &p8_area);
-	SDL_SetRenderDrawColor(this->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 	SDL_SetRenderTarget(this->renderer, NULL);
+
+	SDL_SetRenderDrawColor(this->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
 	SDL_Rect canvas_position = SDL_Rect{
 		(FRAME_WIDTH - this->canvas_size)/2, (FRAME_HEIGHT - this->canvas_size)/2, this->canvas_size, this->canvas_size
@@ -599,28 +639,6 @@ void Renderer::reset_transparency_pal()
 	}
 }
 
-inline Uint8 clamp8(int x) {
-	return (Uint8)(x < 0 ? 0 : (x > 255 ? 255 : x));
-}
-
-void desat_color(SDL_Color* color, int sat255) {
-	// BT.601 luma with 8-bit weights: 0.299≈77/256, 0.587≈150/256, 0.114≈29/256
-	int gray = (77 * (color->r) + 150 * (color->g) + 29 * (color->b) + 128) >> 8;
-
-	// Move each channel toward gray by (1 - s)
-	// out = gray + s*(in-gray) -> out = in*s + gray*(1-s)
-	// sat255 ≈ s*255
-	int dr = color->r - gray, dg = color->g - gray, db = color->b - gray;
-
-	int r2 = gray + (sat255 * dr + 127) / 255;
-	int g2 = gray + (sat255 * dg + 127) / 255;
-	int b2 = gray + (sat255 * db + 127) / 255;
-
-	color->r = clamp8(r2);
-	color->g = clamp8(g2);
-	color->b = clamp8(b2);
-}
-
 #include <map>
 void Renderer::present()
 {
@@ -663,18 +681,7 @@ void Renderer::present()
 		if (paletteColor >= 0x10) {
 			color = EXTENDED_PALETTE[paletteColor & 0x0F];
 		}
-		if (this->filter == FILTER_DOT) {
-			color.r *= 0.9;
-			color.g += (255 - color.g) * 0.2;
-			color.b *= 0.9;
-			desat_color(&color, 245);
-		}
-		else if (this->filter == FILTER_CRT) {
-			color.r += (255 - color.r) * 0.2;
-			color.g *= 0.95;
-			color.b *= 0.9;
-			desat_color(&color, 215);
-		}
+		apply_filter(this->filter, &color);
 		SDL_SetRenderDrawColor(this->renderer, color.r, color.g, color.b, 0xFF);
 		SDL_RenderDrawPoints(this->renderer, &points[i][0], size);
 	}
@@ -701,6 +708,7 @@ void Renderer::present()
 		SDL_RenderGeometry(this->renderer, this->flat, this->crt_verts.data(), (int)this->crt_verts.size(),
 			this->crt_indices.data(), (int)this->crt_indices.size());*/
 
+		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
 		SDL_SetRenderTarget(this->renderer, NULL);
 		SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
 

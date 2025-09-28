@@ -99,6 +99,9 @@
     <ClCompile Include="carousel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h">
@@ -177,6 +180,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="carousel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -23,6 +23,7 @@
 #include "system_menu.h"
 #include "main.h"
 #include "carousel.h"
+#include "settings.h"
 
 #if __SWITCH__
 #define CAROUSEL_CART_HEIGHT 350
@@ -59,7 +60,7 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory);
 
 bool isSplore(int screen)
 {
-	return screen == 2 || screen == 3;
+	return screen == 3 || screen == 4;
 }
 
 std::string name_from_path(std::string path)
@@ -132,6 +133,9 @@ int main(void)
 
 	Screen screens[] = {
 		Screen{
+			"settings",
+			fakeBbs},
+		Screen{
 			"bundled",
 			bundledCartridges},
 		Screen{
@@ -145,10 +149,14 @@ int main(void)
 			fakeBbs},
 	};
 	Splore splore;
-	int currentScreen = 1;
+	Settings settings;
+
+	settings.initialize();
+
+	int currentScreen = 2;
 	if (localCartridges.size() == 0)
 	{
-		currentScreen = 0;
+		currentScreen = 1;
 	}
 
 	Carousel* carousel = new Carousel(screens[currentScreen].cartridges.size(), 160 * ((double)CAROUSEL_CART_HEIGHT / 205), CAROUSEL_CART_HEIGHT);
@@ -165,20 +173,20 @@ int main(void)
 		}
 		bool canDecScreen = prevScreen >= 0;
 		int nextScreen = currentScreen + 1;
-		while (nextScreen < 4 && screens[nextScreen].cartridges.size() == 0)
+		while (nextScreen < 5 && screens[nextScreen].cartridges.size() == 0)
 		{
 			nextScreen++;
 		}
-		bool canIncScreen = nextScreen < 4;
+		bool canIncScreen = nextScreen < 5;
 
 		if (invalidateLocalCartridges) {
 			invalidateLocalCartridges = false;
 
 			localCartridges = load_local_cartridges(CARTRIDGE_FOLDER);
 			screens[1].cartridges = localCartridges;
-			if (currentScreen == 1) {
+			if (currentScreen == 2) {
 				if (localCartridges.size() == 0) {
-					currentScreen = 0;
+					currentScreen = 1;
 
 					carousel->reset();
 					carousel->setItemcount(screens[currentScreen].cartridges.size());
@@ -207,15 +215,15 @@ int main(void)
 				{
 					currentScreen = prevScreen;
 
-					if (currentScreen < 2) {
+					if (currentScreen < 3) {
 						carousel->reset();
 						carousel->setItemcount(screens[currentScreen].cartridges.size());
 					}
 
-					if (currentScreen == 2) {
+					if (currentScreen == 3) {
 						splore.initialize(Mode::Featured);
 					}
-					else if (currentScreen == 3) {
+					else if (currentScreen == 4) {
 						splore.initialize(Mode::New);
 					}
 				}
@@ -225,16 +233,16 @@ int main(void)
 				{
 					currentScreen = nextScreen;
 
-					if (currentScreen < 2) {
+					if (currentScreen < 3) {
 						carousel->reset();
 						carousel->setItemcount(screens[currentScreen].cartridges.size());
 					}
 
-					if (currentScreen == 2)
+					if (currentScreen == 3)
 					{
 						splore.initialize(Mode::Featured);
 					}
-					else if (currentScreen == 3)
+					else if (currentScreen == 4)
 					{
 						splore.initialize(Mode::New);
 					}
@@ -247,6 +255,9 @@ int main(void)
 			} else if (isSplore(currentScreen))
 			{
 				splore.key_down(k);
+			}
+			else if (currentScreen == 0) {
+				settings.key_down(k);
 			}
 			else
 			{
@@ -261,7 +272,7 @@ int main(void)
 					break;
 				}
 				case Key::pause: {
-					if (currentScreen == 1) {
+					if (currentScreen == 2) {
 						std::string path = screens[1].cartridges[carousel->getActiveIndex()].path;
 						std::vector<MenuItem> items = {
 							MenuItem {
@@ -313,6 +324,9 @@ int main(void)
 		if (isSplore(currentScreen))
 		{
 			splore.render(delta);
+		}
+		else if (currentScreen == 0) {
+			settings.render(delta);
 		}
 		else
 		{

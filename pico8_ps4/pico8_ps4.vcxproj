@@ -177,6 +177,7 @@
     <ClCompile Include="running-cart.cpp" />
     <ClCompile Include="saves.cpp" />
     <ClCompile Include="save_states.cpp" />
+    <ClCompile Include="settings.cpp" />
     <ClCompile Include="splore.cpp" />
     <ClCompile Include="splore_loader.cpp" />
     <ClCompile Include="system_menu.cpp" />
@@ -205,6 +206,7 @@
     <ClInclude Include="running-cart.h" />
     <ClInclude Include="saves.h" />
     <ClInclude Include="save_states.h" />
+    <ClInclude Include="settings.h" />
     <ClInclude Include="splore.h" />
     <ClInclude Include="splore_loader.h" />
     <ClInclude Include="system_menu.h" />

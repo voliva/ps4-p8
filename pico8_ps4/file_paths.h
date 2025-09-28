@@ -35,6 +35,14 @@
 #define CARTRIDGE_FOLDER "../p8-cartridges"
 #endif
 
+#ifdef __PS4__
+#define SETTINGS_FILE "/data/p8-saves/settings.txt"
+#elif __SWITCH__
+#define SETTINGS_FILE "/switch/switch-p8/settings.txt"
+#else
+#define SETTINGS_FILE "../settings.txt"
+#endif
+
 void prepareFilePaths();
 
 #pragma once
