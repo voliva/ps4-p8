@@ -23,7 +23,6 @@
 #include "system_menu.h"
 #include "main.h"
 #include "carousel.h"
-#include "settings.h"
 
 #if __SWITCH__
 #define CAROUSEL_CART_HEIGHT 350
@@ -33,17 +32,17 @@
 
 #define DEBUGLOG Rom_DEBUGLOG
 Log DEBUGLOG = logger.log("ROM");
-MachineState *machineState;
-AudioManager *audioManager;
-Renderer *renderer;
-Font *font;
-PauseMenu *pauseMenu;
-RunningCart *runningCart;
-SaveManager *saveManager;
+MachineState* machineState;
+AudioManager* audioManager;
+Renderer* renderer;
+Font* font;
+PauseMenu* pauseMenu;
+RunningCart* runningCart;
+SaveManager* saveManager;
 
 typedef struct
 {
-	SDL_Texture *surface;
+	SDL_Texture* surface;
 	std::string path;
 } LocalCartridge;
 typedef struct
@@ -60,7 +59,7 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory);
 
 bool isSplore(int screen)
 {
-	return screen == 3 || screen == 4;
+	return screen == 2 || screen == 3;
 }
 
 std::string name_from_path(std::string path)
@@ -123,18 +122,18 @@ int main(void)
 	}
 
 	DEBUGLOG << "Begin rendering" << ENDL;
-	SDL_Surface *screenSurface = SDL_GetWindowSurface(renderer->window);
+	SDL_Surface* screenSurface = SDL_GetWindowSurface(renderer->window);
 
 	std::vector<LocalCartridge> bundledCartridges = load_local_cartridges(BUNDLED_FOLDER);
 	std::vector<LocalCartridge> localCartridges = load_local_cartridges(CARTRIDGE_FOLDER);
 	std::vector<LocalCartridge> fakeBbs;
 	fakeBbs.push_back(LocalCartridge{
-		NULL, ""});
+		NULL, "" });
 
 	Screen screens[] = {
-		Screen{
-			"settings",
-			fakeBbs},
+
+
+
 		Screen{
 			"bundled",
 			bundledCartridges},
@@ -149,14 +148,14 @@ int main(void)
 			fakeBbs},
 	};
 	Splore splore;
-	Settings settings;
+	int currentScreen = 1;
 
-	settings.initialize();
 
-	int currentScreen = 2;
+
+
 	if (localCartridges.size() == 0)
 	{
-		currentScreen = 1;
+		currentScreen = 0;
 	}
 
 	Carousel* carousel = new Carousel(screens[currentScreen].cartridges.size(), 160 * ((double)CAROUSEL_CART_HEIGHT / 205), CAROUSEL_CART_HEIGHT);
@@ -173,20 +172,20 @@ int main(void)
 		}
 		bool canDecScreen = prevScreen >= 0;
 		int nextScreen = currentScreen + 1;
-		while (nextScreen < 5 && screens[nextScreen].cartridges.size() == 0)
+		while (nextScreen < 4 && screens[nextScreen].cartridges.size() == 0)
 		{
 			nextScreen++;
 		}
-		bool canIncScreen = nextScreen < 5;
+		bool canIncScreen = nextScreen < 4;
 
 		if (invalidateLocalCartridges) {
 			invalidateLocalCartridges = false;
 
 			localCartridges = load_local_cartridges(CARTRIDGE_FOLDER);
 			screens[1].cartridges = localCartridges;
-			if (currentScreen == 2) {
+			if (currentScreen == 1) {
 				if (localCartridges.size() == 0) {
-					currentScreen = 1;
+					currentScreen = 0;
 
 					carousel->reset();
 					carousel->setItemcount(screens[currentScreen].cartridges.size());
@@ -215,15 +214,15 @@ int main(void)
 				{
 					currentScreen = prevScreen;
 
-					if (currentScreen < 3) {
+					if (currentScreen < 2) {
 						carousel->reset();
 						carousel->setItemcount(screens[currentScreen].cartridges.size());
 					}
 
-					if (currentScreen == 3) {
+					if (currentScreen == 2) {
 						splore.initialize(Mode::Featured);
 					}
-					else if (currentScreen == 4) {
+					else if (currentScreen == 3) {
 						splore.initialize(Mode::New);
 					}
 				}
@@ -233,16 +232,16 @@ int main(void)
 				{
 					currentScreen = nextScreen;
 
-					if (currentScreen < 3) {
+					if (currentScreen < 2) {
 						carousel->reset();
 						carousel->setItemcount(screens[currentScreen].cartridges.size());
 					}
 
-					if (currentScreen == 3)
+					if (currentScreen == 2)
 					{
 						splore.initialize(Mode::Featured);
 					}
-					else if (currentScreen == 4)
+					else if (currentScreen == 3)
 					{
 						splore.initialize(Mode::New);
 					}
@@ -252,13 +251,14 @@ int main(void)
 
 			if (activeSystemMenu) {
 				activeSystemMenu->keyDown(k);
-			} else if (isSplore(currentScreen))
+			}
+			else if (isSplore(currentScreen))
 			{
 				splore.key_down(k);
 			}
-			else if (currentScreen == 0) {
-				settings.key_down(k);
-			}
+
+
+
 			else
 			{
 				carousel->keyDown(k);
@@ -272,7 +272,7 @@ int main(void)
 					break;
 				}
 				case Key::pause: {
-					if (currentScreen == 2) {
+					if (currentScreen == 1) {
 						std::string path = screens[1].cartridges[carousel->getActiveIndex()].path;
 						std::vector<MenuItem> items = {
 							MenuItem {
@@ -325,9 +325,9 @@ int main(void)
 		{
 			splore.render(delta);
 		}
-		else if (currentScreen == 0) {
-			settings.render(delta);
-		}
+
+
+
 		else
 		{
 			auto items = carousel->draw(delta);
@@ -373,14 +373,14 @@ int main(void)
 	return 0;
 }
 
-SDL_Texture *surface_from_file(std::string path)
+SDL_Texture* surface_from_file(std::string path)
 {
 	int width, height, channels;
-	unsigned char *data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+	unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
 	// For some reason stbi_load gives rgb_a as [a,b,g,r] stream
-	SDL_Surface *surface = SDL_CreateRGBSurfaceFrom(data, width, height, 4 * 8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
-	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer->renderer, surface);
+	SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(data, width, height, 4 * 8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
+	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer->renderer, surface);
 	SDL_FreeSurface(surface);
 
 	return texture;
@@ -389,8 +389,8 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory)
 {
 	std::vector<LocalCartridge> result;
 
-	DIR *dir;
-	struct dirent *ent;
+	DIR* dir;
+	struct dirent* ent;
 	if ((dir = opendir(directory.c_str())) != NULL)
 	{
 		while ((ent = readdir(dir)) != NULL)
@@ -399,11 +399,11 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory)
 			if (filename.find(".p8.png") != std::string::npos)
 			{
 				std::string path = directory + "/" + filename;
-				SDL_Texture *surface = surface_from_file(path);
+				SDL_Texture* surface = surface_from_file(path);
 				if (surface != NULL)
 				{
-					result.push_back({surface,
-									  path});
+					result.push_back({ surface,
+									  path });
 				}
 			}
 		}

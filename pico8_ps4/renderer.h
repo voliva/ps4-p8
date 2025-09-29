@@ -60,6 +60,7 @@ public:
 	void reset_transparency_pal();
 
 	void present();
+	void present(bool redraw);
 	void syncrhonize_30fps();
 
 	SDL_Renderer* renderer;

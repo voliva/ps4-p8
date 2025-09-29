@@ -640,7 +640,7 @@ void Renderer::reset_transparency_pal()
 }
 
 #include <map>
-void Renderer::present()
+void Renderer::present(bool redraw)
 {
 	bool palette_changed = false;
 	for (int i = 0; !palette_changed && i<16; i++) {
@@ -649,6 +649,7 @@ void Renderer::present()
 	if (palette_changed) {
 		memcpy(this->prev_screen_pal, &p8_memory[ADDR_DS_SCREEN_PAL], 16);
 	}
+	palette_changed = palette_changed || redraw;
 
 	std::vector<SDL_Point> points[16];
 	for (int i = 0; i < SCREEN_MEMORY_SIZE; i++) {
@@ -737,6 +738,10 @@ void Renderer::present()
 		this->sync_delay = 0;
 	}
 	this->prev_frame = now;
+}
+
+void Renderer::present() {
+	this->present(false);
 }
 
 // This is only called by flip - runningCart has a better control of FPS and might skip a render if needed.
