@@ -161,6 +161,64 @@ static SDL_Texture* buildCRTMask(SDL_Renderer* r, int w, int h,
 	return t;
 }
 
+// k < 0 => pincushion (edges pulled IN). Anchors the horizontal & vertical center (no shrink there).
+static void BuildCurvedGrid(int W, int H, int NX, int NY, float k,
+	std::vector<SDL_Vertex>& outVerts,
+	std::vector<int>& outIdxs)
+{
+	outVerts.clear(); outIdxs.clear();
+	outVerts.reserve((NX + 1) * (NY + 1));
+	outIdxs.reserve(6 * NX * NY);
+
+	const float cx = (W - 1) * 0.5f, cy = (H - 1) * 0.5f;
+	const float eps = 1e-5f;
+
+	for (int j = 0; j <= NY; ++j) {
+		float v = (float)j / (float)NY;           // 0..1
+		float y = v * 2.0f - 1.0f;                  // -1..1
+		for (int i = 0; i <= NX; ++i) {
+			float u = (float)i / (float)NX;       // 0..1
+			float x = u * 2.0f - 1.0f;              // -1..1
+
+			// Normal barrel factor
+			float r2 = x * x + y * y;
+			float num = 1.0f + k * r2;
+
+			// Axis-normalized factors: keep scale = 1 along the center lines
+			float denX = 1.0f + k * (x * x); if (fabsf(denX) < eps) denX = (denX < 0 ? -eps : eps);
+			float denY = 1.0f + k * (y * y); if (fabsf(denY) < eps) denY = (denY < 0 ? -eps : eps);
+
+			float fx = num / denX;   // along x, cancels scaling when y=0
+			float fy = num / denY;   // along y, cancels scaling when x=0
+
+			// Optional safety clamp to avoid extreme values if k is large
+			// fx = SDL_clamp(fx, 0.7f, 1.3f);
+			// fy = SDL_clamp(fy, 0.7f, 1.3f);
+
+			float xd = x * fx;
+			float yd = y * fy;
+
+			// map to pixels & snap to pixel centers to avoid fuzz
+			float px = floorf((xd * 0.5f + 0.5f) * W) + 0.5f;
+			float py = floorf((yd * 0.5f + 0.5f) * H) + 0.5f;
+
+			SDL_Vertex vert{};
+			vert.position.x = px;  vert.position.y = py;
+			vert.tex_coord.x = u;  vert.tex_coord.y = v;   // full texture
+			vert.color = { 255,255,255,255 };
+			outVerts.push_back(vert);
+		}
+	}
+
+	int stride = NX + 1;
+	for (int j = 0; j < NY; ++j) {
+		for (int i = 0; i < NX; ++i) {
+			int a = j * stride + i, b = a + 1, c = a + stride, d = c + 1;
+			outIdxs.insert(outIdxs.end(), { a,b,c,  b,d,c });  // CCW
+		}
+	}
+}
+
 Renderer::Renderer()
 {
 	// Initialize SDL functions
@@ -202,9 +260,10 @@ Renderer::Renderer()
 	// Assuming square, but logic should still work for other aspect ratios (but more complex)
 	this->canvas_size = line_height * P8_HEIGHT;
 
-	this->CRT_filter = buildCRTMask(this->renderer, this->canvas_size, this->canvas_size, line_height, 0.8f, 3.0f, 0.5f);
+	this->CRT_filter = buildCRTMask(this->renderer, this->canvas_size, this->canvas_size, line_height, 0.8f, 3.0f, 1.0f);
 	this->DOT_filter = buildDotMask(this->renderer, this->canvas_size, this->canvas_size, line_height);
 	this->flat = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
+	this->distorted = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
 
 	// Prepare for apply
 	// no filter => screen/NONE, CRT => flat/NONE, DOT => flat/NONE
@@ -218,6 +277,10 @@ Renderer::Renderer()
 	//SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_BLEND);
 
 	SDL_SetRenderTarget(this->renderer, NULL);
+
+	BuildCurvedGrid(this->canvas_size, this->canvas_size,
+		/*NX=*/32, /*NY=*/32, -0.04,
+		this->crtVerts, this->crtIdx);
 
 	this->filter = FILTER_NONE;
 
@@ -703,6 +766,7 @@ void Renderer::present(bool redraw)
 		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
 
 		if (this->filter == FILTER_CRT) {
+
 			// Red fringe
 			SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_ADD);
 			SDL_SetTextureAlphaMod(this->p8_viewport, 60);
@@ -719,22 +783,48 @@ void Renderer::present(bool redraw)
 			// Restore mods
 			SDL_SetTextureAlphaMod(this->p8_viewport, 255);
 			SDL_SetTextureColorMod(this->p8_viewport, 255, 255, 255);
+
 			SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_NONE);
 		}
 
-		SDL_Texture* filter = this->filter == FILTER_CRT ? this->CRT_filter : this->DOT_filter;
-		SDL_RenderCopy(this->renderer, filter, NULL, NULL);
-
-		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
-		SDL_SetRenderTarget(this->renderer, NULL);
-		SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
-
 		// Tiny luma “pop”
-		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_ADD);
-		SDL_SetTextureAlphaMod(this->flat, 10);
-		SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
-		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
-		SDL_SetTextureAlphaMod(this->flat, 255);
+		SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_ADD);
+		SDL_SetTextureAlphaMod(this->p8_viewport, 10);
+		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
+		SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_NONE);
+		SDL_SetTextureAlphaMod(this->p8_viewport, 255);
+
+		if (this->filter == FILTER_CRT) {
+			SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, NULL);
+
+			SDL_SetRenderTarget(this->renderer, this->distorted);
+			SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
+			SDL_RenderGeometry(this->renderer,
+				this->flat,
+				this->crtVerts.data(), (int)this->crtVerts.size(),
+				this->crtIdx.data(), (int)this->crtIdx.size());
+
+			SDL_SetRenderTarget(this->renderer, NULL);
+			SDL_RenderCopy(this->renderer, this->distorted, NULL, &canvas_position);
+
+			SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_BLEND);
+			SDL_SetTextureAlphaMod(this->distorted, 128);
+			canvas_position.x -= displacement / 2;
+			canvas_position.y -= displacement / 2;
+			SDL_RenderCopy(this->renderer, this->distorted, NULL, &canvas_position);
+			//SDL_SetTextureAlphaMod(this->distorted, 64);
+			//canvas_position.y += line_height;
+			//canvas_position.x += 3 * displacement;
+			//SDL_RenderCopy(this->renderer, this->distorted, NULL, &canvas_position);
+			SDL_SetTextureAlphaMod(this->distorted, 255);
+		}
+		else {
+			SDL_RenderCopy(this->renderer, this->DOT_filter, NULL, NULL);
+
+			SDL_SetRenderTarget(this->renderer, NULL);
+			SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
+			SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
+		}
 	}
 
 	SDL_UpdateWindowSurface(this->window);

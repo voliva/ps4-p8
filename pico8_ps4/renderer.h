@@ -99,8 +99,8 @@ private:
 	SDL_Texture* CRT_filter;
 	SDL_Texture* DOT_filter;
 	SDL_Texture* flat;
-	//SDL_Texture* distorted;
-	//std::vector<SDL_Vertex> crt_verts;
-	//std::vector<int> crt_indices;
+	SDL_Texture* distorted;
+	std::vector<SDL_Vertex> crtVerts;
+	std::vector<int>        crtIdx;
 };
 extern Renderer *renderer;
