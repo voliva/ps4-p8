@@ -38,13 +38,13 @@ int flr(lua_State* L) {
 }
 
 int ceil(lua_State* L) {
-	fix16_t num = luaL_checknumber(L, 1);
+	fix16_t num = luaL_optnumber(L, 1, 0);
 	lua_pushinteger(L, fix16_to_int(fix16_ceil(num)));
 	return 1;
 }
 
 int sqrt(lua_State* L) {
-	fix16_t f = luaL_checknumber(L, 1);
+	fix16_t f = luaL_optnumber(L, 1, 0);
 
 	lua_pushnumber(L, fix16_sqrt(f));
 
@@ -52,7 +52,7 @@ int sqrt(lua_State* L) {
 }
 
 int sin(lua_State* L) {
-	fix16_t f = luaL_checknumber(L, 1);
+	fix16_t f = luaL_optnumber(L, 1, 0);
 
 	lua_pushnumber(L, -fix16_sin(
 		fix16_mul(f, fix16_pi << 1) // fix16_pi << 1 = 2*PI with fix16 format
@@ -75,7 +75,7 @@ int atan2(lua_State* L) {
 }
 
 int cos(lua_State* L) {
-	fix16_t f = luaL_checknumber(L, 1);
+	fix16_t f = luaL_optnumber(L, 1, 0);
 
 	lua_pushnumber(L, fix16_cos(
 		fix16_mul(f, fix16_pi << 1)

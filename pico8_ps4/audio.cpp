@@ -19,15 +19,15 @@ int signIndex(float f) {
 
 // It will try and return a phaseshift that matches sample, with the same slope as (sample-prevSample)
 #define ACCEPTABLE_STEP 0.01
-float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float from, float to) {
+float find_phaseshift(float (*wave_fn)(float), float volume, int sign, float sample, float from, float to) {
 	float inc = (to - from) / 8;
 	float bestDiffs[] = { 2.0, 2.0 };
 	float bestFs[] = { -1.0, -1.0 };
 	// We need to skip the first and the last: They have the same value that crosses the origin, and their range will be explored on the recursive call anyway.
 	for (float f = from + inc; f < to; f += inc) {
-		float v = wave_fn(f);
+		float v = wave_fn(f) * volume;
 		float diff = std::fabs(sample - v);
-		float nextV = wave_fn(std::nextafter(f, to));
+		float nextV = wave_fn(std::nextafter(f, to)) * volume;
 		int sign = signIndex(nextV - v);
 
 		if (bestDiffs[sign] > diff) {
@@ -50,8 +50,8 @@ float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float fro
 
 	// Try to improve it
 	if (bestFs[sign] != -1) {
-		bestFs[sign] = find_phaseshift(wave_fn, sign, sample, std::fmax(bestFs[sign] - inc, 0), std::fmin(bestFs[sign] + inc, 1));
-		bestDiffs[sign] = std::fabs(sample - wave_fn(bestFs[sign]));
+		bestFs[sign] = find_phaseshift(wave_fn, volume, sign, sample, std::fmax(bestFs[sign] - inc, 0), std::fmin(bestFs[sign] + inc, 1));
+		bestDiffs[sign] = std::fabs(sample - wave_fn(bestFs[sign]) * volume);
 		if (bestDiffs[sign] < ACCEPTABLE_STEP) {
 			return bestFs[sign];
 		}
@@ -62,8 +62,8 @@ float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float fro
 		return bestFs[1 - sign];
 	}
 	if (bestFs[1-sign] != -1) {
-		bestFs[1-sign] = find_phaseshift(wave_fn, sign, sample, std::fmax(bestFs[1-sign] - inc, 0), std::fmin(bestFs[1-sign] + inc, 1));
-		bestDiffs[1-sign] = std::fabs(sample - wave_fn(bestFs[1-sign]));
+		bestFs[1-sign] = find_phaseshift(wave_fn, volume, sign, sample, std::fmax(bestFs[1-sign] - inc, 0), std::fmin(bestFs[1-sign] + inc, 1));
+		bestDiffs[1-sign] = std::fabs(sample - wave_fn(bestFs[1-sign]) * volume);
 		if (bestDiffs[1-sign] < ACCEPTABLE_STEP) {
 			return bestFs[1-sign];
 		}
@@ -75,9 +75,9 @@ float find_phaseshift(float (*wave_fn)(float), int sign, float sample, float fro
 	}
 	return bestFs[1 - sign];
 }
-float find_phaseshift(float (*wave_fn)(float), float prevSample, float sample) {
+float find_phaseshift(float (*wave_fn)(float), float volume, float prevSample, float sample) {
 	float diff = sample - prevSample;
-	return find_phaseshift(wave_fn, signIndex(diff), sample, 0, 1);
+	return find_phaseshift(wave_fn, volume, signIndex(diff), sample, 0, 1);
 }
 
 typedef float(*WaveGenerator)(float);
@@ -94,7 +94,8 @@ void generate_next_samples(
 	float* dest, int length,
 	float prevSample, float sample,
 	float freq, int instrument, int volume, int effect,
-	float prevFreq, float offset, float endOffset
+	float prevFreq, float offset, float endOffset,
+	float volumeSetting
 ) {
 	if (instrument >= 8) {
 		// TODO custom instruments
@@ -126,7 +127,7 @@ void generate_next_samples(
 	if (instrument != 6) {
 		float v = lerp(v0, vf, offset);
 
-		phase_shift = find_phaseshift(waveGenerator, prevSample * 7 / v, sample * 7 / v);
+		phase_shift = find_phaseshift(waveGenerator, volumeSetting * v / 7, prevSample, sample);
 	}
 
 	// Initial freq_offset
@@ -151,12 +152,12 @@ void generate_next_samples(
 			float next = audio_noise_wave(0);
 			float diff = std::fmax(std::fmin(next - prev_sample, max_diff), -max_diff);
 			prev_sample = std::fmax(-1, std::fmin(1, prev_sample + diff * scale));
-			dest[i] += prev_sample * v / 7;
+			dest[i] += prev_sample * volumeSetting * v / 7;
 		}
 		else {
 			float wavelength = audio_get_wavelength(current_freq);
 			phase = std::fmod(phase + 1 / wavelength, 1); // TODO 1/wavelength = current_freq / SAMPLE_RATE
-			dest[i] += waveGenerator(phase) * v / 7;
+			dest[i] += waveGenerator(phase) * volumeSetting * v / 7;
 		}
 	}
 }
@@ -627,6 +628,19 @@ float pitch_to_freq(unsigned char pitch) {
 	return base_frequencies[base] * multipliers[mul];
 }
 
+int audio_setting_sfx_volume = 10;
+int audio_setting_music_volume = 10;
+
+float get_volume(bool is_music) {
+	int setting = is_music ? audio_setting_music_volume : audio_setting_sfx_volume;
+
+	if (setting == 0) return 0;
+	if (setting >= 10) return 1;
+
+	float fsetting = (float)setting * 0.1;
+	return powf(10, fsetting - 1);
+}
+
 int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 	if (channel->sfx == -1) {
 		return 0;
@@ -676,11 +690,13 @@ int audio_cb_channel(Channel* channel, float* stream, int data_points) {
 
 	float prevValue2 = stream[length - 2];
 	float prevValue = stream[length - 1];
+	float volumeSetting = get_volume(channel->isMusic);
 	generate_next_samples(
 		stream, length,
 		channel->previousSample2, channel->previousSample,
 		freq, currentNote.instrument, currentNote.volume, currentNote.effect,
-		prevFreq, offset, endOffset
+		prevFreq, offset, endOffset,
+		volumeSetting
 	);
 	channel->previousSample2 = stream[length - 2] - prevValue2;
 	channel->previousSample = stream[length - 1] - prevValue;

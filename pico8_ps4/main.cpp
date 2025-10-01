@@ -32,17 +32,17 @@
 
 #define DEBUGLOG Rom_DEBUGLOG
 Log DEBUGLOG = logger.log("ROM");
-MachineState *machineState;
-AudioManager *audioManager;
-Renderer *renderer;
-Font *font;
-PauseMenu *pauseMenu;
-RunningCart *runningCart;
-SaveManager *saveManager;
+MachineState* machineState;
+AudioManager* audioManager;
+Renderer* renderer;
+Font* font;
+PauseMenu* pauseMenu;
+RunningCart* runningCart;
+SaveManager* saveManager;
 
 typedef struct
 {
-	SDL_Texture *surface;
+	SDL_Texture* surface;
 	std::string path;
 } LocalCartridge;
 typedef struct
@@ -122,15 +122,18 @@ int main(void)
 	}
 
 	DEBUGLOG << "Begin rendering" << ENDL;
-	SDL_Surface *screenSurface = SDL_GetWindowSurface(renderer->window);
+	SDL_Surface* screenSurface = SDL_GetWindowSurface(renderer->window);
 
 	std::vector<LocalCartridge> bundledCartridges = load_local_cartridges(BUNDLED_FOLDER);
 	std::vector<LocalCartridge> localCartridges = load_local_cartridges(CARTRIDGE_FOLDER);
 	std::vector<LocalCartridge> fakeBbs;
 	fakeBbs.push_back(LocalCartridge{
-		NULL, ""});
+		NULL, "" });
 
 	Screen screens[] = {
+
+
+
 		Screen{
 			"bundled",
 			bundledCartridges},
@@ -146,6 +149,9 @@ int main(void)
 	};
 	Splore splore;
 	int currentScreen = 1;
+
+	pauseMenu->initialize();
+
 	if (localCartridges.size() == 0)
 	{
 		currentScreen = 0;
@@ -244,10 +250,14 @@ int main(void)
 
 			if (activeSystemMenu) {
 				activeSystemMenu->keyDown(k);
-			} else if (isSplore(currentScreen))
+			}
+			else if (isSplore(currentScreen))
 			{
 				splore.key_down(k);
 			}
+
+
+
 			else
 			{
 				carousel->keyDown(k);
@@ -314,6 +324,9 @@ int main(void)
 		{
 			splore.render(delta);
 		}
+
+
+
 		else
 		{
 			auto items = carousel->draw(delta);
@@ -359,14 +372,14 @@ int main(void)
 	return 0;
 }
 
-SDL_Texture *surface_from_file(std::string path)
+SDL_Texture* surface_from_file(std::string path)
 {
 	int width, height, channels;
-	unsigned char *data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+	unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
 	// For some reason stbi_load gives rgb_a as [a,b,g,r] stream
-	SDL_Surface *surface = SDL_CreateRGBSurfaceFrom(data, width, height, 4 * 8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
-	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer->renderer, surface);
+	SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(data, width, height, 4 * 8, width * 4, 0x0000000FF, 0x00000FF00, 0x000FF0000, 0x0FF000000);
+	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer->renderer, surface);
 	SDL_FreeSurface(surface);
 
 	return texture;
@@ -375,8 +388,8 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory)
 {
 	std::vector<LocalCartridge> result;
 
-	DIR *dir;
-	struct dirent *ent;
+	DIR* dir;
+	struct dirent* ent;
 	if ((dir = opendir(directory.c_str())) != NULL)
 	{
 		while ((ent = readdir(dir)) != NULL)
@@ -385,11 +398,11 @@ std::vector<LocalCartridge> load_local_cartridges(std::string directory)
 			if (filename.find(".p8.png") != std::string::npos)
 			{
 				std::string path = directory + "/" + filename;
-				SDL_Texture *surface = surface_from_file(path);
+				SDL_Texture* surface = surface_from_file(path);
 				if (surface != NULL)
 				{
-					result.push_back({surface,
-									  path});
+					result.push_back({ surface,
+									  path });
 				}
 			}
 		}

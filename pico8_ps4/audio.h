@@ -9,6 +9,10 @@
 #define SFX_AMOUNT 64
 #define CHANNELS 4
 
+// [0-10]
+extern int audio_setting_sfx_volume;
+extern int audio_setting_music_volume;
+
 typedef struct {
 	int sfx; // -1 = paused
 	unsigned int offset;

@@ -10,6 +10,7 @@ public:
 	void draw();
 
 private:
+	unsigned char active_screen;
 	unsigned char active_index;
 	bool pressed;
 };
