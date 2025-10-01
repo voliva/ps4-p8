@@ -80,12 +80,12 @@ void apply_filter(int filter, SDL_Color* color) {
 		color->b *= 0.9;
 		desat_color(color, 245);
 	}
-	else if (filter == FILTER_CRT) {
+	/*else if (filter == FILTER_CRT) {
 		color->r += clamp((255 - color->r) * 0.1, 12);
 		color->g *= 0.95;
 		color->b *= 0.9;
 		desat_color(color, 215);
-	}
+	}*/
 }
 
 SDL_Texture* buildDotMask(SDL_Renderer* r, int w, int h, int cell) {
@@ -115,6 +115,50 @@ SDL_Texture* buildDotMask(SDL_Renderer* r, int w, int h, int cell) {
 	}
 	SDL_UnlockTexture(tex);
 	return tex;
+}
+static inline Uint8 clamp8f(float x) { return (Uint8)(x < 0 ? 0 : (x > 255 ? 255 : x)); }
+
+static inline float enc_srgb(float L) {       // linear -> sRGB
+	return (L <= 0.0031308f) ? 12.92f * L : 1.055f * powf(L, 1.0f / 2.4f) - 0.055f;
+}
+
+// Build a single grayscale mask = scanlines * vignette (both in linear, then encode to sRGB).
+// period_px = line height; dark ∈ [0..1] (brightness between lines), feather_px ~1.0; vig_str ~0.2
+static SDL_Texture* buildCRTMask(SDL_Renderer* r, int w, int h,
+	int period_px, float dark, float feather_px, float vig_str)
+{
+	SDL_Texture* t = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_STREAMING, w, h);
+	Uint8* p; int pitch; SDL_LockTexture(t, NULL, (void**)&p, &pitch);
+
+	float cx = (w - 1) * 0.5f, cy = (h - 1) * 0.5f, maxr = 1.2 * sqrtf(cx * cx + cy * cy);
+	float fea = SDL_max(0.5f, feather_px);
+
+	for (int y = 0; y < h; ++y) {
+		Uint32* row = (Uint32*)(p + y * pitch);
+
+		// --- scanline in linear
+		float ly = (float)(y % period_px);
+		float d = fabsf(ly - period_px * 0.5f);
+		float e = 1.0f - SDL_clamp((d - 0.5f) / fea, 0.0f, 1.0f);   // edge shape
+		e = e * e * (3.0f - 2.0f * e);                                   // smoothstep
+		float scan_lin = dark + (1.0f - dark) * e;                 // [dark..1]
+
+		// --- vignette in linear
+		float rnorm = sqrtf((y - cy) * (y - cy)) / maxr;                 // radial will vary per x below
+		for (int x = 0; x < w; ++x) {
+			float rn = sqrtf((x - cx) * (x - cx) + (y - cy) * (y - cy)) / maxr;
+			float vig_lin = 1.0f - vig_str * (rn * rn);                 // quadratic
+
+			// combine (linear), then encode once to sRGB
+			float m_lin = SDL_clamp(scan_lin * SDL_clamp(vig_lin, 0.0f, 1.0f), 0.0f, 1.0f);
+			float m_srgb = enc_srgb(m_lin);
+			Uint8 v = clamp8f(255.0f * m_srgb);
+			row[x] = 0xFF000000u | (v << 16) | (v << 8) | v;            // alpha=255
+		}
+	}
+	SDL_UnlockTexture(t);
+	return t;
 }
 
 Renderer::Renderer()
@@ -158,18 +202,9 @@ Renderer::Renderer()
 	// Assuming square, but logic should still work for other aspect ratios (but more complex)
 	this->canvas_size = line_height * P8_HEIGHT;
 
-	this->CRT_filter = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
+	this->CRT_filter = buildCRTMask(this->renderer, this->canvas_size, this->canvas_size, line_height, 0.8f, 3.0f, 0.5f);
 	this->DOT_filter = buildDotMask(this->renderer, this->canvas_size, this->canvas_size, line_height);
-	// SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
 	this->flat = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
-	//this->distorted = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
-
-	// Render CRT 
-	SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 32);
-	SDL_SetRenderTarget(this->renderer, this->CRT_filter);
-	for (int i = 0; i < P8_HEIGHT; i++) {
-		SDL_RenderDrawLine(this->renderer, 0, i * line_height, this->canvas_size, i * line_height);
-	}
 
 	// Prepare for apply
 	// no filter => screen/NONE, CRT => flat/NONE, DOT => flat/NONE
@@ -186,44 +221,6 @@ Renderer::Renderer()
 
 	this->filter = FILTER_NONE;
 
-	// Aliasing problems kill the vibe. Commenting out for now
-	//// Pre-calculate crt distortion geometry
-	//const int NX = 32, NY = 32; // grid resolution
-	//auto barrel = [&](float x, float y, float k) {   // x,y in [-1,1], k ~ 0.08
-	//	float r2 = x * x + y * y;
-	//	float f = 1.0f - k * r2;
-	//	return std::pair<float, float>(x * f, y * f);
-	//};
-	//for (int j = 0; j <= NY; ++j) {
-	//	for (int i = 0; i <= NX; ++i) {
-	//		float u = (float)i / (float)NX, v = (float)j / (float)NY;
-	//		// screen-space normalized [-1,1]
-	//		float x = (u * 2.f - 1.f), y = (v * 2.f - 1.f);
-	//		auto pair = barrel(x, y, 0.015);
-	//		// map back to pixels
-	//		float px = (pair.first * 0.5 + 0.5) * this->canvas_size;
-	//		float py = (pair.second * 0.5 + 0.5) * this->canvas_size;
-
-	//		SDL_Vertex vert{};
-	//		vert.position.x = px;
-	//		vert.position.y = py;
-	//		vert.tex_coord.x = u;
-	//		vert.tex_coord.y = v;
-	//		vert.color = { 255,255,255,255 };
-	//		this->crt_verts.push_back(vert);
-	//	}
-	//}
-	//// indices for quads
-	//for (int j = 0; j < NY; ++j) {
-	//	for (int i = 0; i < NX; ++i) {
-	//		int a = j * (NX + 1) + i;
-	//		int b = a + 1;
-	//		int c = a + (NX + 1);
-	//		int d = c + 1;
-	//		// two triangles: a,b,c and b,d,c
-	//		this->crt_indices.insert(this->crt_indices.end(), { a,b,c,  b,d,c });
-	//	}
-	//}
 }
 
 void Renderer::initialize()
@@ -695,6 +692,9 @@ void Renderer::present(bool redraw)
 		(FRAME_WIDTH - this->canvas_size)/2, (FRAME_HEIGHT - this->canvas_size) / 2, this->canvas_size, this->canvas_size
 	};
 
+	int line_height = FRAME_HEIGHT / P8_HEIGHT;
+	int displacement = line_height / 2;
+
 	if (this->filter == FILTER_NONE) {
 		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &canvas_position);
 	}
@@ -702,27 +702,38 @@ void Renderer::present(bool redraw)
 		SDL_SetRenderTarget(this->renderer, this->flat);
 		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
 
+		if (this->filter == FILTER_CRT) {
+			// Red fringe
+			SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_ADD);
+			SDL_SetTextureAlphaMod(this->p8_viewport, 60);
+			SDL_SetTextureColorMod(this->p8_viewport, 255, 0, 0);
+			SDL_Rect dstR = { displacement, 0, this->canvas_size, this->canvas_size };
+			SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &dstR);
+
+			// Blue fringe
+			SDL_SetTextureAlphaMod(this->p8_viewport, 80);
+			SDL_SetTextureColorMod(this->p8_viewport, 0, 0, 255);
+			dstR.x = -displacement; // clipped draw is fine
+			SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &dstR);
+
+			// Restore mods
+			SDL_SetTextureAlphaMod(this->p8_viewport, 255);
+			SDL_SetTextureColorMod(this->p8_viewport, 255, 255, 255);
+			SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_NONE);
+		}
+
 		SDL_Texture* filter = this->filter == FILTER_CRT ? this->CRT_filter : this->DOT_filter;
 		SDL_RenderCopy(this->renderer, filter, NULL, NULL);
-
-		/*SDL_SetRenderTarget(this->renderer, this->distorted);
-		SDL_RenderGeometry(this->renderer, this->flat, this->crt_verts.data(), (int)this->crt_verts.size(),
-			this->crt_indices.data(), (int)this->crt_indices.size());*/
 
 		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
 		SDL_SetRenderTarget(this->renderer, NULL);
 		SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
 
-		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_BLEND);
-		SDL_SetTextureAlphaMod(this->flat, 128);
-		auto displacement = 1;
-		canvas_position.x -= displacement;
-		canvas_position.y -= displacement;
+		// Tiny luma “pop”
+		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_ADD);
+		SDL_SetTextureAlphaMod(this->flat, 10);
 		SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
-		SDL_SetTextureAlphaMod(this->flat, 64);
-		canvas_position.y += 2*displacement;
-		canvas_position.x += 3*displacement;
-		SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
+		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
 		SDL_SetTextureAlphaMod(this->flat, 255);
 	}
 

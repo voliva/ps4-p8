@@ -54,7 +54,7 @@ void PauseMenu::manageEvent(KeyEvent& e)
 	case P8_Key::right:
 		if (this->active_screen == 1) {
 			if (this->active_index == 1) {
-				if (renderer->filter < FILTER_DOT) {
+				if (renderer->filter < FILTER_CRT) {
 					renderer->filter++;
 					renderer->present(true);
 					save_settings();
@@ -137,7 +137,7 @@ void PauseMenu::manageEvent(KeyEvent& e)
 
 void render_filter_setting(int x, int y) {
 	std::string title = "filter:";
-	std::vector<std::string> options = { "none", "crt", "dot" };
+	std::vector<std::string> options = { "none", "dot", "crt" };
 	int option_lengths = 0;
 	for (int i = 0; i < options.size(); i++) option_lengths += options[i].length();
 
@@ -282,7 +282,6 @@ void load_settings() {
 			auto label = s.substr(0, eq);
 			auto value = s.substr(eq + 1, s.length() - eq - 2);
 			if (label == "filter") {
-				printf("value: '%s'", value.c_str());
 				if (value == "none") {
 					renderer->filter = FILTER_NONE;
 				}

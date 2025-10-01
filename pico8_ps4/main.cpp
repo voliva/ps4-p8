@@ -150,8 +150,7 @@ int main(void)
 	Splore splore;
 	int currentScreen = 1;
 
-
-
+	pauseMenu->initialize();
 
 	if (localCartridges.size() == 0)
 	{

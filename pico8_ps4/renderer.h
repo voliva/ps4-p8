@@ -26,8 +26,8 @@
 #define SCREEN_MEMORY_SIZE P8_HEIGHT * P8_WIDTH / 2
 
 #define FILTER_NONE 0
-#define FILTER_CRT 1
-#define FILTER_DOT 2
+#define FILTER_DOT 1
+#define FILTER_CRT 2
 
 typedef struct {
 	int x;
