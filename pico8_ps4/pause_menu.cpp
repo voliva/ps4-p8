@@ -8,9 +8,10 @@
 #include "save_states.h"
 #include "audio.h"
 #include "file_paths.h"
+#include "machine_state.h"
 
 #define DEFAULT_LINES 6
-#define OPTION_LINES 4
+#define OPTION_LINES 5
 
 void load_settings();
 void save_settings();
@@ -61,19 +62,19 @@ void PauseMenu::manageEvent(KeyEvent& e)
 					renderer->filter = FILTER_NONE;
 				}
 				renderer->present(true);
-				save_settings();
 			}
 			else if (this->active_index == 2) {
 				if (audio_setting_sfx_volume < 10) {
 					audio_setting_sfx_volume++;
-					save_settings();
 				}
 			}
-			else {
+			else if (this->active_index == 3) {
 				if (audio_setting_music_volume < 10) {
 					audio_setting_music_volume++;
-					save_settings();
 				}
+			}
+			else if (this->active_index == 4) {
+				machineState->controlInverted = !machineState->controlInverted;
 			}
 		}
 		break;
@@ -87,19 +88,19 @@ void PauseMenu::manageEvent(KeyEvent& e)
 					renderer->filter = FILTER_CRT;
 				}
 				renderer->present(true);
-				save_settings();
 			}
 			else if (this->active_index == 2) {
 				if (audio_setting_sfx_volume > 0) {
 					audio_setting_sfx_volume--;
-					save_settings();
 				}
 			}
-			else {
+			else if (this->active_index == 3) {
 				if (audio_setting_music_volume > 0) {
 					audio_setting_music_volume--;
-					save_settings();
 				}
+			}
+			else if (this->active_index == 4) {
+				machineState->controlInverted = !machineState->controlInverted;
 			}
 		}
 		break;
@@ -134,6 +135,10 @@ void PauseMenu::manageEvent(KeyEvent& e)
 			if (this->active_index == 0) {
 				this->active_index = 0;
 				this->active_screen = 0;
+				save_settings();
+			}
+			else if (this->active_index == 4) {
+				machineState->controlInverted = !machineState->controlInverted;
 			}
 		}
 		break;
@@ -172,6 +177,17 @@ void render_filter_setting(int x, int y) {
 
 void render_audio_setting(int x, int y, std::string title, int value) {
 	std::string line = title + std::string(": ") + std::to_string(value);
+
+	font->print(
+		line,
+		x,
+		y,
+		false
+	);
+}
+
+void render_invert_control_setting(int x, int y) {
+	std::string line = "invert buttons:" + std::string(machineState->controlInverted ? "yes" : "no");
 
 	font->print(
 		line,
@@ -251,6 +267,9 @@ void PauseMenu::draw()
 			case 3:
 				render_audio_setting(text_x, text_top, "music", audio_setting_music_volume);
 				break;
+			case 4:
+				render_invert_control_setting(text_x, text_top);
+				break;
 			}
 		}
 	}
@@ -272,6 +291,7 @@ void save_settings() {
 	fprintf(f, "filter=%s\n", filter_value);
 	fprintf(f, "sfx=%d\n", audio_setting_sfx_volume);
 	fprintf(f, "music=%d\n", audio_setting_music_volume);
+	fprintf(f, "inverted=%s\n", machineState->controlInverted ? "yes" : "no");
 
 	fclose(f);
 }
@@ -303,6 +323,9 @@ void load_settings() {
 			}
 			else if (label == "music") {
 				audio_setting_music_volume = std::stoi(value);
+			}
+			else if (label == "inverted") {
+				machineState->controlInverted = value == "yes";
 			}
 		}
 

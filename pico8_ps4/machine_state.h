@@ -16,6 +16,7 @@ public:
 	void serialize(unsigned char* dest);
 	void deserialize(unsigned char* src);
 
+	bool controlInverted;
 	void processKeyEvent(KeyEvent evt);
 	bool isButtonPressed(int p, P8_Key btn);
 	bool wasButtonPressed(int p, P8_Key btn);

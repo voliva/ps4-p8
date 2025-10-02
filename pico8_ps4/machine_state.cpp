@@ -22,6 +22,7 @@ MachineState::MachineState()
 
 	// Breadcrumb should not be reset when initializing
 	this->breadcrumb = "";
+	this->controlInverted = false;
 }
 
 void MachineState::initialize()
@@ -64,6 +65,14 @@ void MachineState::deserialize(unsigned char* src)
 
 void MachineState::processKeyEvent(KeyEvent evt)
 {
+	if (this->controlInverted) {
+		if (evt.key == P8_Key::circle) {
+			evt.key = P8_Key::cross;
+		} else if (evt.key == P8_Key::cross) {
+			evt.key = P8_Key::circle;
+		}
+	}
+
 	int btnBit = 1 << (int)evt.key;
 	this->btn_countdown[evt.player][(int)evt.key] = 0;
 	if (evt.down) {
