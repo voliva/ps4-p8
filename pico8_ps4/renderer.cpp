@@ -80,12 +80,11 @@ void apply_filter(int filter, SDL_Color* color) {
 		color->b *= 0.9;
 		desat_color(color, 245);
 	}
-	/*else if (filter == FILTER_CRT) {
-		color->r += clamp((255 - color->r) * 0.1, 12);
-		color->g *= 0.95;
-		color->b *= 0.9;
-		desat_color(color, 215);
-	}*/
+	else if (filter == FILTER_CRT) {
+		// Fringe is going to bump reds and blues up, so tuning them down here
+		color->r *= 0.7;
+		color->b *= 0.6;
+	}
 }
 
 SDL_Texture* buildDotMask(SDL_Renderer* r, int w, int h, int cell) {
@@ -260,7 +259,7 @@ Renderer::Renderer()
 	// Assuming square, but logic should still work for other aspect ratios (but more complex)
 	this->canvas_size = line_height * P8_HEIGHT;
 
-	this->CRT_filter = buildCRTMask(this->renderer, this->canvas_size, this->canvas_size, line_height, 0.8f, 3.0f, 1.0f);
+	this->CRT_filter = buildCRTMask(this->renderer, this->canvas_size, this->canvas_size, line_height, 0.9f, 3.0f, 1.0f);
 	this->DOT_filter = buildDotMask(this->renderer, this->canvas_size, this->canvas_size, line_height);
 	this->flat = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
 	this->distorted = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_TARGET, this->canvas_size, this->canvas_size);
@@ -279,11 +278,10 @@ Renderer::Renderer()
 	SDL_SetRenderTarget(this->renderer, NULL);
 
 	BuildCurvedGrid(this->canvas_size, this->canvas_size,
-		/*NX=*/32, /*NY=*/32, -0.04,
+		/*NX=*/32, /*NY=*/32, -0.02,
 		this->crtVerts, this->crtIdx);
 
 	this->filter = FILTER_NONE;
-
 }
 
 void Renderer::initialize()
@@ -756,43 +754,46 @@ void Renderer::present(bool redraw)
 	};
 
 	int line_height = FRAME_HEIGHT / P8_HEIGHT;
-	int displacement = line_height / 2;
+	int displacement = 2 * line_height / 3;
 
 	if (this->filter == FILTER_NONE) {
 		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &canvas_position);
 	}
 	else {
-		SDL_SetRenderTarget(this->renderer, this->flat);
-		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
-
 		if (this->filter == FILTER_CRT) {
+			// Temporarily using distorted to do the fringe
+			SDL_SetRenderTarget(this->renderer, this->distorted);
+			SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
+
+			SDL_SetRenderTarget(this->renderer, this->flat);
+			SDL_RenderCopy(this->renderer, this->distorted, NULL, NULL);
 
 			// Red fringe
-			SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_ADD);
-			SDL_SetTextureAlphaMod(this->p8_viewport, 60);
-			SDL_SetTextureColorMod(this->p8_viewport, 255, 0, 0);
+			SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_ADD);
+			SDL_SetTextureAlphaMod(this->distorted, 128);
+			SDL_SetTextureColorMod(this->distorted, 255, 0, 0);
 			SDL_Rect dstR = { displacement, 0, this->canvas_size, this->canvas_size };
-			SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &dstR);
+			SDL_RenderCopy(this->renderer, this->distorted, NULL, &dstR);
 
 			// Blue fringe
-			SDL_SetTextureAlphaMod(this->p8_viewport, 80);
-			SDL_SetTextureColorMod(this->p8_viewport, 0, 0, 255);
-			dstR.x = -displacement; // clipped draw is fine
-			SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &dstR);
+			SDL_SetTextureAlphaMod(this->distorted, 255);
+			SDL_SetTextureColorMod(this->distorted, 0, 0, 255);
+			dstR.x = -displacement;
+			SDL_RenderCopy(this->renderer, this->distorted, NULL, &dstR);
 
 			// Restore mods
-			SDL_SetTextureAlphaMod(this->p8_viewport, 255);
-			SDL_SetTextureColorMod(this->p8_viewport, 255, 255, 255);
+			SDL_SetTextureAlphaMod(this->distorted, 255);
+			SDL_SetTextureColorMod(this->distorted, 255, 255, 255);
+			SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_NONE);
 
-			SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_NONE);
+			SDL_SetRenderTarget(this->renderer, this->distorted);
+			SDL_RenderClear(this->renderer);
+			SDL_SetRenderTarget(this->renderer, this->flat);
 		}
-
-		// Tiny luma “pop”
-		SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_ADD);
-		SDL_SetTextureAlphaMod(this->p8_viewport, 10);
-		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
-		SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_NONE);
-		SDL_SetTextureAlphaMod(this->p8_viewport, 255);
+		else {
+			SDL_SetRenderTarget(this->renderer, this->flat);
+			SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
+		}
 
 		if (this->filter == FILTER_CRT) {
 			SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, NULL);
@@ -809,13 +810,8 @@ void Renderer::present(bool redraw)
 
 			SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_BLEND);
 			SDL_SetTextureAlphaMod(this->distorted, 128);
-			canvas_position.x -= displacement / 2;
-			canvas_position.y -= displacement / 2;
-			SDL_RenderCopy(this->renderer, this->distorted, NULL, &canvas_position);
-			//SDL_SetTextureAlphaMod(this->distorted, 64);
-			//canvas_position.y += line_height;
-			//canvas_position.x += 3 * displacement;
-			//SDL_RenderCopy(this->renderer, this->distorted, NULL, &canvas_position);
+			canvas_position.x -= displacement / 3;
+			canvas_position.y -= displacement / 3;
 			SDL_SetTextureAlphaMod(this->distorted, 255);
 		}
 		else {

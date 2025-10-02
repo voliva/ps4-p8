@@ -56,9 +56,12 @@ void PauseMenu::manageEvent(KeyEvent& e)
 			if (this->active_index == 1) {
 				if (renderer->filter < FILTER_CRT) {
 					renderer->filter++;
-					renderer->present(true);
-					save_settings();
 				}
+				else {
+					renderer->filter = FILTER_NONE;
+				}
+				renderer->present(true);
+				save_settings();
 			}
 			else if (this->active_index == 2) {
 				if (audio_setting_sfx_volume < 10) {
@@ -79,9 +82,12 @@ void PauseMenu::manageEvent(KeyEvent& e)
 			if (this->active_index == 1) {
 				if (renderer->filter > 0) {
 					renderer->filter--;
-					renderer->present(true);
-					save_settings();
 				}
+				else {
+					renderer->filter = FILTER_CRT;
+				}
+				renderer->present(true);
+				save_settings();
 			}
 			else if (this->active_index == 2) {
 				if (audio_setting_sfx_volume > 0) {
