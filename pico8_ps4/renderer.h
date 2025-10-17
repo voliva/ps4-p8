@@ -100,7 +100,10 @@ private:
 	SDL_Texture* DOT_filter;
 	SDL_Texture* flat;
 	SDL_Texture* distorted;
+
+#ifndef __PS4__
 	std::vector<SDL_Vertex> crtVerts;
 	std::vector<int>        crtIdx;
+#endif
 };
 extern Renderer *renderer;

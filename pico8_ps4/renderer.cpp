@@ -121,6 +121,8 @@ static inline float enc_srgb(float L) {       // linear -> sRGB
 	return (L <= 0.0031308f) ? 12.92f * L : 1.055f * powf(L, 1.0f / 2.4f) - 0.055f;
 }
 
+#define SDL_clamp(x, a, b) (((x) < (a)) ? (a) : (((x) > (b)) ? (b) : (x)))
+
 // Build a single grayscale mask = scanlines * vignette (both in linear, then encode to sRGB).
 // period_px = line height; dark ∈ [0..1] (brightness between lines), feather_px ~1.0; vig_str ~0.2
 static SDL_Texture* buildCRTMask(SDL_Renderer* r, int w, int h,
@@ -153,13 +155,26 @@ static SDL_Texture* buildCRTMask(SDL_Renderer* r, int w, int h,
 			float m_lin = SDL_clamp(scan_lin * SDL_clamp(vig_lin, 0.0f, 1.0f), 0.0f, 1.0f);
 			float m_srgb = enc_srgb(m_lin);
 			Uint8 v = clamp8f(255.0f * m_srgb);
-			row[x] = 0xFF000000u | (v << 16) | (v << 8) | v;            // alpha=255
+#ifdef __PS4__
+			row[x] = 0x20000000u | (v << 16) | (v << 8) | v;
+#else
+			row[x] = 0xFF000000u | (v << 16) | (v << 8) | v;
+#endif
 		}
 	}
 	SDL_UnlockTexture(t);
 	return t;
 }
 
+// PS4 SDL's doesn't have BLENDMODE_MUL
+#ifdef __PS4__
+// Grabbed from original commit https://github.com/libsdl-org/SDL/commit/981e0d367c9c5320970bfd39a8ba8747a7c2e393
+// #define SDL_BLENDMODE_MUL SDL_ComposeCustomBlendMode(SDL_BLENDFACTOR_DST_COLOR, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD, SDL_BLENDFACTOR_DST_ALPHA, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD )
+// This works in modern SDL, but not on PS4 either :/ fallbacking to BLEND
+#define SDL_BLENDMODE_MUL SDL_BLENDMODE_BLEND
+#endif
+
+#ifndef __PS4__
 // k < 0 => pincushion (edges pulled IN). Anchors the horizontal & vertical center (no shrink there).
 static void BuildCurvedGrid(int W, int H, int NX, int NY, float k,
 	std::vector<SDL_Vertex>& outVerts,
@@ -217,6 +232,7 @@ static void BuildCurvedGrid(int W, int H, int NX, int NY, float k,
 		}
 	}
 }
+#endif
 
 Renderer::Renderer()
 {
@@ -268,6 +284,7 @@ Renderer::Renderer()
 	// no filter => screen/NONE, CRT => flat/NONE, DOT => flat/NONE
 	SDL_SetTextureBlendMode(this->p8_viewport, SDL_BLENDMODE_NONE);
 	// no filter => N/A, CRT/DOT => flat/MUL
+
 	SDL_SetTextureBlendMode(this->CRT_filter, SDL_BLENDMODE_MUL);
 	SDL_SetTextureBlendMode(this->DOT_filter, SDL_BLENDMODE_MUL);
 	// no filter => N/A, CRT => distorted/NONE, DOT => screen/NONE
@@ -277,9 +294,11 @@ Renderer::Renderer()
 
 	SDL_SetRenderTarget(this->renderer, NULL);
 
+#ifndef __PS4__
 	BuildCurvedGrid(this->canvas_size, this->canvas_size,
 		/*NX=*/32, /*NY=*/32, -0.02,
 		this->crtVerts, this->crtIdx);
+#endif
 
 	this->filter = FILTER_NONE;
 }
@@ -759,68 +778,59 @@ void Renderer::present(bool redraw)
 	if (this->filter == FILTER_NONE) {
 		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &canvas_position);
 	}
-	else {
-		if (this->filter == FILTER_CRT) {
-			// Temporarily using distorted to do the fringe
-			SDL_SetRenderTarget(this->renderer, this->distorted);
-			SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
+	else if (this->filter == FILTER_CRT) {
+#ifdef __PS4__
+		// PS4's RenderCopy is more expensive, we can't afford the fringe
+		SDL_SetRenderTarget(this->renderer, NULL);
+		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &canvas_position);
+		SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, &canvas_position);
+#else
+		// Temporarily using distorted to do the fringe
+		SDL_SetRenderTarget(this->renderer, this->distorted);
+		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
 
-			SDL_SetRenderTarget(this->renderer, this->flat);
-			SDL_RenderCopy(this->renderer, this->distorted, NULL, NULL);
+		SDL_SetRenderTarget(this->renderer, this->flat);
+		SDL_RenderCopy(this->renderer, this->distorted, NULL, NULL);
 
-			// Red fringe
-			SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_ADD);
-			SDL_SetTextureAlphaMod(this->distorted, 128);
-			SDL_SetTextureColorMod(this->distorted, 255, 0, 0);
-			SDL_Rect dstR = { displacement, 0, this->canvas_size, this->canvas_size };
-			SDL_RenderCopy(this->renderer, this->distorted, NULL, &dstR);
+		// Red fringe
+		SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_ADD);
+		SDL_SetTextureAlphaMod(this->distorted, 128);
+		SDL_SetTextureColorMod(this->distorted, 255, 0, 0);
+		SDL_Rect dstR = { displacement, 0, this->canvas_size, this->canvas_size };
+		SDL_RenderCopy(this->renderer, this->distorted, NULL, &dstR);
 
-			// Blue fringe
-			SDL_SetTextureAlphaMod(this->distorted, 255);
-			SDL_SetTextureColorMod(this->distorted, 0, 0, 255);
-			dstR.x = -displacement;
-			SDL_RenderCopy(this->renderer, this->distorted, NULL, &dstR);
+		// Blue fringe
+		SDL_SetTextureAlphaMod(this->distorted, 255);
+		SDL_SetTextureColorMod(this->distorted, 0, 0, 255);
+		dstR.x = -displacement;
+		SDL_RenderCopy(this->renderer, this->distorted, NULL, &dstR);
 
-			// Restore mods
-			SDL_SetTextureAlphaMod(this->distorted, 255);
-			SDL_SetTextureColorMod(this->distorted, 255, 255, 255);
-			SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_NONE);
+		// Restore mods
+		SDL_SetTextureAlphaMod(this->distorted, 255);
+		SDL_SetTextureColorMod(this->distorted, 255, 255, 255);
+		SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_NONE);
 
-			SDL_SetRenderTarget(this->renderer, this->distorted);
-			SDL_RenderClear(this->renderer);
-			SDL_SetRenderTarget(this->renderer, this->flat);
-		}
-		else {
-			SDL_SetRenderTarget(this->renderer, this->flat);
-			SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, NULL);
-		}
+		SDL_SetRenderTarget(this->renderer, this->distorted);
+		SDL_RenderClear(this->renderer);
+		SDL_SetRenderTarget(this->renderer, this->flat);
 
-		if (this->filter == FILTER_CRT) {
-			SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, NULL);
+		SDL_RenderCopy(this->renderer, this->CRT_filter, NULL, NULL);
 
-			SDL_SetRenderTarget(this->renderer, this->distorted);
-			SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
-			SDL_RenderGeometry(this->renderer,
-				this->flat,
-				this->crtVerts.data(), (int)this->crtVerts.size(),
-				this->crtIdx.data(), (int)this->crtIdx.size());
+		SDL_SetRenderTarget(this->renderer, this->distorted);
+		SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
 
-			SDL_SetRenderTarget(this->renderer, NULL);
-			SDL_RenderCopy(this->renderer, this->distorted, NULL, &canvas_position);
+		SDL_RenderGeometry(this->renderer,
+			this->flat,
+			this->crtVerts.data(), (int)this->crtVerts.size(),
+			this->crtIdx.data(), (int)this->crtIdx.size());
 
-			SDL_SetTextureBlendMode(this->distorted, SDL_BLENDMODE_BLEND);
-			SDL_SetTextureAlphaMod(this->distorted, 128);
-			canvas_position.x -= displacement / 3;
-			canvas_position.y -= displacement / 3;
-			SDL_SetTextureAlphaMod(this->distorted, 255);
-		}
-		else {
-			SDL_RenderCopy(this->renderer, this->DOT_filter, NULL, NULL);
-
-			SDL_SetRenderTarget(this->renderer, NULL);
-			SDL_SetTextureBlendMode(this->flat, SDL_BLENDMODE_NONE);
-			SDL_RenderCopy(this->renderer, this->flat, NULL, &canvas_position);
-		}
+		SDL_SetRenderTarget(this->renderer, NULL);
+		SDL_RenderCopy(this->renderer, this->distorted, NULL, &canvas_position);
+#endif
+	} else {
+		SDL_SetRenderTarget(this->renderer, NULL);
+		SDL_RenderCopy(this->renderer, this->p8_viewport, NULL, &canvas_position);
+		SDL_RenderCopy(this->renderer, this->DOT_filter, NULL, &canvas_position);
 	}
 
 	SDL_UpdateWindowSurface(this->window);
