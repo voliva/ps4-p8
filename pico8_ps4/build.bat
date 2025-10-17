@@ -2,7 +2,7 @@ SETLOCAL EnableDelayedExpansion
 
 Rem Package information
 set PKG_TITLE="PS4 P-8"
-set PKG_VERSION="1.0.4.1"
+set PKG_VERSION="1.0.5.0"
 set PKG_ASSETS="assets"
 set PKG_TITLE_ID="BREW34965"
 set PKG_CONTENT_ID="IV0000-BREW34965_00-OLIPS4PICO800000"

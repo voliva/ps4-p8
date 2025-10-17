@@ -18,6 +18,10 @@ Not finished - Compatibility is still limited, but there are many cartridges it 
 - 16-bit fixed point decimal arithemtic just like pico8.
 - Save states (at the moment simplistic, one save state per cartridge).
 - The most used predefined pico8 functions are implemented: 90 functions implemented out of 105
+- Console options
+    - CRT/DOT matrix filters
+    - Volume control
+    - Invert controls
 
 It comes with a set of bundled games which have been used to improve the compatibility.
 
